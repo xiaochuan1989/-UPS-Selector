@@ -1,5 +1,5 @@
 [build]
-  publish = "."
+  publish = "UPS选型助手.html"
   command = ""
 
 [context.production]
