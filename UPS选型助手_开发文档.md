@@ -723,6 +723,21 @@ git push origin master
    - Publish directory: .
 5. 点击 "Deploy site"
 
+### 10.4 注意事项
+
+⚠️ **重要**：每次修改代码后，一定要执行 `git add .` 把文件添加到暂存区，否则文件不会提交到 GitHub。
+
+⚠️ **不要删除 UPS选型助手.html 文件**，这是主程序文件，必须保留在项目文件夹中。
+
+### 10.5 常见问题
+
+| 问题 | 解决方法 |
+|------|---------|
+| git push 提示 "nothing to commit" | 检查是否修改了文件，用 `git status` 查看状态 |
+| GitHub上看不到文件 | 检查 `.gitignore` 是否忽略的文件，或确认 `git add` 是否成功 |
+| Netlify 找不到入口文件 | 确认 `netlify.toml` 中 `publish` 配置正确指向 `UPS选型助手.html` |
+| 推送被拒绝 | 运行 `git pull origin master` 拉取远程更新后再推送 |
+
 **方法二：使用 Netlify CLI**
 
 ```bash
