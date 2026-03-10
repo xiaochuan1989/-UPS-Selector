@@ -703,38 +703,41 @@ python inspect_excel.py
 
 ### 10.3 更新部署命令
 
-**方法一：使用 Netlify CLI（推荐）**
+**方法一：Git 自动部署（推荐）**
+
+代码已推送到 GitHub，关联 Netlify 后每次 `git push` 自动部署：
 
 ```bash
-# 1. 安装 Netlify CLI（首次需要）
+# 每次功能更新后执行
+git add .
+git commit -m "描述更新内容"
+git push origin master
+```
+
+首次设置步骤：
+1. 打开 https://app.netlify.com
+2. 点击 "Add new site" → "Import an existing project"
+3. 选择 GitHub，授权后选择 `UPS-Selector` 仓库
+4. 设置：
+   - Build command: (空)
+   - Publish directory: .
+5. 点击 "Deploy site"
+
+**方法二：使用 Netlify CLI**
+
+```bash
 npm install -g netlify-cli
-
-# 2. 登录（会打开浏览器）
 netlify login
-
-# 3. 部署（每次修改后执行）
 cd "UPS选型助手_开发包_v1.2"
 cp UPS选型助手.html deploy/index.html
 cd deploy
 netlify deploy --dir . --prod --site c662b019-245f-4a7f-af88-53c9b72502da
 ```
 
-**方法二：手动上传**
+**方法三：手动上传**
 
 1. 打开 https://app.netlify.com/sites/ups-selector
 2. 将 `UPS选型助手.html` 拖拽到页面
-3. 设置为生产环境
-
-**方法三：使用 npx（无需全局安装）**
-
-```bash
-cd "UPS选型助手_开发包_v1.2"
-cp UPS选型助手.html deploy/index.html
-cd deploy
-npx netlify deploy --dir . --prod --site c662b019-245f-4a7f-af88-53c9b72502da
-```
-
-> 注意：首次使用 Netlify CLI 需要登录认证。
 
 ---
 
