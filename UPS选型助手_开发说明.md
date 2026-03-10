@@ -165,54 +165,60 @@ python test.py --env       # 环境检查
 
 ## 线上部署
 
+### 网站地址
+**https://ups-selector.netlify.app**
+
 ### GitHub 仓库
 
 | 项目 | 说明 |
 |------|------|
 | 仓库地址 | https://github.com/xiaochuan1989/-UPS-Selector |
 
-### Netlify 部署
+### Netlify 自动部署
 
 | 项目 | 说明 |
 |------|------|
-| 线上地址 | https://ups-selector.netlify.app |
 | Site ID | c662b019-245f-4a7f-af88-53c9b72502da |
 | 部署方式 | Git 自动部署 ⭐ |
 
-### 首次设置 Netlify 自动部署
+### 关联 GitHub 仓库（首次设置）
 
 1. 打开 https://app.netlify.com
-2. 点击 **"Add new site"** → **"Import an existing project"**
-3. 选择 **GitHub**，授权后选择 **`-UPS-Selector`** 仓库
-4. 设置：
-   - Build command: `(空)`
-   - Publish directory: `.`
-5. 点击 **"Deploy site"**
+2. 选择站点 **ups-selector**
+3. 点击 **Site settings**
+4. 找到 **Build & deploy** → 点击 **Link repository**
+5. 选择 **GitHub**，授权后选择 **`-UPS-Selector`** 仓库
+6. 点击 **Save**
 
-### 后续部署流程
+### 后续部署流程（每次功能更新）
 
 ```bash
-# 1. 修改完代码后，提交并推送
+# 1. 进入项目目录
+cd "D:\Claude 安装\UPS选型助手_开发包_v1.2"
+
+# 2. 提交修改并推送到 GitHub
 git add .
 git commit -m "描述更新内容"
 git push origin master
 
-# 2. 等待约1-2分钟，Netlify 自动部署
+# 3. 等待约1-2分钟，Netlify 自动部署
 
-# 3. 访问 https://ups-selector.netlify.app 查看更新
+# 4. 访问 https://ups-selector.netlify.app 查看更新
 ```
 
-### 备选部署方式（手动）
+### 手动部署（备选）
+
+如果自动部署未关联，可以手动部署：
 
 ```bash
-# 方式一：手动复制部署
+# 方式一：手动上传
+# 打开 https://app.netlify.com/sites/ups-selector
+# 拖拽 UPS选型助手.html 到页面
+
+# 方式二：使用 Netlify CLI
 cp UPS选型助手.html deploy/index.html
 cd deploy
 netlify deploy --dir . --prod --site c662b019-245f-4a7f-af88-53c9b72502da
-
-# 方式二：手动上传
-# 打开 https://app.netlify.com/sites/ups-selector
-# 拖拽 UPS选型助手.html 到页面
 ```
 
 ## 注意事项
