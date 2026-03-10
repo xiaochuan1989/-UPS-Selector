@@ -1,0 +1,17 @@
+# 忽略不需要版本控制的文件
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+deploy/
+.chrome/
+serena/
+chats/
+fix_history/
+dist/
+src/
+dev_scripts/
+test_data/
+.claude/
+*.png
+*.xlsx
