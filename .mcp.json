@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "serena-slim": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "C:/",
+        "npx",
+        "-y",
+        "serena-slim@latest"
+      ],
+      "env": {}
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "C:\\Users\\woaig\\.local\\bin\\uv.exe",
+      "args": [
+        "run",
+        "--directory",
+        "C:\\Users\\woaig\\Downloads\\serena-main",
+        "serena-mcp-server",
+        "D:\\Claude Code\\UPS选型助手_开发包_v1.2\\.serena\\project.yml"
+      ],
+      "env": {}
+    }
+  }
+}
