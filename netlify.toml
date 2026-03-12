@@ -1,6 +1,11 @@
 [build]
-  publish = "UPS选型助手.html"
+  publish = "."
   command = ""
+
+[[redirects]]
+  from = "/"
+  to = "/UPS选型助手.html"
+  status = 200
 
 [context.production]
   command = ""
