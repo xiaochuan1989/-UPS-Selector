@@ -737,13 +737,26 @@ git push origin master
 
 ⚠️ **不要删除 UPS选型助手.html 文件**，这是主程序文件，必须保留在项目文件夹中。
 
+⚠️ **Netlify 配置注意事项**：
+- `netlify.toml` 中的 `publish` 必须是**目录**，不能是文件
+- 正确配置：`publish = "."`
+- 错误配置：`publish = "UPS选型助手.html"` ❌
+- 使用重定向规则指定入口文件：
+  ```toml
+  [[redirects]]
+    from = "/"
+    to = "/UPS选型助手.html"
+    status = 200
+  ```
+
 ### 10.5 常见问题
 
 | 问题 | 解决方法 |
 |------|---------|
 | git push 提示 "nothing to commit" | 检查是否修改了文件，用 `git status` 查看状态 |
 | GitHub上看不到文件 | 检查 `.gitignore` 是否忽略的文件，或确认 `git add` 是否成功 |
-| Netlify 找不到入口文件 | 确认 `netlify.toml` 中 `publish` 配置正确指向 `UPS选型助手.html` |
+| Netlify 报错 "deploy directory is not a directory" | 检查 `netlify.toml` 中 `publish` 是否配置为目录（如 `.`）而非文件 |
+| Netlify 找不到入口文件 | 确认 `netlify.toml` 中有正确的重定向规则指向 `UPS选型助手.html` |
 | 推送被拒绝 | 运行 `git pull origin master` 拉取远程更新后再推送 |
 
 **方法二：使用 Netlify CLI**
