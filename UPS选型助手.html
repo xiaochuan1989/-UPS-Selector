@@ -359,6 +359,10 @@ function checkAuth(){
     <div id="batt-switch-panel" style="display:none">
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
         <div class="field">
+          <label>负载功率 (kW) <span style="font-weight:normal;color:#888;font-size:11px">选填</span></label>
+          <input type="number" id="sw-load-power" placeholder="如有请填写">
+        </div>
+        <div class="field">
           <label>UPS容量 (kVA)</label>
           <input type="number" id="sw-ups-cap" placeholder="如: 200" value="200">
         </div>
@@ -370,26 +374,117 @@ function checkAuth(){
           <label>电池节数/组</label>
           <input type="number" id="sw-batt-num" placeholder="如: 30" value="30">
         </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div class="field">
+          <label>电池组数 (N≥2)</label>
+          <input type="number" id="sw-batt-groups" placeholder="如: 2" min="2" value="2">
+        </div>
         <div class="field">
           <label>终止电压 (V)</label>
           <input type="number" id="sw-end-v" placeholder="默认1.75" step="0.01" value="1.75">
         </div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
-        <div class="field" style="flex:1">
-          <label>电池逆变效率 <span style="font-weight:normal;color:#888;font-size:11px">泰山UT系列取0.94</span></label>
+        <div class="field">
+          <label>电池逆变效率 <span style="font-weight:normal;color:#888;font-size:11px">泰山UT取0.94</span></label>
           <input type="number" id="sw-eff" placeholder="高频0.95/工频0.94" step="0.01" min="0" max="1" value="0.95">
         </div>
-        <button class="save-btn" onclick="calcSwitchBox()" style="margin-top:18px">计算</button>
+        <div class="field" style="display:flex;align-items:flex-end">
+          <button class="save-btn" onclick="calcSwitchBox()" style="width:100%">计算</button>
+        </div>
       </div>
       <div id="switch-result" style="display:none;background:#f8fbff;border:1px solid #d0e8ff;border-radius:10px;padding:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">计算结果</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:14px">
-          <div>最大放电电流: <strong id="sw-current"></strong> A</div>
-          <div>开关盒电压等级: <strong id="sw-volts-level"></strong></div>
-          <div>推荐开关容量: <strong id="sw-switch-cap"></strong></div>
+        <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">📊 计算结果</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;font-size:14px;margin-bottom:12px">
+          <div style="background:white;padding:10px;border-radius:6px;border:1px solid #e0e0e0">
+            <div style="font-size:12px;color:#888;margin-bottom:4px">最大放电电流</div>
+            <div style="font-size:20px;font-weight:600;color:#2d6a9f"><span id="sw-current">-</span> A</div>
+          </div>
+          <div style="background:white;padding:10px;border-radius:6px;border:1px solid #e0e0e0">
+            <div style="font-size:12px;color:#888;margin-bottom:4px">分组开关电流</div>
+            <div style="font-size:20px;font-weight:600;color:#27ae60"><span id="sw-group-current">-</span> A</div>
+          </div>
+          <div style="background:white;padding:10px;border-radius:6px;border:1px solid #e0e0e0">
+            <div style="font-size:12px;color:#888;margin-bottom:4px">开关盒电压等级</div>
+            <div style="font-size:18px;font-weight:600;color:#e67e22"><span id="sw-volts-level">-</span></div>
+          </div>
+          <div style="background:white;padding:10px;border-radius:6px;border:1px solid #e0e0e0">
+            <div style="font-size:12px;color:#888;margin-bottom:4px">电池组并联数</div>
+            <div style="font-size:20px;font-weight:600;color:#8e44ad"><span id="sw-groups-result">-</span> 组</div>
+          </div>
         </div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #d0e8ff;font-size:13px;line-height:1.8;color:#555" id="switch-notes"></div>
+
+        <!-- 断路器推荐卡片 + 标准规格表 -->
+        <div style="margin-top:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <!-- 断路器推荐卡片 -->
+            <div style="padding:16px;background:linear-gradient(135deg,#f8f9fa,#e9ecef);border-radius:10px;border:2px solid #495057">
+              <div style="text-align:center;margin-bottom:12px">
+                <span style="font-size:14px;font-weight:700;color:#212529">🔌 推荐断路器（大一号）</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div style="background:linear-gradient(135deg,#fff3cd,#ffe69c);padding:12px;border-radius:8px;border:2px solid #ffc107;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+                  <div style="text-align:center;border-bottom:1px dashed #ffc107;padding-bottom:6px;margin-bottom:6px">
+                    <span style="font-size:12px;font-weight:600;color:#856404">🔋 电池总开关</span>
+                  </div>
+                  <div style="text-align:center">
+                    <div style="font-size:28px;font-weight:700;color:#856404;line-height:1.2" id="sw-main-switch">-</div>
+                    <div style="font-size:12px;color:#856404;margin-top:2px;font-weight:500" id="sw-main-switch-note">-</div>
+                  </div>
+                  <div style="text-align:center;margin-top:6px;padding-top:6px;border-top:1px solid #ffc107">
+                    <span style="font-size:11px;color:#666">计算电流：</span>
+                    <span style="font-size:12px;font-weight:600;color:#333" id="sw-main-calc">-</span>
+                  </div>
+                </div>
+                <div style="background:linear-gradient(135deg,#d4edda,#a3d9a5);padding:12px;border-radius:8px;border:2px solid #28a745;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+                  <div style="text-align:center;border-bottom:1px dashed #28a745;padding-bottom:6px;margin-bottom:6px">
+                    <span style="font-size:12px;font-weight:600;color:#155724">⚡ 电池分开关</span>
+                  </div>
+                  <div style="text-align:center">
+                    <div style="font-size:28px;font-weight:700;color:#155724;line-height:1.2" id="sw-sub-switch">-</div>
+                    <div style="font-size:12px;color:#155724;margin-top:2px;font-weight:500" id="sw-sub-switch-note">-</div>
+                  </div>
+                  <div style="text-align:center;margin-top:6px;padding-top:6px;border-top:1px solid #28a745">
+                    <span style="font-size:11px;color:#666">计算电流：</span>
+                    <span style="font-size:12px;font-weight:600;color:#333" id="sw-sub-calc">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 标准断路器规格表 -->
+            <div style="padding:12px;background:white;border-radius:10px;border:2px solid #dee2e6">
+              <div style="text-align:center;margin-bottom:8px">
+                <span style="font-size:14px;font-weight:700;color:#212529">📋 断路器额定电流规格表</span>
+              </div>
+              <div style="font-size:11px;color:#666;margin-bottom:8px;text-align:center">直流断路器标准额定电流（A）</div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;text-align:center">
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">63</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">80</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">100</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">125</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">160</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">200</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">225</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">250</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">315</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">350</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">400</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">500</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">630</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">800</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">1000</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">1250</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">1600</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">2000</div>
+                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">2500</div>
+              </div>
+              <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #dee2e6;font-size:10px;color:#888;text-align:center">
+                选型规则：计算电流向上取整至表中相邻较大值
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding-top:12px;border-top:1px solid #d0e8ff;font-size:13px;line-height:1.8;color:#555" id="switch-notes"></div>
       </div>
     </div>
   </div>
@@ -1716,51 +1811,138 @@ function getLeadBatteryRecommendations(cellPower, groups, battNum) {
 }
 
 // 开关盒配置计算
+// 计算公式说明：
+// - 最大放电电流 I = 负载功率 / (电池节数 × 终止电压 × 6 × 逆变效率)
+// - 电池组数 N ≥ 2
+// - 总开关电流 = I（不考虑安全系数）
+// - 分开关电流 = I / (N-1)
+// - 断路器选择：计算值向上一档标准规格（大一号）
+// 标准断路器规格：63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 400, 500, 630, 800, 1000
+
+// 标准断路器规格数组（安培）
+const STANDARD_BREAKER_SIZES = [63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 400, 500, 630, 800, 1000, 1250, 1600];
+
+// 获取大一号断路器规格
+function getNextBreakerSize(calcCurrent) {
+  for (let size of STANDARD_BREAKER_SIZES) {
+    if (size > calcCurrent) {
+      return size;
+    }
+  }
+  return STANDARD_BREAKER_SIZES[STANDARD_BREAKER_SIZES.length - 1]; // 返回最大规格
+}
+
 function calcSwitchBox() {
+  console.log('开关盒计算函数被调用');
+  const loadPowerInput = parseFloat(document.getElementById('sw-load-power').value) || 0;
   const upsCap = parseFloat(document.getElementById('sw-ups-cap').value) || 0;
   const pf = parseFloat(document.getElementById('sw-pf').value) || 0.9;
   const battNum = parseFloat(document.getElementById('sw-batt-num').value) || 30;
+  const battGroups = parseInt(document.getElementById('sw-batt-groups').value) || 2;
   const endV = parseFloat(document.getElementById('sw-end-v').value) || 1.75;
   const eff = parseFloat(document.getElementById('sw-eff').value) || 0.95;
 
   if (!upsCap || !battNum) {
-    alert('请填写完整的UPS参数');
+    alert('请填写UPS容量和电池节数');
     return;
   }
 
-  // 计算负载功率 (W) - kVA转VA需要乘以1000
-  const loadPower = upsCap * pf * 1000;
+  if (battGroups < 2) {
+    alert('电池组数N需要≥2，才能计算分组开关');
+    return;
+  }
 
-  // 计算最大放电电流: I = PL / (N * 1.75 * 6 * η)
+  // 计算负载功率 (W)：优先使用负载功率输入，否则用UPS容量×功率因数
+  let loadPower = 0;
+  let powerSource = '';
+  if (loadPowerInput > 0) {
+    loadPower = loadPowerInput * 1000; // kW转W
+    powerSource = '负载功率 ' + loadPowerInput + 'kW';
+  } else {
+    loadPower = upsCap * pf * 1000; // kVA×PF×1000 = W
+    powerSource = 'UPS ' + upsCap + 'kVA × ' + pf + ' = ' + (upsCap * pf).toFixed(1) + 'kW';
+  }
+
+  // 计算最大放电电流: I = PL / (N × 1.75 × 6 × η)
   const maxCurrent = loadPower / (battNum * endV * 6 * eff);
+
+  // 分组开关电流 = 总电流 / (N-1)，N为电池组数
+  const subSwitchCurrent = maxCurrent / (battGroups - 1);
 
   // 确定电压等级
   let voltsLevel = '';
-  if (battNum <= 20) voltsLevel = '≤ 250VDC';
-  else if (battNum <= 36) voltsLevel = '≤ 500VDC';
-  else voltsLevel = '≤ 750VDC';
+  let voltsLevelNum = 0;
+  if (battNum <= 20) {
+    voltsLevel = '250VDC';
+    voltsLevelNum = 250;
+  } else if (battNum <= 36) {
+    voltsLevel = '500VDC';
+    voltsLevelNum = 500;
+  } else {
+    voltsLevel = '750VDC';
+    voltsLevelNum = 750;
+  }
 
-  // 推荐开关容量（通常取最大电流的1.25倍）
-  const switchCap = Math.ceil(maxCurrent * 1.25 / 50) * 50;
+  // 获取大一号断路器规格
+  const mainSwitchRec = getNextBreakerSize(maxCurrent);
+  const subSwitchRec = getNextBreakerSize(subSwitchCurrent);
 
-  // 生成备注
+  // 更新界面
+  document.getElementById('sw-current').textContent = maxCurrent.toFixed(2);
+  document.getElementById('sw-group-current').textContent = subSwitchCurrent.toFixed(2);
+  document.getElementById('sw-volts-level').textContent = voltsLevel;
+  document.getElementById('sw-groups-result').textContent = battGroups;
+
+  // 总开关推荐（大一号）
+  document.getElementById('sw-main-switch').textContent = mainSwitchRec + 'A';
+  document.getElementById('sw-main-switch-note').textContent = voltsLevel;
+  document.getElementById('sw-main-calc').textContent = maxCurrent.toFixed(1) + 'A';
+
+  // 分开关推荐（大一号）
+  document.getElementById('sw-sub-switch').textContent = subSwitchRec + 'A';
+  document.getElementById('sw-sub-switch-note').textContent = voltsLevel;
+  document.getElementById('sw-sub-calc').textContent = subSwitchCurrent.toFixed(1) + 'A × ' + battGroups + '组';
+
+  // 生成详细说明
   const notes = `
-    <div style="margin-top:12px">
-      <strong>配置说明：</strong>
-      <ul style="margin:8px 0 0 20px;padding:0">
-        <li>电池总开关容量应不低于 <strong>${Math.ceil(maxCurrent)}A</strong></li>
-        <li>分组开关电流 = 总电流 / (组数-1)，建议组数不少于2组</li>
-        <li>开关盒电压等级：${voltsLevel}</li>
-        <li>推荐使用 <strong>${switchCap}A</strong> 或更大容量的断路器</li>
-      </ul>
+    <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-top:8px">
+      <div style="font-weight:600;margin-bottom:10px;color:#1a3a5c">📝 配置说明</div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse">
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0;color:#888">负载功率来源</td>
+          <td style="padding:8px 0;text-align:right;font-weight:600">${powerSource}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0;color:#888">最大放电电流 I</td>
+          <td style="padding:8px 0;text-align:right;font-weight:600">${maxCurrent.toFixed(2)} A</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0;color:#888">分组开关电流 (I/(N-1))</td>
+          <td style="padding:8px 0;text-align:right;font-weight:600">${subSwitchCurrent.toFixed(2)} A (N=${battGroups})</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 0;color:#888">开关盒电压等级</td>
+          <td style="padding:8px 0;text-align:right;font-weight:600">${voltsLevel}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#888">推荐总开关</td>
+          <td style="padding:8px 0;text-align:right;font-weight:600;color:#856404">${mainSwitchRec}A / ${voltsLevel}</td>
+        </tr>
+      </table>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e0e0e0;font-size:12px;color:#888">
+        <strong>⚠️ 选型提示：</strong>
+        <ul style="margin:6px 0 0 16px;padding:0;line-height:1.8">
+          <li>电池总开关：<strong>${mainSwitchRec}A</strong> 直流断路器，电压等级 ${voltsLevel}（计算值${maxCurrent.toFixed(1)}A，选大一号）</li>
+          <li>电池分开关：<strong>${subSwitchRec}A</strong> × ${battGroups} 个，电压等级 ${voltsLevel}（计算值${subSwitchCurrent.toFixed(1)}A，选大一号）</li>
+          <li>开关额定电压必须 ≥ ${voltsLevelNum}V DC</li>
+          <li>断路器应具备直流灭弧能力，推荐使用专用直流断路器</li>
+          <li>以上为估算推荐，实际选型请参考电池厂家放电曲线及开关厂家规格书</li>
+        </ul>
+      </div>
     </div>
   `;
 
-  document.getElementById('sw-current').textContent = maxCurrent.toFixed(2);
-  document.getElementById('sw-volts-level').textContent = voltsLevel;
-  document.getElementById('sw-switch-cap').textContent = switchCap + 'A';
   document.getElementById('switch-notes').innerHTML = notes;
-
   document.getElementById('switch-result').style.display = 'block';
 }
 
