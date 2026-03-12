@@ -378,7 +378,7 @@ function checkAuth(){
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
         <div class="field">
           <label>电池组数 (N≥2)</label>
-          <input type="number" id="sw-batt-groups" placeholder="如: 2" min="2" value="2">
+          <input type="number" id="sw-batt-groups" placeholder="如: 1" min="1" value="1">
         </div>
         <div class="field">
           <label>终止电压 (V)</label>
@@ -421,7 +421,7 @@ function checkAuth(){
               <div style="text-align:center;margin-bottom:12px">
                 <span style="font-size:14px;font-weight:700;color:#212529">🔌 推荐断路器（大一号）</span>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="display:grid;grid-template-columns:1fr;gap:12px" id="sw-main-container">
                 <div style="background:linear-gradient(135deg,#fff3cd,#ffe69c);padding:12px;border-radius:8px;border:2px solid #ffc107;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
                   <div style="text-align:center;border-bottom:1px dashed #ffc107;padding-bottom:6px;margin-bottom:6px">
                     <span style="font-size:12px;font-weight:600;color:#856404">🔋 电池总开关</span>
@@ -435,7 +435,7 @@ function checkAuth(){
                     <span style="font-size:12px;font-weight:600;color:#333" id="sw-main-calc">-</span>
                   </div>
                 </div>
-                <div style="background:linear-gradient(135deg,#d4edda,#a3d9a5);padding:12px;border-radius:8px;border:2px solid #28a745;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+                <div id="sw-sub-container" style="background:linear-gradient(135deg,#d4edda,#a3d9a5);padding:12px;border-radius:8px;border:2px solid #28a745;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
                   <div style="text-align:center;border-bottom:1px dashed #28a745;padding-bottom:6px;margin-bottom:6px">
                     <span style="font-size:12px;font-weight:600;color:#155724">⚡ 电池分开关</span>
                   </div>
@@ -1847,8 +1847,8 @@ function calcSwitchBox() {
     return;
   }
 
-  if (battGroups < 2) {
-    alert('电池组数N需要≥2，才能计算分组开关');
+  if (battGroups < 1) {
+    alert('电池组数不能小于1');
     return;
   }
 
@@ -1866,8 +1866,11 @@ function calcSwitchBox() {
   // 计算最大放电电流: I = PL / (N × 1.75 × 6 × η)
   const maxCurrent = loadPower / (battNum * endV * 6 * eff);
 
-  // 分组开关电流 = 总电流 / (N-1)，N为电池组数
-  const subSwitchCurrent = maxCurrent / (battGroups - 1);
+  // 分组开关电流 = 总电流 / (N-1)，N为电池组数（仅当N≥2时）
+  let subSwitchCurrent = 0;
+  if (battGroups >= 2) {
+    subSwitchCurrent = maxCurrent / (battGroups - 1);
+  }
 
   // 确定电压等级
   let voltsLevel = '';
@@ -1887,9 +1890,20 @@ function calcSwitchBox() {
   const mainSwitchRec = getNextBreakerSize(maxCurrent);
   const subSwitchRec = getNextBreakerSize(subSwitchCurrent);
 
+  // 控制分开关显示/隐藏
+  const subContainer = document.getElementById('sw-sub-container');
+  const subCurrentRow = document.getElementById('sw-group-current').parentElement.parentElement;
+  if (battGroups >= 2) {
+    subContainer.style.display = 'block';
+    subCurrentRow.style.display = 'block';
+  } else {
+    subContainer.style.display = 'none';
+    subCurrentRow.style.display = 'none';
+  }
+
   // 更新界面
   document.getElementById('sw-current').textContent = maxCurrent.toFixed(2);
-  document.getElementById('sw-group-current').textContent = subSwitchCurrent.toFixed(2);
+  document.getElementById('sw-group-current').textContent = battGroups >= 2 ? subSwitchCurrent.toFixed(2) : '-';
   document.getElementById('sw-volts-level').textContent = voltsLevel;
   document.getElementById('sw-groups-result').textContent = battGroups;
 
@@ -1899,12 +1913,14 @@ function calcSwitchBox() {
   document.getElementById('sw-main-calc').textContent = maxCurrent.toFixed(1) + 'A';
 
   // 分开关推荐（大一号）
-  document.getElementById('sw-sub-switch').textContent = subSwitchRec + 'A';
-  document.getElementById('sw-sub-switch-note').textContent = voltsLevel;
-  document.getElementById('sw-sub-calc').textContent = subSwitchCurrent.toFixed(1) + 'A × ' + battGroups + '组';
+  if (battGroups >= 2) {
+    document.getElementById('sw-sub-switch').textContent = subSwitchRec + 'A';
+    document.getElementById('sw-sub-switch-note').textContent = voltsLevel;
+    document.getElementById('sw-sub-calc').textContent = subSwitchCurrent.toFixed(1) + 'A × ' + battGroups + '组';
+  }
 
   // 生成详细说明
-  const notes = `
+  let notes = `
     <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-top:8px">
       <div style="font-weight:600;margin-bottom:10px;color:#1a3a5c">📝 配置说明</div>
       <table style="width:100%;font-size:13px;border-collapse:collapse">
@@ -1915,11 +1931,17 @@ function calcSwitchBox() {
         <tr style="border-bottom:1px solid #f0f0f0">
           <td style="padding:8px 0;color:#888">最大放电电流 I</td>
           <td style="padding:8px 0;text-align:right;font-weight:600">${maxCurrent.toFixed(2)} A</td>
-        </tr>
+        </tr>`;
+
+  if (battGroups >= 2) {
+    notes += `
         <tr style="border-bottom:1px solid #f0f0f0">
           <td style="padding:8px 0;color:#888">分组开关电流 (I/(N-1))</td>
           <td style="padding:8px 0;text-align:right;font-weight:600">${subSwitchCurrent.toFixed(2)} A (N=${battGroups})</td>
-        </tr>
+        </tr>`;
+  }
+
+  notes += `
         <tr style="border-bottom:1px solid #f0f0f0">
           <td style="padding:8px 0;color:#888">开关盒电压等级</td>
           <td style="padding:8px 0;text-align:right;font-weight:600">${voltsLevel}</td>
@@ -1928,7 +1950,10 @@ function calcSwitchBox() {
           <td style="padding:8px 0;color:#888">推荐总开关</td>
           <td style="padding:8px 0;text-align:right;font-weight:600;color:#856404">${mainSwitchRec}A / ${voltsLevel}</td>
         </tr>
-      </table>
+      </table>`;
+
+  if (battGroups >= 2) {
+    notes += `
       <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e0e0e0;font-size:12px;color:#888">
         <strong>⚠️ 选型提示：</strong>
         <ul style="margin:6px 0 0 16px;padding:0;line-height:1.8">
@@ -1939,8 +1964,20 @@ function calcSwitchBox() {
           <li>以上为估算推荐，实际选型请参考电池厂家放电曲线及开关厂家规格书</li>
         </ul>
       </div>
-    </div>
-  `;
+    </div>`;
+  } else {
+    notes += `
+      <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e0e0e0;font-size:12px;color:#888">
+        <strong>⚠️ 选型提示：</strong>
+        <ul style="margin:6px 0 0 16px;padding:0;line-height:1.8">
+          <li>电池总开关：<strong>${mainSwitchRec}A</strong> 直流断路器，电压等级 ${voltsLevel}（计算值${maxCurrent.toFixed(1)}A，选大一号）</li>
+          <li>开关额定电压必须 ≥ ${voltsLevelNum}V DC</li>
+          <li>断路器应具备直流灭弧能力，推荐使用专用直流断路器</li>
+          <li>以上为估算推荐，实际选型请参考电池厂家放电曲线及开关厂家规格书</li>
+        </ul>
+      </div>
+    </div>`;
+  }
 
   document.getElementById('switch-notes').innerHTML = notes;
   document.getElementById('switch-result').style.display = 'block';
