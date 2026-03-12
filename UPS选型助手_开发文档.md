@@ -697,7 +697,7 @@ python inspect_excel.py
 | 项目 | 说明 |
 |------|------|
 | 平台 | Netlify（免费计划） |
-| 线上地址 | https://ups-selector.netlify.app |
+| 线上地址 | https://xiaochuan1989.github.io/-UPS-Selector/ |
 | Netlify 账号 | tianshangrenjian1989@gmail.com |
 | Site ID | c662b019-245f-4a7f-af88-53c9b72502da |
 | 部署目录 | `deploy/` |
@@ -795,7 +795,7 @@ netlify deploy --dir . --prod --site c662b019-245f-4a7f-af88-53c9b72502da
 | v1.2.1 | 2026-03-10 | 新增 PDF 文档上传支持（集成 PDF.js 3.11.174）；文档上传现在支持 TXT/MD/DOCX/PDF 格式 |
 | v1.2.2 | 2026-03-10 | 部署至 Netlify（https://ups-selector.netlify.app）；新增前端密码保护遮罩（sessionStorage 保持登录状态） |
 | v1.2.3 | 2026-03-10 | 新增选型结果对比功能：推荐/备选产品支持复选框选择，2-4产品并排对比，黄色高亮标注差异参数 |
-| v1.2.4 | 2026-03-12 | 优化开关盒计算：增加电池组数参数(N≥1)、负载功率输入(选填)；修正分开关电流公式为I/(N-1)，N=1时不显示分开关；断路器选型采用大一号标准规格(不乘安全系数)；增加标准断路器额定电流规格表(63-2500A)；修复Netlify部署配置错误 |
+| v1.2.4 | 2026-03-12 | 优化开关盒计算：增加电池组数参数(N≥1)、负载功率输入(选填)；修正分开关电流公式为I/(N-1)，N=1时不显示分开关；断路器选型采用大一号标准规格(不乘安全系数)；增加标准断路器额定电流规格表(63-2500A)；修复Netlify部署配置错误；新增GitHub Pages部署支持 |
 
 ---
 

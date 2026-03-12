@@ -166,7 +166,7 @@ python test.py --env       # 环境检查
 ## 线上部署
 
 ### 网站地址
-**https://ups-selector.netlify.app**
+**https://xiaochuan1989.github.io/-UPS-Selector/**
 
 ### GitHub 仓库
 
@@ -174,12 +174,41 @@ python test.py --env       # 环境检查
 |------|------|
 | 仓库地址 | https://github.com/xiaochuan1989/-UPS-Selector |
 
-### Netlify 自动部署
+### GitHub Pages 部署
+
+| 项目 | 说明 |
+|------|------|
+| 部署方式 | GitHub Actions 自动部署 ⭐ |
+| Workflow 文件 | `.github/workflows/deploy.yml` |
+
+**首次设置步骤：**
+1. 进入仓库 **Settings** → **Pages**
+2. 在 **Build and deployment** 下，Source 选择 **GitHub Actions**
+3. 点击 **Save**
+
+**后续部署流程（每次功能更新）：**
+```bash
+# 1. 进入项目目录
+cd "D:\Claude 安装\UPS选型助手_开发包_v1.2"
+
+# 2. 提交修改并推送到 GitHub
+git add .
+git commit -m "描述更新内容"
+git push origin master
+
+# 3. 等待约1分钟，GitHub Actions 自动部署
+
+# 4. 访问 https://xiaochuan1989.github.io/-UPS-Selector/ 查看更新
+```
+
+### Netlify 部署（备选）
+
+当 GitHub Pages 不可用时可使用 Netlify：
 
 | 项目 | 说明 |
 |------|------|
 | Site ID | c662b019-245f-4a7f-af88-53c9b72502da |
-| 部署方式 | Git 自动部署 ⭐ |
+| 部署方式 | Git 自动部署 |
 
 ### 关联 GitHub 仓库（首次设置）
 

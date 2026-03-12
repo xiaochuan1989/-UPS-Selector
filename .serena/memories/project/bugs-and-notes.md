@@ -27,3 +27,5 @@
 4. **产品数据量**: PRODUCTS数组约179条，嵌入在HTML中，占用较大空间
 5. **Netlify配置**: publish必须是目录，使用重定向规则指定入口文件
 6. **代码修改后测试**: 每次修改代码后必须用浏览器测试，确保功能正常
+7. **部署选择**: Netlify 团队账户有月度使用限制（build minutes），建议优先使用 GitHub Pages（免费无限）
+8. **GitHub Pages**: 需要创建 `.github/workflows/deploy.yml` 文件，并在 Settings → Pages 中启用
