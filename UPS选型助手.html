@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UPS 智能选型助手 v1.3.0</title>
+<title>UPS 智能选型助手 v1.3.3</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; }
@@ -238,9 +238,10 @@ function checkAuth(){
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2 data-icon="🔋" style="margin:0">电池配置计算</h2>
       <div style="display:flex;gap:8px;flex-wrap:nowrap">
-        <button onclick="switchBatteryTab('lead')" id="batt-tab-lead" class="settings-tab settings-tab-active" style="color:#2d6a9f;border-bottom-color:#2d6a9f;background:#fff;min-width:100px">铅酸电池</button>
-        <button onclick="switchBatteryTab('lithium')" id="batt-tab-lithium" class="settings-tab" style="min-width:100px">锂电池</button>
-        <button onclick="switchBatteryTab('switch')" id="batt-tab-switch" class="settings-tab" style="min-width:100px">开关盒</button>
+        <button onclick="switchBatteryTab('lead')" id="batt-tab-lead" class="settings-tab settings-tab-active" style="color:#2d6a9f;border-bottom-color:#2d6a9f;background:#fff;min-width:80px">铅酸电池</button>
+        <button onclick="switchBatteryTab('lithium')" id="batt-tab-lithium" class="settings-tab" style="min-width:80px">锂电池</button>
+        <button onclick="switchBatteryTab('switch')" id="batt-tab-switch" class="settings-tab" style="min-width:80px">开关盒</button>
+        <button onclick="switchBatteryTab('monitor')" id="batt-tab-monitor" class="settings-tab" style="min-width:80px">监控</button>
       </div>
     </div>
 
@@ -540,6 +541,152 @@ function checkAuth(){
         </div>
 
         <div style="padding-top:12px;border-top:1px solid #d0e8ff;font-size:13px;line-height:1.8;color:#555" id="switch-notes"></div>
+      </div>
+    </div>
+
+    <!-- 电池监控配置选型 -->
+    <div id="batt-monitor-panel" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:16px">
+        <!-- 输入参数 -->
+        <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px">
+          <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">📥 输入参数</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div class="field">
+              <label>负载功率(kW)</label>
+              <input type="number" id="mon-load-kw" placeholder="如: 180" min="0">
+            </div>
+            <div class="field">
+              <label>UPS台数</label>
+              <input type="number" id="mon-ups-num" placeholder="如: 1" value="1" min="1">
+            </div>
+            <div class="field">
+              <label>每台UPS容量(kVA)</label>
+              <input type="number" id="mon-ups-cap" placeholder="如: 200" value="200" min="1">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
+            <div class="field">
+              <label>功率因数(cosφ)</label>
+              <input type="number" id="mon-pf" placeholder="0.8~1" step="0.01" value="0.9" min="0.8" max="1">
+            </div>
+            <div class="field">
+              <label>电池组数</label>
+              <input type="number" id="mon-batt-groups" placeholder="如: 4" value="4" min="1">
+            </div>
+            <div class="field">
+              <label>单体数/组</label>
+              <input type="number" id="mon-cell-per-group" placeholder="如: 36" value="36" min="1">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
+            <div class="field">
+              <label>电池类型</label>
+              <select id="mon-batt-type">
+                <option value="12v">12V铅酸电池</option>
+                <option value="2v">2V铅酸电池</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>逆变器效率(η)</label>
+              <input type="number" id="mon-eff" placeholder="高频0.95/工频0.94" step="0.01" value="0.95" min="0.9" max="1">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
+            <div class="field">
+              <label>放电截止电压(V)</label>
+              <select id="mon-end-v">
+                <option value="1.6">1.60V</option>
+                <option value="1.65">1.65V</option>
+                <option value="1.67">1.67V</option>
+                <option value="1.7">1.70V</option>
+                <option value="1.75" selected>1.75V</option>
+                <option value="1.8">1.80V</option>
+                <option value="1.85">1.85V</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>端子类型</label>
+              <select id="mon-terminal-type">
+                <option value="M6">M6</option>
+                <option value="M8" selected>M8</option>
+                <option value="M10">M10</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 输出参数 -->
+        <div style="background:#fff8e8;border:1.5px solid #ffe0b2;border-radius:10px;padding:16px">
+          <div style="font-weight:600;margin-bottom:12px;color:#e65100">📤 计算结果</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+            <div style="background:white;padding:12px;border-radius:8px;border:1px solid #ddd">
+              <div style="font-size:12px;color:#888;margin-bottom:4px">电池总组数</div>
+              <div style="font-size:20px;font-weight:600;color:#2d6a9f"><span id="mon-total-groups">-</span> 组</div>
+            </div>
+            <div style="background:white;padding:12px;border-radius:8px;border:1px solid #ddd">
+              <div style="font-size:12px;color:#888;margin-bottom:4px">分组放电电流</div>
+              <div style="font-size:20px;font-weight:600;color:#e65100"><span id="mon-group-current">-</span> A</div>
+            </div>
+          </div>
+          <div style="margin-top:12px">
+            <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:#555">选配项：</div>
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer">
+              <input type="checkbox" id="mon-opt-hmi" checked>
+              <span style="font-size:13px">本地数据显示屏(SBMS-HMI-6000)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="mon-opt-vm">
+              <span style="font-size:13px">组电压监控模块(SBMS-PBMS-VM)</span>
+            </label>
+          </div>
+          <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="mon-show-price" onchange="toggleMonitorPrice()">
+              <span style="font-size:13px">显示价格</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <button class="save-btn" onclick="calcMonitorConfig()">生成配置</button>
+        <button onclick="exportMonitorConfig()" style="background:#27ae60;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer">导出配置表</button>
+      </div>
+      <div id="monitor-result" style="display:none">
+        <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">📋 电池监控配置表</div>
+        <div style="overflow-x:auto">
+          <table id="monitor-config-table" style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="background:#2d6a9f;color:white">
+                <th style="padding:10px;text-align:center;border:1px solid #ddd;width:40px">序号</th>
+                <th style="padding:10px;text-align:left;border:1px solid #ddd">产品型号</th>
+                <th style="padding:10px;text-align:left;border:1px solid #ddd">产品名称</th>
+                <th style="padding:10px;text-align:left;border:1px solid #ddd">产品描述</th>
+                <th style="padding:10px;text-align:left;border:1px solid #ddd">备注</th>
+                <th style="padding:10px;text-align:center;border:1px solid #ddd;width:50px">单位</th>
+                <th style="padding:10px;text-align:center;border:1px solid #ddd;width:60px">数量</th>
+                <th class="mon-price-col" style="padding:10px;text-align:right;border:1px solid #ddd;display:none">单价(元)</th>
+                <th class="mon-price-col" style="padding:10px;text-align:right;border:1px solid #ddd;display:none">小计(元)</th>
+              </tr>
+            </thead>
+            <tbody id="monitor-tbody"></tbody>
+            <tfoot>
+              <tr class="mon-price-row" style="background:#f5f7fa;font-weight:600;display:none">
+                <td colspan="6" style="padding:12px;text-align:right;border:1px solid #ddd">合计金额：</td>
+                <td class="mon-price-col" style="padding:12px;text-align:right;border:1px solid #ddd;color:#e74c3c;font-size:16px;display:none" id="monitor-total">¥0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div style="margin-top:16px;padding:12px;background:#fff3cd;border-radius:8px;font-size:12px;color:#856404">
+          <strong>💡 配置说明：</strong>
+          <ul style="margin:8px 0 0 20px;padding:0">
+            <li>主机(SBMS-PBMS6000)是必选配置，支持最多6个从控模块</li>
+            <li>电流传感器根据最大电流选择合适量程(100A/200A/400A/600A/800A/1000A)</li>
+            <li>12V铅酸电池：每只电池配1个单体测量模块(SBMS-PBAT51-12)和1根采集线</li>
+            <li>2V铅酸电池：每只电池配1个单体测量模块(SBMS-PBAT51-02)和1根采集线</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -1667,7 +1814,7 @@ function toggleBatteryCalc() {
 // 切换电池计算Tab
 function switchBatteryTab(tab) {
   // 更新按钮状态
-  ['lead', 'lithium', 'switch'].forEach(t => {
+  ['lead', 'lithium', 'switch', 'monitor'].forEach(t => {
     const btn = document.getElementById('batt-tab-' + t);
     if (t === tab) {
       btn.classList.add('settings-tab-active');
@@ -1686,6 +1833,397 @@ function switchBatteryTab(tab) {
   document.getElementById('batt-lead-panel').style.display = tab === 'lead' ? 'block' : 'none';
   document.getElementById('batt-lithium-panel').style.display = tab === 'lithium' ? 'block' : 'none';
   document.getElementById('batt-switch-panel').style.display = tab === 'switch' ? 'block' : 'none';
+  document.getElementById('batt-monitor-panel').style.display = tab === 'monitor' ? 'block' : 'none';
+}
+
+// 电池监控配置产品数据
+const MONITOR_PRODUCTS = [
+  { code: '88091156', name: 'SBMS-PBMS6000', desc: '电池监控主机-标准1U嵌入式安装,含2路RS485+1路网口', unit: '套', unitPrice: 898.70, required: true },
+  { code: '88091157', name: 'SBMS-HMI-6000', desc: '电池监控液晶显示模块-7寸触摸屏,嵌入式安装', unit: '个', unitPrice: 710.60, required: true },
+  { code: '88091138', name: 'SBMS-PBMS-CM', desc: '从控模块-电池智能接口模块', unit: '个', unitPrice: 94.05, required: false },
+  { code: '88091139', name: 'SBMS-CS100EK1T5', desc: '电流传感器-测量范围0~100A,线径20mm', unit: '个', unitPrice: 88.83, required: false },
+  { code: '88091140', name: 'SBMS-CS200EK2T5', desc: '电流传感器-测量范围0~200A,线径40mm', unit: '个', unitPrice: 94.05, required: false },
+  { code: '88091141', name: 'SBMS-CS400EK2T5', desc: '电流传感器-测量范围0~400A,线径40mm', unit: '个', unitPrice: 94.05, required: false },
+  { code: '88091142', name: 'SBMS-CS600EK2T5', desc: '电流传感器-测量范围0~600A,线径40mm', unit: '个', unitPrice: 114.95, required: false },
+  { code: '88091143', name: 'SBMS-CS800EK2T5', desc: '电流传感器-测量范围0~800A,线径40mm', unit: '个', unitPrice: 114.95, required: false },
+  { code: '88091144', name: 'SBMS-CS1000EK2T5', desc: '电流传感器-测量范围0~1000A,线径40mm', unit: '个', unitPrice: 114.95, required: false },
+  { code: '88091145', name: 'SBMS-PBAT51-12', desc: '12V从控模块-12V电池SOC采集,电压范围7.5V-15.6V', unit: '个', unitPrice: 32.40, required: false, perPack: 24 },
+  { code: '88091146', name: 'SBMS-PBAT51-02', desc: '2V从控模块-2V电池SOC采集,电压范围1.6V-2.6V', unit: '个', unitPrice: 32.40, required: false, perPack: 24 },
+  { code: '88091147', name: 'SBMS-PBAT-C1-0-M6-30', desc: '采集线缆-铜鼻子O型,直径6mm,长度30cm', unit: '根', unitPrice: 6.27, required: false },
+  { code: '88091148', name: 'SBMS-PBAT-C1-0-M8-30', desc: '采集线缆-铜鼻子O型,直径8mm,长度30cm', unit: '根', unitPrice: 6.27, required: false },
+  { code: '88091149', name: 'SBMS-PBAT-C1-0-M10-30', desc: '采集线缆-铜鼻子O型,直径10mm,长度30cm', unit: '根', unitPrice: 8.36, required: false },
+  { code: '88091150', name: 'SBMS-PBMS-VM', desc: '电压采集模块(可选1通道可选1个)', unit: '个', unitPrice: 102.41, required: false }
+];
+
+// 电池监控配置计算
+function calcMonitorConfig() {
+  const loadPower = parseFloat(document.getElementById('mon-load-kw').value) || 0;
+  const upsNum = parseInt(document.getElementById('mon-ups-num').value) || 1;
+  const upsCap = parseFloat(document.getElementById('mon-ups-cap').value) || 0;
+  const pf = parseFloat(document.getElementById('mon-pf').value) || 0.9;
+  const battGroups = parseInt(document.getElementById('mon-batt-groups').value) || 0;
+  const cellPerGroup = parseInt(document.getElementById('mon-cell-per-group').value) || 0;
+  const battType = document.getElementById('mon-batt-type').value;
+  const eff = parseFloat(document.getElementById('mon-eff').value) || 0.95;
+  const endV = parseFloat(document.getElementById('mon-end-v').value) || 1.75;
+  const terminalType = document.getElementById('mon-terminal-type').value;
+
+  if (!upsCap || !battGroups || !cellPerGroup) {
+    alert('请填写UPS容量、电池组数和单体数');
+    return;
+  }
+
+  // 计算负载功率：优先使用负载功率，否则用UPS容量×功率因数×台数
+  const totalUpsCap = upsCap * upsNum;
+  let powerKw = loadPower > 0 ? loadPower : totalUpsCap * pf;
+
+  // 计算电池总组数 = 电池组数 × UPS台数
+  const totalBattGroups = battGroups * upsNum;
+
+  // 计算最大电流(A) = 负载功率(kW) × 1000 / (单体数/组 × 放电截止电压 × 6 × 逆变器效率)
+  const maxCurrent = (powerKw * 1000) / (cellPerGroup * endV * 6 * eff);
+
+  // 计算分组放电电流(A)
+  // 电池组数为1时等于最大电流，大于1时等于最大电流/(电池组数-1)
+  const groupCurrent = totalBattGroups === 1 ? maxCurrent : maxCurrent / (totalBattGroups - 1);
+
+  // 显示输出参数
+  document.getElementById('mon-total-groups').textContent = totalBattGroups;
+  document.getElementById('mon-group-current').textContent = groupCurrent.toFixed(1);
+
+  // 获取选配项
+  const optHmi = document.getElementById('mon-opt-hmi').checked;
+  const optVm = document.getElementById('mon-opt-vm').checked;
+
+  // 总电池数量
+  const totalCells = totalBattGroups * cellPerGroup;
+
+  // 构建配置清单
+  const config = [];
+
+  // 1. 主机（必选）
+  const host = MONITOR_PRODUCTS.find(p => p.code === '88091156');
+  config.push({
+    ...host,
+    qty: 1,
+    total: host.unitPrice,
+    note: '必选'
+  });
+
+  // 2. HMI显示（选配，默认勾选）
+  if (optHmi) {
+    const hmi = MONITOR_PRODUCTS.find(p => p.code === '88091157');
+    config.push({
+      ...hmi,
+      qty: 1,
+      total: hmi.unitPrice,
+      note: '选配'
+    });
+  }
+
+  // 3. 组电压监控模块（选配）
+  if (optVm) {
+    const vm = MONITOR_PRODUCTS.find(p => p.code === '88091150');
+    config.push({
+      ...vm,
+      qty: 1,
+      total: vm.unitPrice,
+      note: '选配'
+    });
+  }
+
+  // 4. 从控模块数量计算
+  let slaveQty = 0;
+  let cableQty = 0;
+  let slaveCode = '';
+  let cableCode = '';
+
+  // 端子类型对应的线缆型号
+  const terminalMap = {
+    'M6': '88091147',
+    'M8': '88091148',
+    'M10': '88091149'
+  };
+  cableCode = terminalMap[terminalType] || '88091148';
+
+  if (battType === '12v') {
+    // 12V铅酸：单体测量模块数量 = 每组节数 × 电池总组数（每只电池1个）
+    slaveQty = totalCells;
+    slaveCode = '88091145';
+    cableQty = totalCells; // 每只电池1根线
+  } else if (battType === '2v') {
+    // 2V铅酸：单体测量模块数量 = 每组节数 × 电池总组数
+    slaveQty = totalCells;
+    cableQty = totalCells;
+    slaveCode = '88091146';
+  }
+
+  // 添加单体测量模块
+  if (slaveQty > 0) {
+    const slave = MONITOR_PRODUCTS.find(p => p.code === slaveCode);
+    if (slave) {
+      config.push({
+        ...slave,
+        qty: slaveQty,
+        total: slaveQty * slave.unitPrice,
+        note: '每只电池配1个'
+      });
+    }
+  }
+
+  // 添加电流监控模块（88091138）- 所有类型电池都需要1个
+  const currentModule = MONITOR_PRODUCTS.find(p => p.code === '88091138');
+  if (currentModule) {
+    config.push({
+      ...currentModule,
+      qty: 1,
+      total: currentModule.unitPrice,
+      note: '蓄电池组电流监控'
+    });
+  }
+
+  // 添加电流传感器（根据分组放电电流选择）
+  let currentSensorCode = '88091140'; // 默认200A
+  let currentSensorRange = '0~200A';
+  const current = groupCurrent;
+  if (current <= 100) {
+    currentSensorCode = '88091139';
+    currentSensorRange = '0~100A';
+  } else if (current <= 200) {
+    currentSensorCode = '88091140';
+    currentSensorRange = '0~200A';
+  } else if (current <= 400) {
+    currentSensorCode = '88091141';
+    currentSensorRange = '0~400A';
+  } else if (current <= 600) {
+    currentSensorCode = '88091142';
+    currentSensorRange = '0~600A';
+  } else if (current <= 800) {
+    currentSensorCode = '88091143';
+    currentSensorRange = '0~800A';
+  } else {
+    currentSensorCode = '88091144';
+    currentSensorRange = '0~1000A';
+  }
+
+  const currentSensor = MONITOR_PRODUCTS.find(p => p.code === currentSensorCode);
+  if (currentSensor) {
+    config.push({
+      ...currentSensor,
+      qty: 1,
+      total: currentSensor.unitPrice,
+      note: `量程${currentSensorRange}`
+    });
+  }
+
+  // 添加采集线缆
+  if (cableQty > 0) {
+    const cable = MONITOR_PRODUCTS.find(p => p.code === cableCode);
+    if (cable) {
+      config.push({
+        ...cable,
+        qty: cableQty,
+        total: cableQty * cable.unitPrice,
+        note: '每只电池1根'
+      });
+    }
+  }
+
+  // 渲染配置表格
+  renderMonitorConfigTable(config);
+
+  // 保存当前配置供导出使用
+  window.currentMonitorConfig = {
+    loadPower,
+    upsNum,
+    upsCap,
+    pf,
+    battGroups,
+    cellPerGroup,
+    battType,
+    eff,
+    endV,
+    terminalType,
+    totalBattGroups,
+    maxCurrent,
+    groupCurrent,
+    optHmi,
+    optVm,
+    config
+  };
+}
+
+// 切换价格显示（密码验证）
+function toggleMonitorPrice() {
+  const checkbox = document.getElementById('mon-show-price');
+  if (checkbox.checked) {
+    const password = prompt('请输入密码查看价格:');
+    if (password !== '314159') {
+      checkbox.checked = false;
+      alert('密码错误！');
+      return;
+    }
+    // 显示价格列
+    document.querySelectorAll('.mon-price-col').forEach(el => el.style.display = '');
+    document.querySelectorAll('.mon-price-row').forEach(el => el.style.display = '');
+  } else {
+    // 隐藏价格列
+    document.querySelectorAll('.mon-price-col').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.mon-price-row').forEach(el => el.style.display = 'none');
+  }
+}
+
+// 渲染监控配置表格
+function renderMonitorConfigTable(config) {
+  const tbody = document.getElementById('monitor-tbody');
+  let html = '';
+  let total = 0;
+
+  config.forEach((item, index) => {
+    total += item.total;
+    html += `
+      <tr style="${item.required ? 'background:#fffde7' : ''}">
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${index + 1}</td>
+        <td style="padding:8px;border:1px solid #ddd">${item.code}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-weight:500">${item.name}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${item.desc || '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#888">${item.note || '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${item.unit}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:500">${item.qty}</td>
+        <td class="mon-price-col" style="padding:8px;border:1px solid #ddd;text-align:right;display:none">${item.unitPrice.toFixed(2)}</td>
+        <td class="mon-price-col" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:500;display:none">${item.total.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+  document.getElementById('monitor-total').textContent = '¥' + total.toFixed(2);
+  document.getElementById('monitor-result').style.display = 'block';
+
+  // 如果复选框已选中，保持价格显示
+  const checkbox = document.getElementById('mon-show-price');
+  if (checkbox.checked) {
+    document.querySelectorAll('.mon-price-col').forEach(el => el.style.display = '');
+    document.querySelectorAll('.mon-price-row').forEach(el => el.style.display = '');
+  }
+}
+
+// 导出监控配置表
+function exportMonitorConfig() {
+  if (!window.currentMonitorConfig) {
+    alert('请先生成配置');
+    return;
+  }
+
+  const { battGroups, cellPerGroup, battType, terminalType, maxCurrent, config } = window.currentMonitorConfig;
+  const total = config.reduce((sum, item) => sum + item.total, 0);
+
+  const battTypeMap = { '12v': '12V铅酸电池', '2v': '2V铅酸电池' };
+
+  // 生成HTML
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>电池监控配置表</title>
+  <style>
+    body { font-family: "Microsoft YaHei", Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; }
+    h1 { text-align: center; color: #2d6a9f; border-bottom: 2px solid #2d6a9f; padding-bottom: 10px; }
+    .info { background: #f5f7fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .info-row { display: flex; margin-bottom: 8px; }
+    .info-label { font-weight: bold; width: 120px; color: #555; }
+    .info-value { color: #333; }
+    .project-info { margin-bottom: 15px; padding: 10px; background: #e8f4fc; border-radius: 6px; }
+    .project-info span { margin-right: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background: #2d6a9f; color: white; padding: 12px; text-align: left; border: 1px solid #ddd; }
+    td { padding: 10px; border: 1px solid #ddd; }
+    .total-row { background: #f5f7fa; font-weight: bold; }
+    .total-cell { text-align: right; font-size: 18px; color: #e74c3c; }
+    .footer { text-align: right; color: #888; font-size: 12px; margin-top: 20px; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <h1>🔋 电池监控配置表</h1>
+
+  <div class="info">
+    <div class="info-row">
+      <span class="info-label">电池组数：</span>
+      <span class="info-value">${battGroups} 组</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">每组单体数：</span>
+      <span class="info-value">${cellPerGroup} 只</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">电池类型：</span>
+      <span class="info-value">${battTypeMap[battType]}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">端子类型：</span>
+      <span class="info-value">${terminalType}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">最大电流：</span>
+      <span class="info-value">${maxCurrent} A</span>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40px">序号</th>
+        <th>产品型号</th>
+        <th>产品名称</th>
+        <th>产品描述</th>
+        <th style="width:50px">单位</th>
+        <th style="width:50px;text-align:center">数量</th>
+        <th style="text-align:right">单价(元)</th>
+        <th style="text-align:right">小计(元)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${config.map((item, i) => `
+      <tr>
+        <td style="text-align:center">${i + 1}</td>
+        <td>${item.code}</td>
+        <td><strong>${item.name}</strong></td>
+        <td style="font-size:12px;color:#666">${item.desc || '-'}</td>
+        <td style="text-align:center">${item.unit}</td>
+        <td style="text-align:center"><strong>${item.qty}</strong></td>
+        <td style="text-align:right">${item.unitPrice.toFixed(2)}</td>
+        <td style="text-align:right">${item.total.toFixed(2)}</td>
+      </tr>
+      `).join('')}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="6" class="total-cell">合计金额：</td>
+        <td class="total-cell">¥${total.toFixed(2)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="footer">
+    <p>生成日期：${new Date().toLocaleString('zh-CN')}</p>
+    <p>备注：以上配置仅供参考，实际采购请咨询供应商</p>
+  </div>
+</body>
+</html>
+  `;
+
+  // 下载文件
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `电池监控配置表_${new Date().toISOString().slice(0,10)}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // 铅酸电池配置计算
