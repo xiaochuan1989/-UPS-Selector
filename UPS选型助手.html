@@ -2116,113 +2116,54 @@ function exportMonitorConfig() {
 
   const { battGroups, cellPerGroup, battType, terminalType, maxCurrent, config } = window.currentMonitorConfig;
   const total = config.reduce((sum, item) => sum + item.total, 0);
-
   const battTypeMap = { '12v': '12V铅酸电池', '2v': '2V铅酸电池' };
 
-  // 生成HTML
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>电池监控配置表</title>
-  <style>
-    body { font-family: "Microsoft YaHei", Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; }
-    h1 { text-align: center; color: #2d6a9f; border-bottom: 2px solid #2d6a9f; padding-bottom: 10px; }
-    .info { background: #f5f7fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .info-row { display: flex; margin-bottom: 8px; }
-    .info-label { font-weight: bold; width: 120px; color: #555; }
-    .info-value { color: #333; }
-    .project-info { margin-bottom: 15px; padding: 10px; background: #e8f4fc; border-radius: 6px; }
-    .project-info span { margin-right: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    th { background: #2d6a9f; color: white; padding: 12px; text-align: left; border: 1px solid #ddd; }
-    td { padding: 10px; border: 1px solid #ddd; }
-    .total-row { background: #f5f7fa; font-weight: bold; }
-    .total-cell { text-align: right; font-size: 18px; color: #e74c3c; }
-    .footer { text-align: right; color: #888; font-size: 12px; margin-top: 20px; }
-    @media print { body { padding: 20px; } }
-  </style>
-</head>
-<body>
-  <h1>🔋 电池监控配置表</h1>
+  // 构建Excel数据
+  const wsData = [
+    ['电池监控配置表'],
+    [],
+    ['配置参数'],
+    ['电池组数', battGroups + ' 组'],
+    ['每组单体数', cellPerGroup + ' 只'],
+    ['电池类型', battTypeMap[battType]],
+    ['端子类型', terminalType],
+    ['最大电流', maxCurrent + ' A'],
+    [],
+    ['序号', '产品型号', '产品名称', '产品描述', '单位', '数量', '单价(元)', '小计(元)']
+  ];
 
-  <div class="info">
-    <div class="info-row">
-      <span class="info-label">电池组数：</span>
-      <span class="info-value">${battGroups} 组</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">每组单体数：</span>
-      <span class="info-value">${cellPerGroup} 只</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">电池类型：</span>
-      <span class="info-value">${battTypeMap[battType]}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">端子类型：</span>
-      <span class="info-value">${terminalType}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">最大电流：</span>
-      <span class="info-value">${maxCurrent} A</span>
-    </div>
-  </div>
+  config.forEach((item, i) => {
+    wsData.push([i + 1, item.code, item.name, item.desc || '-', item.unit, item.qty, item.unitPrice, item.total]);
+  });
 
-  <table>
-    <thead>
-      <tr>
-        <th style="width:40px">序号</th>
-        <th>产品型号</th>
-        <th>产品名称</th>
-        <th>产品描述</th>
-        <th style="width:50px">单位</th>
-        <th style="width:50px;text-align:center">数量</th>
-        <th style="text-align:right">单价(元)</th>
-        <th style="text-align:right">小计(元)</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${config.map((item, i) => `
-      <tr>
-        <td style="text-align:center">${i + 1}</td>
-        <td>${item.code}</td>
-        <td><strong>${item.name}</strong></td>
-        <td style="font-size:12px;color:#666">${item.desc || '-'}</td>
-        <td style="text-align:center">${item.unit}</td>
-        <td style="text-align:center"><strong>${item.qty}</strong></td>
-        <td style="text-align:right">${item.unitPrice.toFixed(2)}</td>
-        <td style="text-align:right">${item.total.toFixed(2)}</td>
-      </tr>
-      `).join('')}
-    </tbody>
-    <tfoot>
-      <tr class="total-row">
-        <td colspan="6" class="total-cell">合计金额：</td>
-        <td class="total-cell">¥${total.toFixed(2)}</td>
-      </tr>
-    </tfoot>
-  </table>
+  wsData.push([]);
+  wsData.push(['', '', '', '', '', '', '合计金额：', total]);
+  wsData.push([]);
+  wsData.push(['生成日期：' + new Date().toLocaleString('zh-CN')]);
+  wsData.push(['备注：以上配置仅供参考，实际采购请咨询供应商']);
 
-  <div class="footer">
-    <p>生成日期：${new Date().toLocaleString('zh-CN')}</p>
-    <p>备注：以上配置仅供参考，实际采购请咨询供应商</p>
-  </div>
-</body>
-</html>
-  `;
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  // 下载文件
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `电池监控配置表_${new Date().toISOString().slice(0,10)}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // 设置列宽
+  ws['!cols'] = [
+    { wch: 6 },   // 序号
+    { wch: 16 },  // 产品型号
+    { wch: 22 },  // 产品名称
+    { wch: 40 },  // 产品描述
+    { wch: 6 },   // 单位
+    { wch: 8 },   // 数量
+    { wch: 12 },  // 单价
+    { wch: 12 }   // 小计
+  ];
+
+  // 合并标题单元格
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '电池监控配置');
+  XLSX.writeFile(wb, `电池监控配置表_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 // 铅酸电池配置计算
