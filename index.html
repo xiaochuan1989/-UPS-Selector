@@ -1035,6 +1035,13 @@ async function testApi() {
 let lastResult = null, lastRequirement = "";
 let chatHistory = [];
 
+function buildProductSummary() {
+  return PRODUCTS.map(p => {
+    const kva = (p["描述"] || "").match(/(\d+(?:\.\d+)?)kVA/i)?.[1] || "?";
+    return `${p["型号"]}|${p["系列"]}|${kva}kVA|${p["安装"]||"?"}|并机:${p["并机数量"]||"无"}|PF:${p["功率因数"]||"?"}|输入:${p["输入电压范围(V)"]||"?"}|${p["描述"]||""}`;
+  }).join("\n");
+}
+
 async function analyze() {
   const req = document.getElementById("requirement").value.trim();
   if (!req) { alert("请先输入客户需求"); return; }
@@ -1045,12 +1052,7 @@ async function analyze() {
   document.getElementById("btn-text").textContent = "分析中...";
 
   try {
-    const productSummary = PRODUCTS.map(p => {
-      const kva = (p["描述"] || "").match(/(\d+(?:\.\d+)?)kVA/i)?.[1] || "?";
-      return `${p["型号"]}|${p["系列"]}|${kva}kVA|${p["安装"]||"?"}|并机:${p["并机数量"]||"无"}|PF:${p["功率因数"]||"?"}|输入:${p["输入电压范围(V)"]||"?"}|${p["描述"]||""}`;
-    }).join("\n");
-
-    // 生成所有合法型号列表（用于Prompt约束和前端验证）
+    const productSummary = buildProductSummary();
     const validModels = PRODUCTS.map(p => p["型号"]);
 
     const systemPrompt = getCustomPrompt()
@@ -1176,10 +1178,7 @@ async function sendFollowup() {
   input.value = "";
 
   try {
-    const productSummary = PRODUCTS.map(p => {
-      const kva = (p["描述"] || "").match(/(\d+(?:\.\d+)?)kVA/i)?.[1] || "?";
-      return p["型号"] + "|" + p["系列"] + "|" + kva + "kVA|" + (p["安装"]||"?") + "|并机:" + (p["并机数量"]||"无") + "|PF:" + (p["功率因数"]||"?") + "|输入:" + (p["输入电压范围(V)"]||"?") + "|" + (p["描述"]||"");
-    }).join("\n");
+    const productSummary = buildProductSummary();
 
     // 提取当前推荐产品的完整参数（含认证、通讯、效率等），供追问时使用
     const recModels = lastResult ? [
@@ -27631,14 +27630,226 @@ var BATTERY_POWER_DATA = [
   }
 ];
 
-function switchLeadMethodTab(method){['method1','method2'].forEach(function(m){var btn=document.getElementById('lead-tab-'+m);var panel=document.getElementById('lead-'+m+'-panel');if(btn&&panel){if(m===method){btn.classList.add('lead-sub-tab-active');panel.style.display='block';}else{btn.classList.remove('lead-sub-tab-active');panel.style.display='none';}}})}
-function showBatteryCategory(category){['normal','highpower','2v'].forEach(function(cat){var btn=document.getElementById('cat-'+cat+'-btn');var panel=document.getElementById('lead2-'+cat+'-recommend');if(btn&&panel){if(cat===category){btn.classList.add('cat-tab-active');panel.style.display='block';}else{btn.classList.remove('cat-tab-active');panel.style.display='none';}}})}
-function calcLeadBatteryMethod2(){var loadKw=parseFloat(document.getElementById('lead2-load-kw').value);var upsCap=parseFloat(document.getElementById('lead2-ups-cap').value)||0;var pf=parseFloat(document.getElementById('lead2-pf').value)||1;var battNum=parseFloat(document.getElementById('lead2-batt-num').value)||36;var battType=document.getElementById('lead2-batt-type').value;var endV=parseFloat(document.getElementById('lead2-end-v').value)||1.75;var eff=parseFloat(document.getElementById('lead2-eff').value)||0.95;var dischargeTime=parseInt(document.getElementById('lead2-discharge-time').value)||15;var groups=parseFloat(document.getElementById('lead2-groups').value)||2;if(!upsCap||!battNum||!groups){alert('请填写UPS容量、电池节数和电池组数');return;}var loadPower=(loadKw===0||isNaN(loadKw))?(upsCap*pf*1000):(loadKw*1000);var cellNum= battType==='2v'?1:6;var reqPower=loadPower/(battNum*cellNum*eff*groups);document.getElementById('lead2-load-w').textContent=(loadPower/1000).toLocaleString();document.getElementById('lead2-req-power').textContent=reqPower.toFixed(2);document.getElementById('lead2-groups-display').textContent=groups;var is2v=battType==='2v';document.getElementById('cat-normal-btn').style.display=is2v?'none':'inline-block';document.getElementById('cat-highpower-btn').style.display=is2v?'none':'inline-block';document.getElementById('cat-2v-btn').style.display=is2v?'inline-block':'none';var defaultCategory=is2v?'2v':'normal';showBatteryCategory(defaultCategory);var recommendations=getBatteryRecommendationsByPower(reqPower,endV,dischargeTime);renderBatteryRecommendations('normal',recommendations.normal,reqPower);renderBatteryRecommendations('highpower',recommendations.highpower,reqPower);renderBatteryRecommendations('2v',recommendations['2v'],reqPower);document.getElementById('lead2-result').style.display='block';}
-function getBatteryRecommendationsByPower(cellPower,endV,dischargeTime){var result={normal:{suitable:[],all:[]},highpower:{suitable:[],all:[]},'2v':{suitable:[],all:[]}};BATTERY_POWER_DATA.forEach(function(battery){var category=battery.category;var voltageData=battery.voltages.find(function(v){return Math.abs(v.endVoltage-endV)<0.01});if(!voltageData)return;var powerInfo=voltageData.powers.find(function(p){return p.time===dischargeTime});if(!powerInfo)return;var batteryPower=powerInfo.power;var isSuitable=batteryPower>=cellPower;var batteryItem={model:battery.model,capacity:battery.capacity,power:batteryPower,isSuitable:isSuitable,margin:batteryPower-cellPower,marginPercent:cellPower>0?((batteryPower-cellPower)/cellPower*100).toFixed(1):'0'};if(isSuitable){result[category].suitable.push(batteryItem);}result[category].all.push(batteryItem);});Object.keys(result).forEach(function(cat){result[cat].suitable.sort(function(a,b){return a.margin-b.margin});});return result;}
-function renderBatteryRecommendations(category,data,cellPower){var container=document.getElementById('lead2-'+category+'-recommend');if(!container)return;var html='';if(data.suitable.length>0){var total=data.suitable.length;var displayCount=Math.min(total,6);var remaining=total-displayCount;html+='<div style="margin-bottom:12px;padding:8px 12px;background:#e8f5e9;border-radius:6px;font-size:12px;color:#2e7d32">';html+='<strong>找到 '+total+' 个适合的型号</strong>（功率 >= '+cellPower.toFixed(2)+'W）</div>';html+='<div class="battery-recommend-card">';data.suitable.slice(0,displayCount).forEach(function(b){html+='<div class="battery-item"><div class="model">'+b.model+'</div><div class="spec">'+b.capacity+'</div><div class="power suitable">恒功率: '+b.power+'W (余量 +'+b.marginPercent+'%)</div></div>';});html+='</div>';if(remaining>0){html+='<details style="margin-top:12px"><summary style="cursor:pointer;font-size:13px;color:#2d6a9f;font-weight:500;padding:8px 12px;background:#f5f7fa;border-radius:6px;text-align:center">▼ 点击展开查看剩余 '+remaining+' 个型号 ▲</summary>';html+='<div class="battery-recommend-card" style="margin-top:8px">';data.suitable.slice(displayCount).forEach(function(b){html+='<div class="battery-item"><div class="model">'+b.model+'</div><div class="spec">'+b.capacity+'</div><div class="power suitable">恒功率: '+b.power+'W (余量 +'+b.marginPercent+'%)</div></div>';});html+='</div></details>';}}else{html+='<div style="margin-bottom:12px;padding:8px 12px;background:#fff3cd;border-radius:6px;font-size:12px;color:#856404">';html+='<strong>未找到适合的型号</strong>，请调整参数</div>';}if(data.all.length>0&&data.suitable.length<data.all.length){var unsuitCount=data.all.length-data.suitable.length;html+='<details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;color:#888">查看 '+unsuitCount+' 个功率不足的型号</summary>';html+='<div class="battery-recommend-card" style="margin-top:8px">';data.all.filter(function(b){return!b.isSuitable}).forEach(function(b){html+='<div class="battery-item unsuitable"><div class="model">'+b.model+'</div><div class="spec">'+b.capacity+'</div><div class="power insufficient">恒功率: '+b.power+'W</div></div>';});html+='</div></details>';}container.innerHTML=html;}
+function switchLeadMethodTab(method) {
+  ['method1', 'method2'].forEach(function(m) {
+    var btn = document.getElementById('lead-tab-' + m);
+    var panel = document.getElementById('lead-' + m + '-panel');
+    if (btn && panel) {
+      if (m === method) {
+        btn.classList.add('lead-sub-tab-active');
+        panel.style.display = 'block';
+      } else {
+        btn.classList.remove('lead-sub-tab-active');
+        panel.style.display = 'none';
+      }
+    }
+  });
+}
+
+function showBatteryCategory(category) {
+  ['normal', 'highpower', '2v'].forEach(function(cat) {
+    var btn = document.getElementById('cat-' + cat + '-btn');
+    var panel = document.getElementById('lead2-' + cat + '-recommend');
+    if (btn && panel) {
+      if (cat === category) {
+        btn.classList.add('cat-tab-active');
+        panel.style.display = 'block';
+      } else {
+        btn.classList.remove('cat-tab-active');
+        panel.style.display = 'none';
+      }
+    }
+  });
+}
+function calcLeadBatteryMethod2() {
+  var loadKw = parseFloat(document.getElementById('lead2-load-kw').value);
+  var upsCap = parseFloat(document.getElementById('lead2-ups-cap').value) || 0;
+  var pf = parseFloat(document.getElementById('lead2-pf').value) || 1;
+  var battNum = parseFloat(document.getElementById('lead2-batt-num').value) || 36;
+  var battType = document.getElementById('lead2-batt-type').value;
+  var endV = parseFloat(document.getElementById('lead2-end-v').value) || 1.75;
+  var eff = parseFloat(document.getElementById('lead2-eff').value) || 0.95;
+  var dischargeTime = parseInt(document.getElementById('lead2-discharge-time').value) || 15;
+  var groups = parseFloat(document.getElementById('lead2-groups').value) || 2;
+
+  if (!upsCap || !battNum || !groups) {
+    alert('请填写UPS容量、电池节数和电池组数');
+    return;
+  }
+
+  var loadPower = (loadKw === 0 || isNaN(loadKw)) ? (upsCap * pf * 1000) : (loadKw * 1000);
+  var cellNum = battType === '2v' ? 1 : 6;
+  var reqPower = loadPower / (battNum * cellNum * eff * groups);
+
+  document.getElementById('lead2-load-w').textContent = (loadPower / 1000).toLocaleString();
+  document.getElementById('lead2-req-power').textContent = reqPower.toFixed(2);
+  document.getElementById('lead2-groups-display').textContent = groups;
+
+  var is2v = battType === '2v';
+  document.getElementById('cat-normal-btn').style.display = is2v ? 'none' : 'inline-block';
+  document.getElementById('cat-highpower-btn').style.display = is2v ? 'none' : 'inline-block';
+  document.getElementById('cat-2v-btn').style.display = is2v ? 'inline-block' : 'none';
+
+  var defaultCategory = is2v ? '2v' : 'normal';
+  showBatteryCategory(defaultCategory);
+
+  var recommendations = getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
+  renderBatteryRecommendations('normal', recommendations.normal, reqPower);
+  renderBatteryRecommendations('highpower', recommendations.highpower, reqPower);
+  renderBatteryRecommendations('2v', recommendations['2v'], reqPower);
+
+  document.getElementById('lead2-result').style.display = 'block';
+}
+function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
+  var result = {
+    normal: { suitable: [], all: [] },
+    highpower: { suitable: [], all: [] },
+    '2v': { suitable: [], all: [] }
+  };
+
+  BATTERY_POWER_DATA.forEach(function(battery) {
+    var category = battery.category;
+    var voltageData = battery.voltages.find(function(v) {
+      return Math.abs(v.endVoltage - endV) < 0.01;
+    });
+    if (!voltageData) return;
+
+    var powerInfo = voltageData.powers.find(function(p) {
+      return p.time === dischargeTime;
+    });
+    if (!powerInfo) return;
+
+    var batteryPower = powerInfo.power;
+    var isSuitable = batteryPower >= cellPower;
+    var batteryItem = {
+      model: battery.model,
+      capacity: battery.capacity,
+      power: batteryPower,
+      isSuitable: isSuitable,
+      margin: batteryPower - cellPower,
+      marginPercent: cellPower > 0 ? ((batteryPower - cellPower) / cellPower * 100).toFixed(1) : '0'
+    };
+
+    if (isSuitable) {
+      result[category].suitable.push(batteryItem);
+    }
+    result[category].all.push(batteryItem);
+  });
+
+  Object.keys(result).forEach(function(cat) {
+    result[cat].suitable.sort(function(a, b) { return a.margin - b.margin; });
+  });
+
+  return result;
+}
+function renderBatteryRecommendations(category, data, cellPower) {
+  var container = document.getElementById('lead2-' + category + '-recommend');
+  if (!container) return;
+
+  var html = '';
+  if (data.suitable.length > 0) {
+    var total = data.suitable.length;
+    var displayCount = Math.min(total, 6);
+    var remaining = total - displayCount;
+
+    html += '<div style="margin-bottom:12px;padding:8px 12px;background:#e8f5e9;border-radius:6px;font-size:12px;color:#2e7d32">';
+    html += '<strong>找到 ' + total + ' 个适合的型号</strong>（功率 >= ' + cellPower.toFixed(2) + 'W）</div>';
+    html += '<div class="battery-recommend-card">';
+    data.suitable.slice(0, displayCount).forEach(function(b) {
+      html += '<div class="battery-item">';
+      html += '<div class="model">' + b.model + '</div>';
+      html += '<div class="spec">' + b.capacity + '</div>';
+      html += '<div class="power suitable">恒功率: ' + b.power + 'W (余量 +' + b.marginPercent + '%)</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    if (remaining > 0) {
+      html += '<details style="margin-top:12px">';
+      html += '<summary style="cursor:pointer;font-size:13px;color:#2d6a9f;font-weight:500;padding:8px 12px;background:#f5f7fa;border-radius:6px;text-align:center">';
+      html += '▼ 点击展开查看剩余 ' + remaining + ' 个型号 ▲</summary>';
+      html += '<div class="battery-recommend-card" style="margin-top:8px">';
+      data.suitable.slice(displayCount).forEach(function(b) {
+        html += '<div class="battery-item">';
+        html += '<div class="model">' + b.model + '</div>';
+        html += '<div class="spec">' + b.capacity + '</div>';
+        html += '<div class="power suitable">恒功率: ' + b.power + 'W (余量 +' + b.marginPercent + '%)</div>';
+        html += '</div>';
+      });
+      html += '</div></details>';
+    }
+  } else {
+    html += '<div style="margin-bottom:12px;padding:8px 12px;background:#fff3cd;border-radius:6px;font-size:12px;color:#856404">';
+    html += '<strong>未找到适合的型号</strong>，请调整参数</div>';
+  }
+
+  if (data.all.length > 0 && data.suitable.length < data.all.length) {
+    var unsuitCount = data.all.length - data.suitable.length;
+    html += '<details style="margin-top:12px">';
+    html += '<summary style="cursor:pointer;font-size:12px;color:#888">查看 ' + unsuitCount + ' 个功率不足的型号</summary>';
+    html += '<div class="battery-recommend-card" style="margin-top:8px">';
+    data.all.filter(function(b) { return !b.isSuitable; }).forEach(function(b) {
+      html += '<div class="battery-item unsuitable">';
+      html += '<div class="model">' + b.model + '</div>';
+      html += '<div class="spec">' + b.capacity + '</div>';
+      html += '<div class="power insufficient">恒功率: ' + b.power + 'W</div>';
+      html += '</div>';
+    });
+    html += '</div></details>';
+  }
+
+  container.innerHTML = html;
+}
 function openBatteryDataTable(){document.getElementById('battery-data-modal').style.display='block';renderBatteryDataTable();}
 function closeBatteryDataTable(){document.getElementById('battery-data-modal').style.display='none';}
-function renderBatteryDataTable(){var category=document.getElementById('batt-data-category').value;var voltage=parseFloat(document.getElementById('batt-data-voltage').value);var searchText=document.getElementById('batt-data-search').value.toLowerCase();var allTimes=new Set();BATTERY_POWER_DATA.forEach(function(b){b.voltages.forEach(function(v){v.powers.forEach(function(p){allTimes.add(p.time);});});});var times=[...allTimes].sort(function(a,b){return a-b});var theadHtml='<tr style="background:#1a3a5c;color:white"><th style="padding:10px 12px;text-align:left">型号</th><th style="padding:10px 12px;text-align:left">分类</th>';times.forEach(function(t){theadHtml+='<th style="padding:10px 12px;text-align:center">'+t+'min</th>';});theadHtml+='</tr>';document.getElementById('battery-power-thead').innerHTML=theadHtml;var html='';BATTERY_POWER_DATA.forEach(function(battery){if(category!=='all'&&battery.category!==category)return;if(searchText&&!battery.model.toLowerCase().includes(searchText))return;var voltageData=battery.voltages.find(function(v){return Math.abs(v.endVoltage-voltage)<0.01});if(!voltageData)return;var categoryLabels={normal:'普通',highpower:'高功率','2v':'2V'};html+='<tr style="border-bottom:1px solid #f0f0f0">';html+='<td style="padding:10px 12px;font-weight:500">'+battery.model+'</td>';html+='<td style="padding:10px 12px">'+categoryLabels[battery.category]+'</td>';times.forEach(function(time){var powerInfo=voltageData.powers.find(function(p){return p.time===time});html+='<td style="padding:10px 12px;text-align:center">'+(powerInfo?powerInfo.power:'-')+'</td>';});html+='</tr>';});document.getElementById('battery-power-tbody').innerHTML=html||'<tr><td colspan="'+(times.length+2)+'" style="text-align:center;padding:20px;color:#888">无匹配数据</td></tr>';}
+function renderBatteryDataTable() {
+  var category = document.getElementById('batt-data-category').value;
+  var voltage = parseFloat(document.getElementById('batt-data-voltage').value);
+  var searchText = document.getElementById('batt-data-search').value.toLowerCase();
+
+  var allTimes = new Set();
+  BATTERY_POWER_DATA.forEach(function(b) {
+    b.voltages.forEach(function(v) {
+      v.powers.forEach(function(p) {
+        allTimes.add(p.time);
+      });
+    });
+  });
+  var times = [...allTimes].sort(function(a, b) { return a - b; });
+
+  var theadHtml = '<tr style="background:#1a3a5c;color:white">';
+  theadHtml += '<th style="padding:10px 12px;text-align:left">型号</th>';
+  theadHtml += '<th style="padding:10px 12px;text-align:left">分类</th>';
+  times.forEach(function(t) {
+    theadHtml += '<th style="padding:10px 12px;text-align:center">' + t + 'min</th>';
+  });
+  theadHtml += '</tr>';
+  document.getElementById('battery-power-thead').innerHTML = theadHtml;
+
+  var categoryLabels = { normal: '普通', highpower: '高功率', '2v': '2V' };
+  var html = '';
+  BATTERY_POWER_DATA.forEach(function(battery) {
+    if (category !== 'all' && battery.category !== category) return;
+    if (searchText && !battery.model.toLowerCase().includes(searchText)) return;
+
+    var voltageData = battery.voltages.find(function(v) {
+      return Math.abs(v.endVoltage - voltage) < 0.01;
+    });
+    if (!voltageData) return;
+
+    html += '<tr style="border-bottom:1px solid #f0f0f0">';
+    html += '<td style="padding:10px 12px;font-weight:500">' + battery.model + '</td>';
+    html += '<td style="padding:10px 12px">' + categoryLabels[battery.category] + '</td>';
+    times.forEach(function(time) {
+      var powerInfo = voltageData.powers.find(function(p) { return p.time === time; });
+      html += '<td style="padding:10px 12px;text-align:center">' + (powerInfo ? powerInfo.power : '-') + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  document.getElementById('battery-power-tbody').innerHTML = html
+    || '<tr><td colspan="' + (times.length + 2) + '" style="text-align:center;padding:20px;color:#888">无匹配数据</td></tr>';
+}
 function filterBatteryDataTable(){renderBatteryDataTable();}
 
 // 锂电池配置计算
@@ -27711,30 +27922,6 @@ function calcLithiumBattery() {
   document.getElementById('li-calc-notes').innerHTML = calcNotes;
 
   document.getElementById('li-result').style.display = 'block';
-}
-
-// 获取锂电池推荐
-function getLithiumRecommendations(capacity, volts, groups) {
-  // 根据容量和电压推荐电芯型号
-  // 常见磷酸铁锂电芯规格
-  const cellTypes = [
-    { name: 'LFP-100Ah', capacity: 100, suitable: capacity <= 120 },
-    { name: 'LFP-150Ah', capacity: 150, suitable: capacity <= 180 },
-    { name: 'LFP-200Ah', capacity: 200, suitable: capacity <= 240 },
-    { name: 'LFP-280Ah', capacity: 280, suitable: capacity <= 340 },
-    { name: 'LFP-300Ah', capacity: 300, suitable: capacity <= 360 },
-    { name: 'LFP-314Ah', capacity: 314, suitable: capacity <= 380 },
-    { name: 'LFP-320Ah', capacity: 320, suitable: capacity <= 400 },
-  ];
-
-  const suitable = cellTypes.filter(c => c.suitable);
-
-  if (suitable.length > 0) {
-    const best = suitable[0];
-    return `${best.name} (需 ${Math.ceil(capacity / best.capacity)} 组 × ${groups} 组并联)`;
-  }
-
-  return '请联系供应商定制';
 }
 
 // 获取铅酸电池推荐（简化版）
