@@ -1879,8 +1879,11 @@ function calcMonitorConfig() {
   // 计算电池总组数 = 电池组数 × UPS台数
   const totalBattGroups = battGroups * upsNum;
 
-  // 计算最大电流(A) = 负载功率(kW) × 1000 / (单体数/组 × 放电截止电压 × 6 × 逆变器效率)
-  const maxCurrent = (powerKw * 1000) / (cellPerGroup * endV * 6 * eff);
+  // 计算最大电流(A)
+  // 12V电池：每节含6个2V单体，电压 = 节数 × 6 × 截止电压
+  // 2V电池：每节就是1个单体，电压 = 节数 × 1 × 截止电压
+  const cellMultiplier = battType === '2v' ? 1 : 6;
+  const maxCurrent = (powerKw * 1000) / (cellPerGroup * endV * cellMultiplier * eff);
 
   // 计算分组放电电流(A)
   // 电池组数为1时等于最大电流，大于1时等于最大电流/(电池组数-1)
