@@ -111,7 +111,7 @@ UPS选型助手_开发包/
 | `BATTERY_POWER_DATA` | 2286-27632 | ~456KB | 73个电池型号恒功率数据 |
 
 ## 外部依赖（CDN）
-- SheetJS 0.20.3 — Excel解析
+- SheetJS(xlsx-js-style) 1.2.0 — Excel解析+样式写入
 - mammoth.js 1.6.0 — DOCX解析
 - PDF.js 3.11.174 — PDF解析
 

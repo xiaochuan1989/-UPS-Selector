@@ -56,6 +56,12 @@
 - 提取 `buildProductSummary()` 公共函数，消除重复代码
 - 删除未使用的 `getLithiumRecommendations` 死代码
 
+## v1.3.5 功能与修复（2026-03-17）
+- 电池监控配置表导出改为Excel格式(.xlsx)
+- 引入xlsx-js-style替换SheetJS，支持单元格样式（边框、背景色、字体）
+- 导出根据价格解锁状态决定是否包含价格列
+- 修复2V电池最大电流计算错误：2V电池cellMultiplier=1，12V电池=6
+
 ## 开发注意事项
 1. **函数定义顺序**: 初始化阶段调用的函数必须定义在调用位置之前，或用DOMContentLoaded延迟
 2. **file://协议**: 双击HTML使用，IndexedDB可用但有限制

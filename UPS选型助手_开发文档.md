@@ -1,6 +1,6 @@
 # UPS 智能选型助手 — 产品开发文档
 
-> 版本：v1.3.4
+> 版本：v1.3.5
 > 最后更新：2026-03-17
 > 技术负责：内部开发
 
@@ -807,6 +807,7 @@ netlify deploy --dir . --prod --site c662b019-245f-4a7f-af88-53c9b72502da
 | v1.3.2 | 2026-03-16 | 新增电池监控配置选型模块：支持铅酸2V/12V电池监控配置计算；内置15个监控产品数据（含价格）；自动计算主机、采集模块、测量模块、电流监控等配置；支持导出配置清单；修复多个计算Bug |
 | v1.3.3 | 2026-03-16 | 电池监控配置选型优化：清理冗余字段、优化UI交互、同步index.html |
 | v1.3.4 | 2026-03-17 | 代码优化：格式化5个压缩单行函数为正常缩进格式（switchLeadMethodTab、showBatteryCategory、calcLeadBatteryMethod2、getBatteryRecommendationsByPower、renderBatteryRecommendations、renderBatteryDataTable）；提取buildProductSummary()公共函数消除analyze/sendFollowup中的重复代码；删除未使用的getLithiumRecommendations死代码 |
+| v1.3.5 | 2026-03-17 | 电池监控配置表导出改为Excel格式(.xlsx)；引入xlsx-js-style替换SheetJS支持单元格样式（边框、背景色、字体）；导出根据价格解锁状态决定是否包含价格列；修复2V电池最大电流计算错误（2V电池不乘6） |
 
 ---
 
