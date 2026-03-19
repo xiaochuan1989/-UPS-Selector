@@ -655,18 +655,18 @@ function checkAuth(){
       <div id="monitor-result" style="display:none">
         <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">📋 电池监控配置表</div>
         <div style="overflow-x:auto">
-          <table id="monitor-config-table" style="width:100%;border-collapse:collapse;font-size:13px">
+          <table id="monitor-config-table" style="width:100%;border-collapse:collapse;font-size:13px;min-width:900px">
             <thead>
               <tr style="background:#2d6a9f;color:white">
                 <th style="padding:10px;text-align:center;border:1px solid #ddd;width:40px">序号</th>
-                <th style="padding:10px;text-align:left;border:1px solid #ddd">产品型号</th>
-                <th style="padding:10px;text-align:left;border:1px solid #ddd">产品名称</th>
-                <th style="padding:10px;text-align:left;border:1px solid #ddd">产品描述</th>
-                <th style="padding:10px;text-align:left;border:1px solid #ddd">备注</th>
+                <th style="padding:10px;text-align:left;border:1px solid #ddd;width:100px">产品型号</th>
+                <th style="padding:10px;text-align:left;border:1px solid #ddd;width:130px">产品名称</th>
+                <th style="padding:10px;text-align:left;border:1px solid #ddd;min-width:280px">产品描述</th>
+                <th style="padding:10px;text-align:left;border:1px solid #ddd;width:100px">备注</th>
                 <th style="padding:10px;text-align:center;border:1px solid #ddd;width:50px">单位</th>
-                <th style="padding:10px;text-align:center;border:1px solid #ddd;width:60px">数量</th>
-                <th class="mon-price-col" style="padding:10px;text-align:right;border:1px solid #ddd;display:none">单价(元)</th>
-                <th class="mon-price-col" style="padding:10px;text-align:right;border:1px solid #ddd;display:none">小计(元)</th>
+                <th style="padding:10px;text-align:center;border:1px solid #ddd;width:50px">数量</th>
+                <th class="mon-price-col" style="padding:10px;text-align:right;border:1px solid #ddd;width:80px;display:none">单价(元)</th>
+                <th class="mon-price-col" style="padding:10px;text-align:right;border:1px solid #ddd;width:80px;display:none">小计(元)</th>
               </tr>
             </thead>
             <tbody id="monitor-tbody"></tbody>
@@ -1835,23 +1835,23 @@ function switchBatteryTab(tab) {
   document.getElementById('batt-monitor-panel').style.display = tab === 'monitor' ? 'block' : 'none';
 }
 
-// 电池监控配置产品数据
+// 电池监控配置产品数据（描述与Excel数据页保持一致）
 const MONITOR_PRODUCTS = [
-  { code: '88091156', name: 'SBMS-PBMS6000', desc: '电池监控主机-标准1U嵌入式安装,含2路RS485+1路网口', unit: '套', unitPrice: 898.70, required: true },
-  { code: '88091157', name: 'SBMS-HMI-6000', desc: '电池监控液晶显示模块-7寸触摸屏,嵌入式安装', unit: '个', unitPrice: 710.60, required: true },
-  { code: '88091138', name: 'SBMS-PBMS-CM', desc: '从控模块-电池智能接口模块', unit: '个', unitPrice: 94.05, required: false },
-  { code: '88091139', name: 'SBMS-CS100EK1T5', desc: '电流传感器-测量范围0~100A,线径20mm', unit: '个', unitPrice: 88.83, required: false },
-  { code: '88091140', name: 'SBMS-CS200EK2T5', desc: '电流传感器-测量范围0~200A,线径40mm', unit: '个', unitPrice: 94.05, required: false },
-  { code: '88091141', name: 'SBMS-CS400EK2T5', desc: '电流传感器-测量范围0~400A,线径40mm', unit: '个', unitPrice: 94.05, required: false },
-  { code: '88091142', name: 'SBMS-CS600EK2T5', desc: '电流传感器-测量范围0~600A,线径40mm', unit: '个', unitPrice: 114.95, required: false },
-  { code: '88091143', name: 'SBMS-CS800EK2T5', desc: '电流传感器-测量范围0~800A,线径40mm', unit: '个', unitPrice: 114.95, required: false },
-  { code: '88091144', name: 'SBMS-CS1000EK2T5', desc: '电流传感器-测量范围0~1000A,线径40mm', unit: '个', unitPrice: 114.95, required: false },
-  { code: '88091145', name: 'SBMS-PBAT51-12', desc: '12V从控模块-12V电池SOC采集,电压范围7.5V-15.6V', unit: '个', unitPrice: 32.40, required: false, perPack: 24 },
-  { code: '88091146', name: 'SBMS-PBAT51-02', desc: '2V从控模块-2V电池SOC采集,电压范围1.6V-2.6V', unit: '个', unitPrice: 32.40, required: false, perPack: 24 },
-  { code: '88091147', name: 'SBMS-PBAT-C1-0-M6-30', desc: '采集线缆-铜鼻子O型,直径6mm,长度30cm', unit: '根', unitPrice: 6.27, required: false },
-  { code: '88091148', name: 'SBMS-PBAT-C1-0-M8-30', desc: '采集线缆-铜鼻子O型,直径8mm,长度30cm', unit: '根', unitPrice: 6.27, required: false },
-  { code: '88091149', name: 'SBMS-PBAT-C1-0-M10-30', desc: '采集线缆-铜鼻子O型,直径10mm,长度30cm', unit: '根', unitPrice: 8.36, required: false },
-  { code: '88091150', name: 'SBMS-PBMS-VM', desc: '电压采集模块(可选1通道可选1个)', unit: '个', unitPrice: 102.41, required: false }
+  { code: '88091156', name: 'SBMS-PBMS6000', desc: '电池监控-蓄电池组监控主机-标准1U机蓄电池组监控装置.额定220VAC工作电源, 配置2个RS485串口 + 1个以太网端口, 支持Modbus-RTU,Modbus-TCP协议.最多支持接入6组电池组, 2路AI模拟量输入,3路DI开关量输入,4路DO继电器输出-不含显示屏-iTeaQ', unit: '套', unitPrice: 898.70, required: true },
+  { code: '88091157', name: 'SBMS-HMI-6000', desc: '电池监控-本地数据显示屏-7寸触摸屏HMI, 嵌入式屏,配24V电源模块-iTeaQ', unit: '个', unitPrice: 710.60, required: true },
+  { code: '88091138', name: 'SBMS-PBMS-CM', desc: '电池监控-蓄电池组电流监控模块-iTeaQ', unit: '个', unitPrice: 94.05, required: false },
+  { code: '88091139', name: 'SBMS-CS100EK1T5', desc: '电池监控-霍尔传感器-测量范围：0~±100A，Φ20mm-iTeaQ', unit: '个', unitPrice: 88.83, required: false },
+  { code: '88091140', name: 'SBMS-CS200EK2T5', desc: '电池监控-霍尔传感器-测量范围：0~±200A，Ф40mm-iTeaQ', unit: '个', unitPrice: 94.05, required: false },
+  { code: '88091141', name: 'SBMS-CS400EK2T5', desc: '电池监控-霍尔传感器-测量范围：0~±400A，Ф40mm-iTeaQ', unit: '个', unitPrice: 94.05, required: false },
+  { code: '88091142', name: 'SBMS-CS600EK2T5', desc: '电池监控-霍尔传感器-测量范围：0~±600A，Ф40mm-iTeaQ', unit: '个', unitPrice: 114.95, required: false },
+  { code: '88091143', name: 'SBMS-CS800EK2T5', desc: '电池监控-霍尔传感器-测量范围：0~±800A，Ф40mm-iTeaQ', unit: '个', unitPrice: 114.95, required: false },
+  { code: '88091144', name: 'SBMS-CS1000EK2T5', desc: '电池监控-霍尔传感器-测量范围：0~±1000A，Ф40mm-iTeaQ', unit: '个', unitPrice: 114.95, required: false },
+  { code: '88091145', name: 'SBMS-PBAT51-12', desc: '电池监控-12V单体测量模块-12V蓄电池SOC监测,用于蓄电池7.5V-15.6V电压范围,带均衡功能-标配监控模块通讯线（ RJ11，长度:40cm）-iTeaQ', unit: '个', unitPrice: 32.40, required: false, perPack: 24 },
+  { code: '88091146', name: 'SBMS-PBAT51-02', desc: '电池监控-2V单体测量模块-2V蓄电池SOC监测,用于蓄电池1.6V-2.6V电压范围,带均衡功能-标配监控模块通讯线（ RJ11，长度:40cm）-iTeaQ', unit: '个', unitPrice: 32.40, required: false, perPack: 24 },
+  { code: '88091147', name: 'SBMS-PBAT-C1-0-M6-30', desc: '电池监控-监控模块测试线-O型端， 孔径:6mm，长度:30cm-iTeaQ', unit: '根', unitPrice: 6.27, required: false },
+  { code: '88091148', name: 'SBMS-PBAT-C1-0-M8-30', desc: '电池监控-监控模块测试线-O型端， 孔径:8mm，长度:30cm-iTeaQ', unit: '根', unitPrice: 6.27, required: false },
+  { code: '88091149', name: 'SBMS-PBAT-C1-0-M10-30', desc: '电池监控-监控模块测试线-O型端， 孔径:10mm，长度:30cm-iTeaQ', unit: '根', unitPrice: 8.36, required: false },
+  { code: '88091150', name: 'SBMS-PBMS-VM', desc: '电池监控-蓄电池组电压监控模块（1组蓄电池可选配1个）-iTeaQ', unit: '个', unitPrice: 102.41, required: false }
 ];
 
 // 电池监控配置计算
@@ -1886,8 +1886,8 @@ function calcMonitorConfig() {
   const maxCurrent = (powerKw * 1000) / (cellPerGroup * endV * cellMultiplier * eff);
 
   // 计算分组放电电流(A)
-  // 电池组数为1时等于最大电流，大于1时等于最大电流/(电池组数-1)
-  const groupCurrent = totalBattGroups === 1 ? maxCurrent : maxCurrent / (totalBattGroups - 1);
+  // 每组电池的放电电流 = 最大电流 / 电池总组数
+  const groupCurrent = maxCurrent / totalBattGroups;
 
   // 显示输出参数
   document.getElementById('mon-total-groups').textContent = totalBattGroups;
@@ -1900,6 +1900,9 @@ function calcMonitorConfig() {
   // 总电池数量
   const totalCells = totalBattGroups * cellPerGroup;
 
+  // 主机数量 = 电池总组数/6 向上取整
+  const hostQty = Math.ceil(totalBattGroups / 6);
+
   // 构建配置清单
   const config = [];
 
@@ -1907,29 +1910,29 @@ function calcMonitorConfig() {
   const host = MONITOR_PRODUCTS.find(p => p.code === '88091156');
   config.push({
     ...host,
-    qty: 1,
-    total: host.unitPrice,
+    qty: hostQty,
+    total: hostQty * host.unitPrice,
     note: '必选'
   });
 
-  // 2. HMI显示（选配，默认勾选）
+  // 2. HMI显示（选配，默认勾选）- 数量与主机相同
   if (optHmi) {
     const hmi = MONITOR_PRODUCTS.find(p => p.code === '88091157');
     config.push({
       ...hmi,
-      qty: 1,
-      total: hmi.unitPrice,
+      qty: hostQty,
+      total: hostQty * hmi.unitPrice,
       note: '选配'
     });
   }
 
-  // 3. 组电压监控模块（选配）
+  // 3. 组电压监控模块（选配）- 数量 = 电池总组数
   if (optVm) {
     const vm = MONITOR_PRODUCTS.find(p => p.code === '88091150');
     config.push({
       ...vm,
-      qty: 1,
-      total: vm.unitPrice,
+      qty: totalBattGroups,
+      total: totalBattGroups * vm.unitPrice,
       note: '选配'
     });
   }
@@ -1973,13 +1976,13 @@ function calcMonitorConfig() {
     }
   }
 
-  // 添加电流监控模块（88091138）- 所有类型电池都需要1个
+  // 添加电流监控模块（88091138）- 每个电池组1个
   const currentModule = MONITOR_PRODUCTS.find(p => p.code === '88091138');
   if (currentModule) {
     config.push({
       ...currentModule,
-      qty: 1,
-      total: currentModule.unitPrice,
+      qty: totalBattGroups,
+      total: totalBattGroups * currentModule.unitPrice,
       note: '蓄电池组电流监控'
     });
   }
@@ -2012,8 +2015,8 @@ function calcMonitorConfig() {
   if (currentSensor) {
     config.push({
       ...currentSensor,
-      qty: 1,
-      total: currentSensor.unitPrice,
+      qty: totalBattGroups,
+      total: totalBattGroups * currentSensor.unitPrice,
       note: `量程${currentSensorRange}`
     });
   }
@@ -2088,7 +2091,7 @@ function renderMonitorConfigTable(config) {
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${index + 1}</td>
         <td style="padding:8px;border:1px solid #ddd">${item.code}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${item.name}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${item.desc || '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666;white-space:normal;word-break:break-word">${item.desc || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#888">${item.note || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${item.unit}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:500">${item.qty}</td>
