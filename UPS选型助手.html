@@ -2448,7 +2448,11 @@ function calcAllBatteryConfig() {
 
   // ===== 2. 电池开关箱/柜计算 =====
   const maxCurrent = loadW / (cellsPerGroup * endV * cellMultiplier * eff);
-  const groupCurrent = maxCurrent / totalGroups;
+  // 分组开关电流 = 总电流 / (N-1)，N为电池组数（仅当N≥2时）
+  let groupCurrent = 0;
+  if (groups >= 2) {
+    groupCurrent = maxCurrent / (groups - 1);
+  }
   const voltLevel = getVoltLevel(cellsPerGroup, battType);
 
   // 获取开关规格（添加备用逻辑）
@@ -2470,7 +2474,7 @@ function calcAllBatteryConfig() {
   </div>`;
   switchHtml += `<div style="padding:8px;background:white;border-radius:6px;margin-top:8px">
     <div>总开关: <b style="color:#e65100">${mainSwitchSize}A</b></div>
-    <div>分开关: <b style="color:#e65100">${subSwitchSize}A</b> × ${totalGroups}路</div>
+    <div>分开关: <b style="color:#e65100">${subSwitchSize}A</b> × ${groups}路</div>
   </div>`;
   document.getElementById('unified-switch-result').innerHTML = switchHtml;
 
@@ -2529,7 +2533,7 @@ function calcAllBatteryConfig() {
   window.projectSummary = {
     ups: { model: '', capacity: upsCap + 'kVA', qty: upsNum, price: 0, note: '' },
     battery: { model: batteryResult ? batteryResult.model : '', cellsPerGroup, groups, totalCells, price: 0, note: battType === '2v' ? '2V电池' : '12V电池' },
-    switchBox: { model: voltLevel + ' 电池开关箱/柜', voltLevel, mainSwitch: mainSwitchSize + 'A', subSwitch: subSwitchSize + 'A', subSwitchQty: totalGroups, qty: upsNum, price: 0, note: '' },
+    switchBox: { model: voltLevel + ' 电池开关箱/柜', voltLevel, mainSwitch: mainSwitchSize + 'A', subSwitch: subSwitchSize + 'A', subSwitchQty: groups, qty: upsNum, price: 0, note: '' },
     monitor: { config: monitorConfig }
   };
   renderProjectSummary();
