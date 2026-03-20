@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UPS 智能选型助手 v1.4</title>
+<title>UPS 智能选型助手 v1.4.6</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; }
@@ -452,6 +452,36 @@ function checkAuth(){
         </div>
       </div>
     </div>
+
+    <!-- 公式说明（可折叠） -->
+    <details style="margin-bottom:16px">
+      <summary style="cursor:pointer;padding:8px 12px;background:#f5f7fa;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;color:#666;user-select:none">
+        📐 查看计算公式说明
+      </summary>
+      <div style="margin-top:10px;padding:14px;background:#fffbf0;border:1px solid #ffe0b2;border-radius:8px;font-size:12px;line-height:1.8">
+        <div style="font-weight:600;color:#e65100;margin-bottom:10px">⚡ 电池开关箱/柜计算公式</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+          <tr style="background:#fff8e1"><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">负载功率</td><td style="padding:6px 10px;border:1px solid #ffcc80">若填负载功率则用负载功率，否则用 <b>UPS容量 × 功率因数</b></td></tr>
+          <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">最大放电电流</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>I = P ÷ (电池节数 × 截止电压 × 单格数 × 效率)</b></td></tr>
+          <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">分开关电流</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>I ÷ (组数 - 1)</b>，当组数≥2时（一组故障时其余组承担全部电流）</td></tr>
+          <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">电压等级</td><td style="padding:6px 10px;border:1px solid #ffcc80">≤20节→250VDC，21~36节→500VDC，>36节→750VDC</td></tr>
+        </table>
+        <div style="font-weight:600;color:#2e7d32;margin-bottom:10px">🔋 电池功率计算公式</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+          <tr style="background:#e8f5e9"><td style="padding:6px 10px;border:1px solid #a5d6a7;font-weight:500">单格功率需求</td><td style="padding:6px 10px;border:1px solid #a5d6a7"><b>W = P ÷ (电池节数 × 单格数 × 效率 × 组数)</b></td></tr>
+          <tr><td style="padding:6px 10px;border:1px solid #a5d6a7;font-weight:500">电池选型</td><td style="padding:6px 10px;border:1px solid #a5d6a7">查恒功率表，选 <b>恒功率 ≥ 单格功率需求</b> 的电池型号</td></tr>
+        </table>
+        <div style="font-weight:600;color:#7b1fa2;margin-bottom:10px">📡 监控配置规则</div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr style="background:#f3e5f5"><td style="padding:6px 10px;border:1px solid #ce93d8;font-weight:500">监控主机</td><td style="padding:6px 10px;border:1px solid #ce93d8">每6组电池配1台主机（向上取整）</td></tr>
+          <tr><td style="padding:6px 10px;border:1px solid #ce93d8;font-weight:500">电流传感器</td><td style="padding:6px 10px;border:1px solid #ce93d8">每组电池1个，量程根据<b>分开关电流</b>选择（保守设计）</td></tr>
+          <tr><td style="padding:6px 10px;border:1px solid #ce93d8;font-weight:500">从控模块</td><td style="padding:6px 10px;border:1px solid #ce93d8">每只电池配1个</td></tr>
+        </table>
+        <div style="margin-top:12px;padding:8px;background:#f5f5f5;border-radius:4px;color:#888">
+          <b>关键变量说明：</b>groups=单台UPS电池组数，upsNum=UPS台数，totalGroups=总组数=groups×upsNum
+        </div>
+      </div>
+    </details>
 
     <!-- 计算结果区：三列布局 -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
@@ -1756,8 +1786,12 @@ function calcMonitorConfig() {
   const maxCurrent = (powerKw * 1000) / (cellPerGroup * endV * cellMultiplier * eff);
 
   // 计算分组放电电流(A)
-  // 每组电池的放电电流 = 最大电流 / 电池总组数
-  const groupCurrent = maxCurrent / totalBattGroups;
+  // 分开关电流 = 总电流 / (组数-1)，即一组故障时剩余组承担的电流
+  // 当 battGroups=1 时，使用总电流；当 battGroups>=2 时，使用分开关电流
+  let groupCurrent = maxCurrent;
+  if (battGroups >= 2) {
+    groupCurrent = maxCurrent / (battGroups - 1);
+  }
 
   // 显示输出参数
   document.getElementById('mon-total-groups').textContent = totalBattGroups;
@@ -1857,10 +1891,10 @@ function calcMonitorConfig() {
     });
   }
 
-  // 添加电流传感器（根据分组放电电流选择）
+  // 添加电流传感器（根据分开关电流选择，即一组故障时剩余组承担的电流）
   let currentSensorCode = '88091140'; // 默认200A
   let currentSensorRange = '0~200A';
-  const current = groupCurrent;
+  const current = groupCurrent;  // 使用分开关电流
   if (current <= 100) {
     currentSensorCode = '88091139';
     currentSensorRange = '0~100A';
@@ -1883,8 +1917,11 @@ function calcMonitorConfig() {
 
   const currentSensor = MONITOR_PRODUCTS.find(p => p.code === currentSensorCode);
   if (currentSensor) {
+    // 更新描述中的量程信息（原始描述是固定的"0~±200A"，需要替换为实际量程）
+    const sensorDesc = currentSensor.desc.replace(/测量范围：0~±\d+A/, `测量范围：0~±${currentSensorRange.replace('0~', '')}`);
     config.push({
       ...currentSensor,
+      desc: sensorDesc,
       qty: totalBattGroups,
       total: totalBattGroups * currentSensor.unitPrice,
       note: `量程${currentSensorRange}`
@@ -2284,12 +2321,14 @@ function renderProjectSummary() {
   if (bat.model) {
     const subtotal = bat.totalCells * (bat.price || 0);
     total += subtotal;
+    // 电池描述：UPS台数 × (每台组数 × 每组只数) = 总只数
+    const batDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
     html += `
       <tr style="background:#e8f5e9">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">电池</td>
         <td style="padding:8px;border:1px solid #ddd">${bat.code || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${bat.model}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${bat.groups}组 × ${bat.cellsPerGroup}只/组 = ${bat.totalCells}只</td>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${batDesc}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">只</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${bat.totalCells}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && bat.price ? bat.price.toFixed(2) : '-'}</td>
@@ -2305,12 +2344,16 @@ function renderProjectSummary() {
   if (sw.model) {
     const subtotal = sw.qty * (sw.price || 0);
     total += subtotal;
+    // 根据分开关数量决定描述格式
+    const swDesc = (sw.subSwitchQty && sw.subSwitchQty >= 2)
+      ? `总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty}路`
+      : `总开关:${sw.mainSwitch || '-'} (单组无分开关)`;
     html += `
       <tr style="background:#fff3e0">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">电池开关箱/柜</td>
         <td style="padding:8px;border:1px solid #ddd">${sw.code || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${sw.model}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty || '-'}路</td>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${swDesc}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">套</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${sw.qty}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && sw.price ? sw.price.toFixed(2) : '-'}</td>
@@ -2350,7 +2393,8 @@ function renderProjectSummary() {
   } else {
     tbody.innerHTML = html;
     document.getElementById('summary-tfoot').style.display = '';
-    document.getElementById('summary-total').textContent = '¥' + total.toFixed(2);
+    // 未勾选"显示价格"时，合计行显示"-"而非金额
+    document.getElementById('summary-total').textContent = showPrice ? '¥' + total.toFixed(2) : '-';
   }
 
   // 保存汇总数据
@@ -2374,34 +2418,85 @@ function clearProjectSummary() {
   alert('已清空汇总数据');
 }
 
-// 标准断路器规格数组（安培）
+// 标准断路器规格数组（安培）- 按升序排列
 const STANDARD_BREAKER_SIZES = [63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 400, 500, 630, 800, 1000, 1250, 1600];
 
-// 获取大一号断路器规格
+/**
+ * 获取大一号的断路器规格（向上取整到标准规格）
+ *
+ * 设计原则：基于经济成本考虑，不乘安全系数（1.25倍）
+ * 直接使用最大放电电流，向上取整到最近的标准规格
+ *
+ * @param {number} calcCurrent - 计算电流（A）
+ * @returns {number} 标准断路器规格（A）
+ */
 function getNextBreakerSize(calcCurrent) {
   for (let size of STANDARD_BREAKER_SIZES) {
     if (size > calcCurrent) {
       return size;
     }
   }
+  // 超出最大规格时返回最大值
   return STANDARD_BREAKER_SIZES[STANDARD_BREAKER_SIZES.length - 1];
 }
 
 // ==================== 一键计算全部 ====================
+/**
+ * UPS与电池配置统一计算函数
+ *
+ * 业务规则：
+ * 1. groups = 单台UPS的电池组数（用于计算分开关路数）
+ * 2. upsNum = UPS台数（用于计算开关箱数量，每台UPS配1个开关箱）
+ * 3. totalGroups = groups × upsNum（总组数，用于监控配置）
+ *
+ * 计算公式：
+ * - 负载功率(W) = 负载功率kW × 1000 或 UPS容量 × 功率因数 × 1000
+ * - 最大放电电流 = 负载功率 / (电池节数 × 截止电压 × 单格数 × 效率)
+ * - 分开关电流 = 总电流 / (groups - 1)，仅当 groups ≥ 2 时有效
+ * - 单格功率需求 = 负载功率 / (电池节数 × 单格数 × 效率 × 组数)
+ *
+ * @returns {void}
+ */
 function calcAllBatteryConfig() {
   // 获取统一参数
   const loadKw = parseFloat(document.getElementById('unified-load-kw').value) || 0;
-  const upsCap = parseFloat(document.getElementById('unified-ups-cap').value) || 200;
+  const upsCap = parseFloat(document.getElementById('unified-ups-cap').value) || 0;
   const upsNum = parseInt(document.getElementById('unified-ups-num').value) || 1;
   const pf = parseFloat(document.getElementById('unified-pf').value) || 0.9;
   const cellsPerGroup = parseInt(document.getElementById('unified-cells').value) || 32;
-  const groups = parseInt(document.getElementById('unified-groups').value) || 2;
+  const groups = parseInt(document.getElementById('unified-groups').value) || 1;
   const battType = document.getElementById('unified-batt-type').value;
   const dischargeTime = parseInt(document.getElementById('unified-discharge-time').value) || 15;
   const endV = parseFloat(document.getElementById('unified-end-v').value) || 1.75;
   const eff = parseFloat(document.getElementById('unified-eff').value) || 0.95;
   const optHmi = document.getElementById('unified-opt-hmi').checked;
   const optVm = document.getElementById('unified-opt-vm').checked;
+
+  // ===== 输入验证 =====
+  if (upsCap <= 0 && loadKw <= 0) {
+    alert('请输入UPS容量或负载功率');
+    return;
+  }
+  if (upsNum < 1) {
+    alert('UPS台数不能小于1');
+    return;
+  }
+  if (groups < 1) {
+    alert('电池组数不能小于1');
+    return;
+  }
+  if (cellsPerGroup < 1) {
+    alert('电池节数不能小于1');
+    return;
+  }
+  if (pf <= 0 || pf > 1) {
+    alert('功率因数应在0~1之间');
+    return;
+  }
+  if (eff <= 0 || eff > 1) {
+    alert('逆变效率应在0~1之间');
+    return;
+  }
 
   const totalGroups = groups * upsNum;
   const totalCells = cellsPerGroup * totalGroups;
@@ -2419,7 +2514,7 @@ function calcAllBatteryConfig() {
     batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐: ${batteryResult.model}</div>`;
     batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
     batteryHtml += `<div>恒功率: <b>${batteryResult.power}W</b> (余量+${batteryResult.marginPercent}%)</div>`;
-    batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${groups}组 × ${cellsPerGroup}只/组)</div>`;
+    batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
   } else if (recommendations.highpower.suitable.length > 0) {
     batteryResult = recommendations.highpower.suitable[0];
     batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐(高功率): ${batteryResult.model}</div>`;
@@ -2469,12 +2564,12 @@ function calcAllBatteryConfig() {
 
   let switchHtml = `<div style="margin-bottom:8px">
     <div>电压等级: <b style="color:#ef6c00">${voltLevel}</b></div>
-    <div>最大电流: <b>${maxCurrent.toFixed(1)}A</b></div>
-    <div>分组电流: <b>${groupCurrent.toFixed(1)}A</b></div>
+    <div>最大放电电流: <b>${maxCurrent.toFixed(1)}A</b></div>
+    ${groups >= 2 ? `<div>分开关电流: <b>${groupCurrent.toFixed(1)}A</b> <span style="color:#888;font-size:11px">(一组故障时)</span></div>` : ''}
   </div>`;
   switchHtml += `<div style="padding:8px;background:white;border-radius:6px;margin-top:8px">
     <div>总开关: <b style="color:#e65100">${mainSwitchSize}A</b></div>
-    <div>分开关: <b style="color:#e65100">${subSwitchSize}A</b> × ${groups}路</div>
+    ${groups >= 2 ? `<div>分开关: <b style="color:#e65100">${subSwitchSize}A</b> × ${groups}路</div>` : '<div style="color:#888;font-size:12px">单组电池无需分开关</div>'}
   </div>`;
   document.getElementById('unified-switch-result').innerHTML = switchHtml;
 
@@ -2498,16 +2593,21 @@ function calcAllBatteryConfig() {
   monitorConfig.push({ ...cm, qty: totalGroups, total: totalGroups * cm.unitPrice, note: '蓄电池组电流监控' });
 
   // 电流传感器
+  // 传感器量程基于【分开关电流】= 总电流 / (组数-1)，即一组故障时剩余组承担的电流
+  // 当 groups=1 时，使用总电流；当 groups>=2 时，使用分开关电流
+  const sensorCurrent = groups >= 2 ? groupCurrent : maxCurrent;
   let sensorCode = '88091140';
   let sensorRange = '0~200A';
-  if (groupCurrent <= 100) { sensorCode = '88091139'; sensorRange = '0~100A'; }
-  else if (groupCurrent <= 200) { sensorCode = '88091140'; sensorRange = '0~200A'; }
-  else if (groupCurrent <= 400) { sensorCode = '88091141'; sensorRange = '0~400A'; }
-  else if (groupCurrent <= 600) { sensorCode = '88091142'; sensorRange = '0~600A'; }
-  else if (groupCurrent <= 800) { sensorCode = '88091143'; sensorRange = '0~800A'; }
+  if (sensorCurrent <= 100) { sensorCode = '88091139'; sensorRange = '0~100A'; }
+  else if (sensorCurrent <= 200) { sensorCode = '88091140'; sensorRange = '0~200A'; }
+  else if (sensorCurrent <= 400) { sensorCode = '88091141'; sensorRange = '0~400A'; }
+  else if (sensorCurrent <= 600) { sensorCode = '88091142'; sensorRange = '0~600A'; }
+  else if (sensorCurrent <= 800) { sensorCode = '88091143'; sensorRange = '0~800A'; }
   else { sensorCode = '88091144'; sensorRange = '0~1000A'; }
   const sensor = MONITOR_PRODUCTS.find(p => p.code === sensorCode);
-  monitorConfig.push({ ...sensor, qty: totalGroups, total: totalGroups * sensor.unitPrice, note: `量程${sensorRange}` });
+  // 更新描述中的量程信息（原始描述是固定的"0~±200A"，需要替换为实际量程）
+  const sensorDesc = sensor.desc.replace(/测量范围：0~±\d+A/, `测量范围：0~±${sensorRange.replace('0~', '')}`);
+  monitorConfig.push({ ...sensor, desc: sensorDesc, qty: totalGroups, total: totalGroups * sensor.unitPrice, note: `量程${sensorRange}` });
 
   // 从控模块和线缆
   const slaveCode = battType === '2v' ? '88091146' : '88091145';
@@ -2532,19 +2632,50 @@ function calcAllBatteryConfig() {
   // ===== 4. 更新项目汇总 =====
   window.projectSummary = {
     ups: { model: '', capacity: upsCap + 'kVA', qty: upsNum, price: 0, note: '' },
-    battery: { model: batteryResult ? batteryResult.model : '', cellsPerGroup, groups, totalCells, price: 0, note: battType === '2v' ? '2V电池' : '12V电池' },
-    switchBox: { model: voltLevel + ' 电池开关箱/柜', voltLevel, mainSwitch: mainSwitchSize + 'A', subSwitch: subSwitchSize + 'A', subSwitchQty: groups, qty: upsNum, price: 0, note: '' },
+    battery: {
+      model: batteryResult ? batteryResult.model : '',
+      cellsPerGroup,
+      groupsPerUps: groups,      // 单台UPS组数
+      totalGroups,               // 总组数 = groups × upsNum
+      upsNum,                    // UPS台数
+      totalCells,
+      price: 0,
+      note: battType === '2v' ? '2V电池' : '12V电池'
+    },
+    switchBox: {
+      model: voltLevel + ' 电池开关箱/柜',
+      voltLevel,
+      mainSwitch: mainSwitchSize + 'A',
+      subSwitch: groups >= 2 ? subSwitchSize + 'A' : '-',
+      subSwitchQty: groups >= 2 ? groups : 0,
+      qty: upsNum,
+      price: 0,
+      note: groups >= 2 ? '' : '单组电池无需分开关'
+    },
     monitor: { config: monitorConfig }
   };
   renderProjectSummary();
 }
 
-// 辅助函数：获取电压等级
+/**
+ * 获取电压等级（用于开关箱选型）
+ *
+ * 规则：根据电池节数确定开关箱电压等级（与Excel公式一致）
+ * - ≤20节 → 250VDC
+ * - 21~36节 → 500VDC
+ * - >36节 → 750VDC
+ *
+ * 注意：此规则基于电池节数，不是总电压！
+ * 来源：常用UPS速查表-V7.5.xlsx 配置计算公式 Sheet
+ *
+ * @param {number} cells - 电池节数
+ * @param {string} battType - 电池类型 ('12v' 或 '2v')，仅用于注释
+ * @returns {string} 电压等级 ('250VDC' | '500VDC' | '750VDC')
+ */
 function getVoltLevel(cells, battType) {
-  const cellV = battType === '2v' ? 2 : 12;
-  const totalV = cells * cellV;
-  if (totalV <= 250) return '250VDC';
-  if (totalV <= 500) return '500VDC';
+  // 严格按照Excel公式：基于电池节数，不是总电压
+  if (cells <= 20) return '250VDC';
+  if (cells <= 36) return '500VDC';
   return '750VDC';
 }
 
@@ -2579,14 +2710,19 @@ function exportProjectSummary() {
   const bat = window.projectSummary.battery;
   if (bat.model) {
     const subtotal = bat.totalCells * (bat.price || 0);
-    wsData.push(['电池', bat.code || '', bat.model, `${bat.groups}组 × ${bat.cellsPerGroup}只/组 = ${bat.totalCells}只`, '只', bat.totalCells, bat.price || '', subtotal || '', bat.note || '']);
+    // 电池描述：UPS台数 × (每台组数 × 每组只数) = 总只数
+    const batDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
+    wsData.push(['电池', bat.code || '', bat.model, batDesc, '只', bat.totalCells, bat.price || '', subtotal || '', bat.note || '']);
   }
 
   // 电池开关箱/柜
   const sw = window.projectSummary.switchBox;
   if (sw.model) {
     const subtotal = sw.qty * (sw.price || 0);
-    wsData.push(['电池开关箱/柜', sw.code || '', sw.model, `总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty || '-'}路`, '套', sw.qty, sw.price || '', subtotal || '', sw.note || '']);
+    const swDesc = (sw.subSwitchQty && sw.subSwitchQty >= 2)
+      ? `总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty}路`
+      : `总开关:${sw.mainSwitch || '-'} (单组无分开关)`;
+    wsData.push(['电池开关箱/柜', sw.code || '', sw.model, swDesc, '套', sw.qty, sw.price || '', subtotal || '', sw.note || '']);
   }
 
   // 监控
