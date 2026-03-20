@@ -235,519 +235,148 @@ function checkAuth(){
 
   <!-- 电池配置计算面板 -->
   <div id="battery-calc-panel" style="display:none" class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h2 data-icon="🔋" style="margin:0">电池配置计算</h2>
-      <div style="display:flex;gap:8px;flex-wrap:nowrap">
-        <button onclick="switchBatteryTab('lead')" id="batt-tab-lead" class="settings-tab settings-tab-active" style="color:#2d6a9f;border-bottom-color:#2d6a9f;background:#fff;min-width:80px">铅酸电池</button>
-        <button onclick="switchBatteryTab('lithium')" id="batt-tab-lithium" class="settings-tab" style="min-width:80px">锂电池</button>
-        <button onclick="switchBatteryTab('switch')" id="batt-tab-switch" class="settings-tab" style="min-width:80px">开关盒</button>
-        <button onclick="switchBatteryTab('monitor')" id="batt-tab-monitor" class="settings-tab" style="min-width:80px">监控</button>
-        <button onclick="switchBatteryTab('summary')" id="batt-tab-summary" class="settings-tab" style="min-width:80px">📋 项目汇总</button>
-      </div>
-    </div>
+    <h2 data-icon="🔋" style="margin:0 0 16px 0">电池配置计算</h2>
 
-    <!-- 铅酸电池计算 -->
-    <div id="batt-lead-panel">
-      <div style="display:flex;gap:4px;margin-bottom:16px;background:#f5f7fa;border-radius:8px;padding:4px">
-        <button onclick="switchLeadMethodTab('method1')" id="lead-tab-method1" class="lead-sub-tab lead-sub-tab-active">方法1: 计算组数</button>
-        <button onclick="switchLeadMethodTab('method2')" id="lead-tab-method2" class="lead-sub-tab">方法2: 输入组数推荐型号</button>
-      </div>
-      <div id="lead-method1-panel">
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:12px">
+    <!-- 统一参数输入区 -->
+    <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">📥 参数输入</div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
         <div class="field">
           <label>负载功率 (kW)</label>
-          <input type="number" id="lead-load-kw" placeholder="选填">
+          <input type="number" id="unified-load-kw" placeholder="选填">
         </div>
         <div class="field">
           <label>UPS容量 (kVA)</label>
-          <input type="number" id="lead-ups-cap" placeholder="如: 500" value="500">
+          <input type="number" id="unified-ups-cap" placeholder="如:200" value="200">
+        </div>
+        <div class="field">
+          <label>UPS台数</label>
+          <input type="number" id="unified-ups-num" value="1" min="1">
         </div>
         <div class="field">
           <label>功率因数</label>
-          <input type="number" id="lead-pf" placeholder="如: 1" step="0.01" min="0" max="1" value="1">
-        </div>
-        <div class="field">
-          <label>电池节数</label>
-          <input type="number" id="lead-batt-num" placeholder="如: 36" value="36">
-        </div>
-        <div class="field">
-          <label>单格个数</label>
-          <input type="number" id="lead-cell-num" placeholder="如: 6" value="6">
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-        <div class="field">
-          <label>截止电压 (V)</label>
-          <input type="number" id="lead-end-v" placeholder="默认1.75" step="0.01" value="1.75">
-        </div>
-        <div class="field">
-          <label>电池逆变效率 <span style="font-weight:normal;color:#888;font-size:11px">泰山UT取0.94</span></label>
-          <input type="number" id="lead-eff" placeholder="高频0.95/工频0.94" step="0.01" min="0" max="1" value="0.95">
-        </div>
-        <div class="field">
-          <label>电池功率 (W)</label>
-          <input type="number" id="lead-batt-power" placeholder="查表后填入" value="546">
-        </div>
-        <div style="display:flex;align-items:flex-end">
-          <button class="save-btn" onclick="calcLeadBattery()" style="width:100%">计算</button>
-        </div>
-      </div>
-      <div id="lead-result" style="display:none;background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">计算结果</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:14px">
-          <div>负载功率: <strong id="lead-load-w"></strong> kW</div>
-          <div>单格功率: <strong id="lead-cell-w"></strong> W/block</div>
-          <div>建议组数: <strong id="lead-groups"></strong> 组</div>
-        </div>
-        <!-- 计算说明 -->
-        <div id="lead-calc-notes" style="margin-top:12px"></div>
-        <!-- 推荐电池 -->
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #d0e8ff">
-          <div style="font-weight:600;margin-bottom:8px">推荐电池型号</div>
-          <div id="lead-batt-recommend" style="font-size:13px;line-height:1.8;color:#555"></div>
-        </div>
-      </div>
-      </div>
-      <div id="lead-method2-panel" style="display:none">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
-          <div class="field"><label>负载功率 (kW)</label><input type="number" id="lead2-load-kw" placeholder="选填"></div>
-          <div class="field"><label>UPS容量 (kVA)</label><input type="number" id="lead2-ups-cap" placeholder="如: 500" value="500"></div>
-          <div class="field"><label>功率因数</label><input type="number" id="lead2-pf" placeholder="如: 1" step="0.01" min="0" max="1" value="1"></div>
-          <div class="field"><label>电池节数</label><input type="number" id="lead2-batt-num" placeholder="如: 36" value="36"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
-          <div class="field"><label>电池类型</label><select id="lead2-batt-type" style="width:100%;border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:14px"><option value="12v">12V电池</option><option value="2v">2V电池</option></select></div>
-          <div class="field"><label>截止电压</label><select id="lead2-end-v" style="width:100%;border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:14px"><option value="1.60">1.60V</option><option value="1.65">1.65V</option><option value="1.67">1.67V</option><option value="1.70">1.70V</option><option value="1.75" selected>1.75V</option><option value="1.80">1.80V</option><option value="1.85">1.85V</option></select></div>
-          <div class="field"><label>电池逆变效率</label><input type="number" id="lead2-eff" placeholder="0.95" step="0.01" min="0" max="1" value="0.95"></div>
-          <div class="field"><label>放电时间</label><select id="lead2-discharge-time" style="width:100%;border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:14px"><option value="5">5分钟</option><option value="10">10分钟</option><option value="15" selected>15分钟</option><option value="20">20分钟</option><option value="25">25分钟</option><option value="30">30分钟</option><option value="45">45分钟</option><option value="60">60分钟</option><option value="90">90分钟</option><option value="120">120分钟</option><option value="180">180分钟</option><option value="240">240分钟</option><option value="300">300分钟</option><option value="360">360分钟</option><option value="480">480分钟</option><option value="600">600分钟</option><option value="1200">1200分钟</option></select></div>
-          <div class="field"><label>电池组数</label><input type="number" id="lead2-groups" placeholder="如: 2" min="1" value="2"></div>
-        </div>
-        <div style="margin-bottom:16px"><button class="save-btn" onclick="calcLeadBatteryMethod2()" style="width:100%;padding:12px;font-size:15px">查询推荐</button></div>
-        <div id="lead2-result" style="display:none;background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px">
-          <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">查询结果</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:14px;margin-bottom:16px">
-            <div>负载功率: <strong id="lead2-load-w"></strong> kW</div>
-            <div>所需功率: <strong id="lead2-req-power"></strong> W</div>
-            <div>电池组数: <strong id="lead2-groups-display"></strong> 组</div>
-          </div>
-          <div style="margin-top:12px;padding-top:12px;border-top:1px solid #d0e8ff">
-            <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-              <button onclick="showBatteryCategory('normal')" id="cat-normal-btn" class="cat-tab cat-tab-active">普通电池</button>
-              <button onclick="showBatteryCategory('highpower')" id="cat-highpower-btn" class="cat-tab">高功率电池</button>
-              <button onclick="showBatteryCategory('2v')" id="cat-2v-btn" class="cat-tab">2V电池</button>
-            </div>
-            <div id="lead2-normal-recommend"></div>
-            <div id="lead2-highpower-recommend" style="display:none"></div>
-            <div id="lead2-2v-recommend" style="display:none"></div>
-          </div>
-        </div>
-        <div style="margin-top:16px"><button onclick="openBatteryDataTable()" style="background:#9b59b6;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer">📊 查看电池恒功率数据表</button></div>
-      </div>
-    </div>
-
-    <!-- 锂电池计算 -->
-    <div id="batt-lithium-panel" style="display:none">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
-        <div class="field">
-          <label>负载功率 (kW)</label>
-          <input type="number" id="li-load-kw" placeholder="如: 500" value="500">
-        </div>
-        <div class="field">
-          <label>UPS功率 (kVA)</label>
-          <input type="number" id="li-ups-kva" placeholder="如: 600" value="600">
-        </div>
-        <div class="field">
-          <label>功率因数cosφ</label>
-          <input type="number" id="li-pf" placeholder="0.8~1" step="0.01" min="0.8" max="1" value="0.8">
-        </div>
-        <div class="field">
-          <label>放电时间 (h)</label>
-          <input type="number" id="li-time" placeholder="如: 0.25" step="0.01" value="0.25">
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
-        <div class="field">
-          <label>电池组数量</label>
-          <input type="number" id="li-group-num" placeholder="如: 2" value="2">
-        </div>
-        <div class="field">
-          <label>3.2V模组电芯串联数</label>
-          <input type="number" id="li-cell-num" placeholder="如: 160" value="160">
-        </div>
-        <div class="field">
-          <label>逆变器效率μ <span style="font-weight:normal;color:#888;font-size:11px">泰山UT取0.94</span></label>
-          <input type="number" id="li-eff" placeholder="0.9~1" step="0.01" min="0.9" max="1" value="0.95">
-        </div>
-        <div class="field">
-          <label>电池输出效率</label>
-          <input type="number" id="li-batt-eff" placeholder="如: 0.95" step="0.01" value="0.95">
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
-        <div class="field">
-          <label>3.2V模组电芯串联数</label>
-          <input type="number" id="li-cell-num" placeholder="如: 160" value="160">
-        </div>
-        <div class="field">
-          <label>逆变器效率μ <span style="font-weight:normal;color:#888;font-size:11px">泰山UT取0.94</span></label>
-          <input type="number" id="li-eff" placeholder="0.9~1" step="0.01" min="0.9" max="1" value="0.95">
-        </div>
-        <div class="field">
-          <label>电池输出效率</label>
-          <input type="number" id="li-batt-eff" placeholder="如: 0.95" step="0.01" value="0.95">
-        </div>
-      </div>
-      <div style="margin-bottom:16px">
-        <button class="save-btn" onclick="calcLithiumBattery()">计算</button>
-      </div>
-      <div id="li-result" style="display:none;background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">计算结果</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:14px">
-          <div>标称电压: <strong id="li-nominal-volts"></strong> V</div>
-          <div>电芯放电倍率: <strong id="li-rate"></strong> C</div>
-          <div>计算电池容量: <strong id="li-capacity"></strong> Ah</div>
-        </div>
-        <!-- 计算说明 -->
-        <div id="li-calc-notes" style="margin-top:12px"></div>
-      </div>
-    </div>
-
-    <!-- 开关盒计算 -->
-    <div id="batt-switch-panel" style="display:none">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-        <div class="field">
-          <label>负载功率 (kW) <span style="font-weight:normal;color:#888;font-size:11px">选填</span></label>
-          <input type="number" id="sw-load-power" placeholder="如有请填写">
-        </div>
-        <div class="field">
-          <label>UPS容量 (kVA)</label>
-          <input type="number" id="sw-ups-cap" placeholder="如: 200" value="200">
-        </div>
-        <div class="field">
-          <label>功率因数</label>
-          <input type="number" id="sw-pf" placeholder="如: 0.9" step="0.01" min="0" max="1" value="0.9">
+          <input type="number" id="unified-pf" step="0.01" value="0.9" min="0.8" max="1">
         </div>
         <div class="field">
           <label>电池节数/组</label>
-          <input type="number" id="sw-batt-num" placeholder="如: 30" value="30">
+          <input type="number" id="unified-cells" value="32" min="1">
+        </div>
+        <div class="field">
+          <label>电池组数</label>
+          <input type="number" id="unified-groups" value="2" min="1">
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:10px">
         <div class="field">
-          <label>电池组数 (N≥2)</label>
-          <input type="number" id="sw-batt-groups" placeholder="如: 1" min="1" value="1">
+          <label>电池类型</label>
+          <select id="unified-batt-type">
+            <option value="12v">12V铅酸</option>
+            <option value="2v">2V铅酸</option>
+          </select>
         </div>
         <div class="field">
-          <label>终止电压 (V)</label>
-          <input type="number" id="sw-end-v" placeholder="默认1.75" step="0.01" value="1.75">
+          <label>放电时间</label>
+          <select id="unified-discharge-time">
+            <option value="15">15分钟</option>
+            <option value="30">30分钟</option>
+            <option value="60">60分钟</option>
+            <option value="120">120分钟</option>
+          </select>
         </div>
         <div class="field">
-          <label>电池逆变效率 <span style="font-weight:normal;color:#888;font-size:11px">泰山UT取0.94</span></label>
-          <input type="number" id="sw-eff" placeholder="高频0.95/工频0.94" step="0.01" min="0" max="1" value="0.95">
+          <label>截止电压 (V)</label>
+          <select id="unified-end-v">
+            <option value="1.75" selected>1.75V</option>
+            <option value="1.70">1.70V</option>
+            <option value="1.80">1.80V</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>逆变效率</label>
+          <input type="number" id="unified-eff" step="0.01" value="0.95">
+        </div>
+        <div class="field">
+          <label>端子类型</label>
+          <select id="unified-terminal">
+            <option value="M6">M6</option>
+            <option value="M8" selected>M8</option>
+            <option value="M10">M10</option>
+          </select>
         </div>
         <div class="field" style="display:flex;align-items:flex-end">
-          <button class="save-btn" onclick="calcSwitchBox()" style="width:100%">计算</button>
-        </div>
-      </div>
-      <div id="switch-result" style="display:none;background:#f8fbff;border:1px solid #d0e8ff;border-radius:10px;padding:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">📊 计算结果</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;font-size:14px;margin-bottom:12px">
-          <div style="background:white;padding:10px;border-radius:6px;border:1px solid #e0e0e0">
-            <div style="font-size:12px;color:#888;margin-bottom:4px">最大放电电流</div>
-            <div style="font-size:20px;font-weight:600;color:#2d6a9f"><span id="sw-current">-</span> A</div>
-          </div>
-          <div style="background:white;padding:10px;border-radius:6px;border:1px solid #e0e0e0">
-            <div style="font-size:12px;color:#888;margin-bottom:4px">分组开关电流</div>
-            <div style="font-size:20px;font-weight:600;color:#27ae60"><span id="sw-group-current">-</span> A</div>
-          </div>
-          <div style="background:white;padding:10px;border-radius:6px;border:1px solid #e0e0e0">
-            <div style="font-size:12px;color:#888;margin-bottom:4px">开关盒电压等级</div>
-            <div style="font-size:18px;font-weight:600;color:#e67e22"><span id="sw-volts-level">-</span></div>
-          </div>
-          <div style="background:white;padding:10px;border-radius:6px;border:1px solid #e0e0e0">
-            <div style="font-size:12px;color:#888;margin-bottom:4px">电池组并联数</div>
-            <div style="font-size:20px;font-weight:600;color:#8e44ad"><span id="sw-groups-result">-</span> 组</div>
-          </div>
-        </div>
-
-        <!-- 断路器推荐卡片 + 标准规格表 -->
-        <div style="margin-top:16px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-            <!-- 断路器推荐卡片 -->
-            <div style="padding:16px;background:linear-gradient(135deg,#f8f9fa,#e9ecef);border-radius:10px;border:2px solid #495057">
-              <div style="text-align:center;margin-bottom:12px">
-                <span style="font-size:14px;font-weight:700;color:#212529">🔌 推荐断路器（大一号）</span>
-              </div>
-              <div style="display:grid;grid-template-columns:1fr;gap:12px" id="sw-main-container">
-                <div style="background:linear-gradient(135deg,#fff3cd,#ffe69c);padding:12px;border-radius:8px;border:2px solid #ffc107;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
-                  <div style="text-align:center;border-bottom:1px dashed #ffc107;padding-bottom:6px;margin-bottom:6px">
-                    <span style="font-size:12px;font-weight:600;color:#856404">🔋 电池总开关</span>
-                  </div>
-                  <div style="text-align:center">
-                    <div style="font-size:28px;font-weight:700;color:#856404;line-height:1.2" id="sw-main-switch">-</div>
-                    <div style="font-size:12px;color:#856404;margin-top:2px;font-weight:500" id="sw-main-switch-note">-</div>
-                  </div>
-                  <div style="text-align:center;margin-top:6px;padding-top:6px;border-top:1px solid #ffc107">
-                    <span style="font-size:11px;color:#666">计算电流：</span>
-                    <span style="font-size:12px;font-weight:600;color:#333" id="sw-main-calc">-</span>
-                  </div>
-                </div>
-                <div id="sw-sub-container" style="background:linear-gradient(135deg,#d4edda,#a3d9a5);padding:12px;border-radius:8px;border:2px solid #28a745;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
-                  <div style="text-align:center;border-bottom:1px dashed #28a745;padding-bottom:6px;margin-bottom:6px">
-                    <span style="font-size:12px;font-weight:600;color:#155724">⚡ 电池分开关</span>
-                  </div>
-                  <div style="text-align:center">
-                    <div style="font-size:28px;font-weight:700;color:#155724;line-height:1.2" id="sw-sub-switch">-</div>
-                    <div style="font-size:12px;color:#155724;margin-top:2px;font-weight:500" id="sw-sub-switch-note">-</div>
-                  </div>
-                  <div style="text-align:center;margin-top:6px;padding-top:6px;border-top:1px solid #28a745">
-                    <span style="font-size:11px;color:#666">计算电流：</span>
-                    <span style="font-size:12px;font-weight:600;color:#333" id="sw-sub-calc">-</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- 标准断路器规格表 -->
-            <div style="padding:12px;background:white;border-radius:10px;border:2px solid #dee2e6">
-              <div style="text-align:center;margin-bottom:8px">
-                <span style="font-size:14px;font-weight:700;color:#212529">📋 断路器额定电流规格表</span>
-              </div>
-              <div style="font-size:11px;color:#666;margin-bottom:8px;text-align:center">直流断路器标准额定电流（A）</div>
-              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;text-align:center">
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">63</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">80</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">100</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">125</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">160</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">200</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">225</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">250</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">315</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">350</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">400</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">500</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">630</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">800</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">1000</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">1250</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">1600</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">2000</div>
-                <div style="background:#f8f9fa;padding:4px;border-radius:3px;border:1px solid #dee2e6">2500</div>
-              </div>
-              <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #dee2e6;font-size:10px;color:#888;text-align:center">
-                选型规则：计算电流向上取整至表中相邻较大值
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding-top:12px;border-top:1px solid #d0e8ff;font-size:13px;line-height:1.8;color:#555" id="switch-notes"></div>
-      </div>
-    </div>
-
-    <!-- 电池监控配置选型 -->
-    <div id="batt-monitor-panel" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:16px">
-        <!-- 输入参数 -->
-        <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px">
-          <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">📥 输入参数</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-            <div class="field">
-              <label>负载功率(kW)</label>
-              <input type="number" id="mon-load-kw" placeholder="如: 180" min="0">
-            </div>
-            <div class="field">
-              <label>UPS台数</label>
-              <input type="number" id="mon-ups-num" placeholder="如: 1" value="1" min="1">
-            </div>
-            <div class="field">
-              <label>每台UPS容量(kVA)</label>
-              <input type="number" id="mon-ups-cap" placeholder="如: 200" value="200" min="1">
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
-            <div class="field">
-              <label>功率因数(cosφ)</label>
-              <input type="number" id="mon-pf" placeholder="0.8~1" step="0.01" value="0.9" min="0.8" max="1">
-            </div>
-            <div class="field">
-              <label>电池组数</label>
-              <input type="number" id="mon-batt-groups" placeholder="如: 4" value="4" min="1">
-            </div>
-            <div class="field">
-              <label>单体数/组</label>
-              <input type="number" id="mon-cell-per-group" placeholder="如: 36" value="36" min="1">
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
-            <div class="field">
-              <label>电池类型</label>
-              <select id="mon-batt-type">
-                <option value="12v">12V铅酸电池</option>
-                <option value="2v">2V铅酸电池</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>逆变器效率(η)</label>
-              <input type="number" id="mon-eff" placeholder="高频0.95/工频0.94" step="0.01" value="0.95" min="0.9" max="1">
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
-            <div class="field">
-              <label>放电截止电压(V)</label>
-              <select id="mon-end-v">
-                <option value="1.6">1.60V</option>
-                <option value="1.65">1.65V</option>
-                <option value="1.67">1.67V</option>
-                <option value="1.7">1.70V</option>
-                <option value="1.75" selected>1.75V</option>
-                <option value="1.8">1.80V</option>
-                <option value="1.85">1.85V</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>端子类型</label>
-              <select id="mon-terminal-type">
-                <option value="M6">M6</option>
-                <option value="M8" selected>M8</option>
-                <option value="M10">M10</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- 输出参数 -->
-        <div style="background:#fff8e8;border:1.5px solid #ffe0b2;border-radius:10px;padding:16px">
-          <div style="font-weight:600;margin-bottom:12px;color:#e65100">📤 计算结果</div>
-          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-            <div style="background:white;padding:12px;border-radius:8px;border:1px solid #ddd">
-              <div style="font-size:12px;color:#888;margin-bottom:4px">电池总组数</div>
-              <div style="font-size:20px;font-weight:600;color:#2d6a9f"><span id="mon-total-groups">-</span> 组</div>
-            </div>
-            <div style="background:white;padding:12px;border-radius:8px;border:1px solid #ddd">
-              <div style="font-size:12px;color:#888;margin-bottom:4px">分组放电电流</div>
-              <div style="font-size:20px;font-weight:600;color:#e65100"><span id="mon-group-current">-</span> A</div>
-            </div>
-          </div>
-          <div style="margin-top:12px">
-            <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:#555">选配项：</div>
-            <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer">
-              <input type="checkbox" id="mon-opt-hmi" checked>
-              <span style="font-size:13px">本地数据显示屏(SBMS-HMI-6000)</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <input type="checkbox" id="mon-opt-vm">
-              <span style="font-size:13px">组电压监控模块(SBMS-PBMS-VM)</span>
-            </label>
-          </div>
-          <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-              <input type="checkbox" id="mon-show-price" onchange="toggleMonitorPrice()">
-              <span style="font-size:13px">显示价格</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <button class="save-btn" onclick="calcMonitorConfig()">生成配置</button>
-        <button onclick="exportMonitorConfig()" style="background:#27ae60;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer">导出配置表</button>
-      </div>
-      <div id="monitor-result" style="display:none">
-        <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">📋 电池监控配置表</div>
-        <div style="overflow-x:auto">
-          <table id="monitor-config-table" style="width:100%;border-collapse:collapse;font-size:13px;min-width:900px">
-            <thead>
-              <tr style="background:#2d6a9f;color:white">
-                <th style="padding:10px;text-align:center;border:1px solid #ddd;width:40px">序号</th>
-                <th style="padding:10px;text-align:left;border:1px solid #ddd;width:100px">产品型号</th>
-                <th style="padding:10px;text-align:left;border:1px solid #ddd;width:130px">产品名称</th>
-                <th style="padding:10px;text-align:left;border:1px solid #ddd;min-width:280px">产品描述</th>
-                <th style="padding:10px;text-align:left;border:1px solid #ddd;width:100px">备注</th>
-                <th style="padding:10px;text-align:center;border:1px solid #ddd;width:50px">单位</th>
-                <th style="padding:10px;text-align:center;border:1px solid #ddd;width:50px">数量</th>
-                <th class="mon-price-col" style="padding:10px;text-align:right;border:1px solid #ddd;width:80px;display:none">单价(元)</th>
-                <th class="mon-price-col" style="padding:10px;text-align:right;border:1px solid #ddd;width:80px;display:none">小计(元)</th>
-              </tr>
-            </thead>
-            <tbody id="monitor-tbody"></tbody>
-            <tfoot>
-              <tr class="mon-price-row" style="background:#f5f7fa;font-weight:600;display:none">
-                <td colspan="6" style="padding:12px;text-align:right;border:1px solid #ddd">合计金额：</td>
-                <td class="mon-price-col" style="padding:12px;text-align:right;border:1px solid #ddd;color:#e74c3c;font-size:16px;display:none" id="monitor-total">¥0.00</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <div style="margin-top:16px;padding:12px;background:#fff3cd;border-radius:8px;font-size:12px;color:#856404">
-          <strong>💡 配置说明：</strong>
-          <ul style="margin:8px 0 0 20px;padding:0">
-            <li>主机(SBMS-PBMS6000)是必选配置，每台主机最多支持6组电池</li>
-            <li>电流传感器根据最大电流选择合适量程(100A/200A/400A/600A/800A/1000A)</li>
-            <li>12V铅酸电池：每只电池配1个单体测量模块(SBMS-PBAT51-12)和1根采集线</li>
-            <li>2V铅酸电池：每只电池配1个单体测量模块(SBMS-PBAT51-02)和1根采集线</li>
-          </ul>
+          <button class="save-btn" onclick="calcAllBatteryConfig()" style="width:100%;padding:12px">🚀 一键计算全部</button>
         </div>
       </div>
     </div>
 
-    <!-- 项目配置汇总 -->
-    <div id="batt-summary-panel" style="display:none">
-      <div style="margin-bottom:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">📥 数据导入</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-          <button onclick="importUpsFromResult()" class="summary-import-btn" style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">📤 从UPS选型带入</button>
-          <button onclick="importBatteryFromCalc()" class="summary-import-btn" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">🔋 从电池计算带入</button>
-          <button onclick="importSwitchBoxFromCalc()" class="summary-import-btn" style="background:#fff3e0;color:#ef6c00;border:1px solid #ffcc80;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">⚡ 从开关盒带入</button>
-          <button onclick="importMonitorFromCalc()" class="summary-import-btn" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #ce93d8;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">📡 从监控带入</button>
+    <!-- 计算结果区：三列布局 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+      <!-- 电池推荐 -->
+      <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:16px">
+        <div style="font-weight:600;margin-bottom:12px;color:#2e7d32">🔋 电池推荐</div>
+        <div id="unified-battery-result" style="font-size:13px;line-height:1.8;color:#555">
+          <span style="color:#888">点击"一键计算全部"查看结果</span>
         </div>
       </div>
 
-      <!-- UPS手动输入区 -->
-      <div id="summary-ups-input" style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">UPS 主机信息 <span style="font-weight:400;color:#888;font-size:12px">(可手动修改)</span></div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
-          <div class="field"><label>产品型号</label><input type="text" id="summary-ups-model" placeholder="如: UR-200K"></div>
-          <div class="field"><label>额定容量</label><input type="text" id="summary-ups-cap" placeholder="如: 200kVA"></div>
-          <div class="field"><label>数量</label><input type="number" id="summary-ups-qty" value="1" min="1"></div>
-          <div class="field"><label>产品编码</label><input type="text" id="summary-ups-code" placeholder="预留"></div>
-          <div class="field"><label>单价(元)</label><input type="number" id="summary-ups-price" placeholder="预留" step="0.01"></div>
+      <!-- 开关盒 -->
+      <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:16px">
+        <div style="font-weight:600;margin-bottom:12px;color:#ef6c00">⚡ 开关盒配置</div>
+        <div id="unified-switch-result" style="font-size:13px;line-height:1.8;color:#555">
+          <span style="color:#888">点击"一键计算全部"查看结果</span>
         </div>
       </div>
 
-      <!-- 汇总表格 -->
-      <div style="font-weight:600;margin-bottom:12px;color:#1a3a5c">📋 项目配置汇总清单</div>
-      <div style="overflow-x:auto;margin-bottom:16px">
-        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:13px;min-width:1000px">
+      <!-- 监控 -->
+      <div style="background:#f3e5f5;border:1px solid #ce93d8;border-radius:10px;padding:16px">
+        <div style="font-weight:600;margin-bottom:12px;color:#7b1fa2">📡 监控配置</div>
+        <div style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+            <input type="checkbox" id="unified-opt-hmi" checked> 显示屏
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin-top:4px">
+            <input type="checkbox" id="unified-opt-vm"> 组电压
+          </label>
+        </div>
+        <div id="unified-monitor-result" style="font-size:13px;line-height:1.8;color:#555">
+          <span style="color:#888">点击"一键计算全部"查看结果</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 项目汇总清单 -->
+    <div style="border:2px solid #2d6a9f;border-radius:10px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-weight:600;color:#1a3a5c;font-size:16px">📋 项目配置汇总清单</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="exportProjectSummary()" style="background:#27ae60;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">📥 导出Excel</button>
+          <button onclick="clearProjectSummary()" style="background:#95a5a6;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">清空</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:800px">
           <thead>
             <tr style="background:#2d6a9f;color:white">
-              <th style="padding:10px;border:1px solid #ddd;width:60px">类别</th>
-              <th style="padding:10px;border:1px solid #ddd;width:100px">产品编码</th>
-              <th style="padding:10px;border:1px solid #ddd;width:150px">产品型号</th>
-              <th style="padding:10px;border:1px solid #ddd">产品描述</th>
-              <th style="padding:10px;border:1px solid #ddd;width:60px">单位</th>
-              <th style="padding:10px;border:1px solid #ddd;width:60px">数量</th>
-              <th style="padding:10px;border:1px solid #ddd;width:80px">单价</th>
-              <th style="padding:10px;border:1px solid #ddd;width:80px">小计</th>
-              <th style="padding:10px;border:1px solid #ddd;width:100px">备注</th>
+              <th style="padding:8px;border:1px solid #ddd;width:50px">类别</th>
+              <th style="padding:8px;border:1px solid #ddd;width:90px">编码</th>
+              <th style="padding:8px;border:1px solid #ddd">型号</th>
+              <th style="padding:8px;border:1px solid #ddd">描述</th>
+              <th style="padding:8px;border:1px solid #ddd;width:40px">单位</th>
+              <th style="padding:8px;border:1px solid #ddd;width:50px">数量</th>
+              <th style="padding:8px;border:1px solid #ddd;width:70px">单价</th>
+              <th style="padding:8px;border:1px solid #ddd;width:70px">小计</th>
             </tr>
           </thead>
           <tbody id="summary-tbody">
-            <tr><td colspan="9" style="padding:40px;text-align:center;color:#888">点击上方按钮导入配置数据</td></tr>
+            <tr><td colspan="8" style="padding:30px;text-align:center;color:#888">点击"一键计算全部"生成配置清单</td></tr>
           </tbody>
           <tfoot id="summary-tfoot" style="display:none;background:#f5f7fa;font-weight:600">
             <tr>
-              <td colspan="6" style="padding:12px;border:1px solid #ddd;text-align:right">合计：</td>
-              <td id="summary-total" colspan="3" style="padding:12px;border:1px solid #ddd;color:#e74c3c;font-size:16px">¥0.00</td>
+              <td colspan="5" style="padding:10px;border:1px solid #ddd;text-align:right">合计：</td>
+              <td id="summary-total" colspan="3" style="padding:10px;border:1px solid #ddd;color:#e74c3c;font-size:14px">¥0.00</td>
             </tr>
           </tfoot>
         </table>
-      </div>
-
-      <!-- 操作按钮 -->
-      <div style="display:flex;gap:12px">
-        <button onclick="exportProjectSummary()" style="background:#27ae60;color:white;border:none;border-radius:8px;padding:12px 24px;font-size:14px;cursor:pointer">📥 导出Excel汇总清单</button>
-        <button onclick="clearProjectSummary()" style="background:#95a5a6;color:white;border:none;border-radius:8px;padding:12px 24px;font-size:14px;cursor:pointer">🗑️ 清空汇总</button>
       </div>
     </div>
   </div>
@@ -2541,6 +2170,137 @@ function clearProjectSummary() {
   document.getElementById('summary-ups-price').value = '';
   renderProjectSummary();
   alert('已清空汇总数据');
+}
+
+// ==================== 一键计算全部 ====================
+function calcAllBatteryConfig() {
+  // 获取统一参数
+  const loadKw = parseFloat(document.getElementById('unified-load-kw').value) || 0;
+  const upsCap = parseFloat(document.getElementById('unified-ups-cap').value) || 200;
+  const upsNum = parseInt(document.getElementById('unified-ups-num').value) || 1;
+  const pf = parseFloat(document.getElementById('unified-pf').value) || 0.9;
+  const cellsPerGroup = parseInt(document.getElementById('unified-cells').value) || 32;
+  const groups = parseInt(document.getElementById('unified-groups').value) || 2;
+  const battType = document.getElementById('unified-batt-type').value;
+  const dischargeTime = parseInt(document.getElementById('unified-discharge-time').value) || 15;
+  const endV = parseFloat(document.getElementById('unified-end-v').value) || 1.75;
+  const eff = parseFloat(document.getElementById('unified-eff').value) || 0.95;
+  const optHmi = document.getElementById('unified-opt-hmi').checked;
+  const optVm = document.getElementById('unified-opt-vm').checked;
+
+  const totalGroups = groups * upsNum;
+  const totalCells = cellsPerGroup * totalGroups;
+  const loadW = loadKw > 0 ? loadKw * 1000 : upsCap * pf * 1000;
+  const cellMultiplier = battType === '2v' ? 1 : 6;
+
+  // ===== 1. 电池计算 =====
+  const reqPower = loadW / (cellsPerGroup * cellMultiplier * eff * groups);
+  const recommendations = getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
+  let batteryHtml = '';
+  let batteryResult = null;
+
+  if (recommendations.normal && recommendations.normal.length > 0) {
+    batteryResult = recommendations.normal[0];
+    batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐: ${batteryResult.model}</div>`;
+    batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
+    batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${groups}组 × ${cellsPerGroup}只/组)</div>`;
+  } else if (recommendations.highpower && recommendations.highpower.length > 0) {
+    batteryResult = recommendations.highpower[0];
+    batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐(大功率): ${batteryResult.model}</div>`;
+    batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
+    batteryHtml += `<div>总数量: <b>${totalCells}</b>只</div>`;
+  } else {
+    batteryHtml = `<div style="color:#e74c3c">⚠️ 未找到满足要求的电池型号</div>`;
+    batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体 (可能需要多组并联)</div>`;
+  }
+  document.getElementById('unified-battery-result').innerHTML = batteryHtml;
+
+  // ===== 2. 开关盒计算 =====
+  const maxCurrent = loadW / (cellsPerGroup * endV * cellMultiplier * eff);
+  const groupCurrent = maxCurrent / totalGroups;
+  const voltLevel = getVoltLevel(cellsPerGroup, battType);
+  const mainSwitch = getNextBreakerSize(maxCurrent);
+  const subSwitch = getNextBreakerSize(groupCurrent);
+
+  let switchHtml = `<div style="margin-bottom:8px">
+    <div>电压等级: <b style="color:#ef6c00">${voltLevel}</b></div>
+    <div>最大电流: <b>${maxCurrent.toFixed(1)}A</b></div>
+    <div>分组电流: <b>${groupCurrent.toFixed(1)}A</b></div>
+  </div>`;
+  switchHtml += `<div style="padding:8px;background:white;border-radius:6px;margin-top:8px">
+    <div>总开关: <b style="color:#e65100">${mainSwitch}A</b></div>
+    <div>分开关: <b style="color:#e65100">${subSwitch}A</b> × ${totalGroups}路</div>
+  </div>`;
+  document.getElementById('unified-switch-result').innerHTML = switchHtml;
+
+  // ===== 3. 监控计算 =====
+  const hostQty = Math.ceil(totalGroups / 6);
+  const monitorConfig = [];
+  let monitorHtml = '';
+
+  // 主机
+  const host = MONITOR_PRODUCTS.find(p => p.code === '88091156');
+  monitorConfig.push({ ...host, qty: hostQty, total: hostQty * host.unitPrice, note: '必选' });
+
+  // HMI
+  if (optHmi) {
+    const hmi = MONITOR_PRODUCTS.find(p => p.code === '88091157');
+    monitorConfig.push({ ...hmi, qty: hostQty, total: hostQty * hmi.unitPrice, note: '选配' });
+  }
+
+  // 电流监控
+  const cm = MONITOR_PRODUCTS.find(p => p.code === '88091138');
+  monitorConfig.push({ ...cm, qty: totalGroups, total: totalGroups * cm.unitPrice, note: '蓄电池组电流监控' });
+
+  // 电流传感器
+  let sensorCode = '88091140';
+  let sensorRange = '0~200A';
+  if (groupCurrent <= 100) { sensorCode = '88091139'; sensorRange = '0~100A'; }
+  else if (groupCurrent <= 200) { sensorCode = '88091140'; sensorRange = '0~200A'; }
+  else if (groupCurrent <= 400) { sensorCode = '88091141'; sensorRange = '0~400A'; }
+  else if (groupCurrent <= 600) { sensorCode = '88091142'; sensorRange = '0~600A'; }
+  else if (groupCurrent <= 800) { sensorCode = '88091143'; sensorRange = '0~800A'; }
+  else { sensorCode = '88091144'; sensorRange = '0~1000A'; }
+  const sensor = MONITOR_PRODUCTS.find(p => p.code === sensorCode);
+  monitorConfig.push({ ...sensor, qty: totalGroups, total: totalGroups * sensor.unitPrice, note: `量程${sensorRange}` });
+
+  // 从控模块和线缆
+  const slaveCode = battType === '2v' ? '88091146' : '88091145';
+  const slave = MONITOR_PRODUCTS.find(p => p.code === slaveCode);
+  monitorConfig.push({ ...slave, qty: totalCells, total: totalCells * slave.unitPrice, note: '每只电池配1个' });
+
+  // 电压采集
+  if (optVm) {
+    const vm = MONITOR_PRODUCTS.find(p => p.code === '88091150');
+    monitorConfig.push({ ...vm, qty: totalGroups, total: totalGroups * vm.unitPrice, note: '选配' });
+  }
+
+  monitorHtml = `<div style="max-height:200px;overflow-y:auto">`;
+  monitorConfig.forEach(item => {
+    monitorHtml += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #ddd">
+      <span>${item.name}</span><span><b>${item.qty}</b>个</span>
+    </div>`;
+  });
+  monitorHtml += `</div>`;
+  document.getElementById('unified-monitor-result').innerHTML = monitorHtml;
+
+  // ===== 4. 更新项目汇总 =====
+  window.projectSummary = {
+    ups: { model: '', capacity: upsCap + 'kVA', qty: upsNum, price: 0, note: '' },
+    battery: { model: batteryResult ? batteryResult.model : '', cellsPerGroup, groups, totalCells, price: 0, note: battType === '2v' ? '2V电池' : '12V电池' },
+    switchBox: { model: voltLevel + ' 开关盒', voltLevel, mainSwitch: mainSwitch + 'A', subSwitch: subSwitch + 'A', qty: 1, price: 0, note: '' },
+    monitor: { config: monitorConfig }
+  };
+  renderProjectSummary();
+}
+
+// 辅助函数：获取电压等级
+function getVoltLevel(cells, battType) {
+  const cellV = battType === '2v' ? 2 : 12;
+  const totalV = cells * cellV;
+  if (totalV <= 250) return '250VDC';
+  if (totalV <= 500) return '500VDC';
+  return '750VDC';
 }
 
 // 导出项目汇总清单（Excel格式）
