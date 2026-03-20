@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UPS 智能选型助手 v1.4.6</title>
+<title>UPS 智能选型助手 v1.4.7</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; }
@@ -2466,6 +2466,7 @@ function calcAllBatteryConfig() {
   const cellsPerGroup = parseInt(document.getElementById('unified-cells').value) || 32;
   const groups = parseInt(document.getElementById('unified-groups').value) || 1;
   const battType = document.getElementById('unified-batt-type').value;
+  const terminalType = document.getElementById('unified-terminal').value || 'M8';  // 端子类型
   const dischargeTime = parseInt(document.getElementById('unified-discharge-time').value) || 15;
   const endV = parseFloat(document.getElementById('unified-end-v').value) || 1.75;
   const eff = parseFloat(document.getElementById('unified-eff').value) || 0.95;
@@ -2609,12 +2610,20 @@ function calcAllBatteryConfig() {
   const sensorDesc = sensor.desc.replace(/测量范围：0~±\d+A/, `测量范围：0~±${sensorRange.replace('0~', '')}`);
   monitorConfig.push({ ...sensor, desc: sensorDesc, qty: totalGroups, total: totalGroups * sensor.unitPrice, note: `量程${sensorRange}` });
 
-  // 从控模块和线缆
+  // 从控模块
   const slaveCode = battType === '2v' ? '88091146' : '88091145';
   const slave = MONITOR_PRODUCTS.find(p => p.code === slaveCode);
   monitorConfig.push({ ...slave, qty: totalCells, total: totalCells * slave.unitPrice, note: '每只电池配1个' });
 
-  // 电压采集
+  // 测试线缆（根据端子类型选择）
+  const terminalMap = { 'M6': '88091147', 'M8': '88091148', 'M10': '88091149' };
+  const cableCode = terminalMap[terminalType] || '88091148';
+  const cable = MONITOR_PRODUCTS.find(p => p.code === cableCode);
+  if (cable) {
+    monitorConfig.push({ ...cable, qty: totalCells, total: totalCells * cable.unitPrice, note: '每只电池1根' });
+  }
+
+  // 电压采集（选配）
   if (optVm) {
     const vm = MONITOR_PRODUCTS.find(p => p.code === '88091150');
     monitorConfig.push({ ...vm, qty: totalGroups, total: totalGroups * vm.unitPrice, note: '选配' });
