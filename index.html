@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UPS 智能选型助手 v1.4.7</title>
+<title>UPS 智能选型助手 v1.4.11</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; }
@@ -384,6 +384,38 @@ function checkAuth(){
     <!-- 统一参数输入区 -->
     <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
       <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">📥 参数输入</div>
+      <!-- UPS型号选择（支持标准/非标切换） -->
+      <div style="margin-bottom:12px;padding:10px;background:#fff8e1;border:1px solid #ffcc80;border-radius:8px">
+        <!-- 标准/非标切换 -->
+        <div style="display:flex;align-items:center;gap:20px;margin-bottom:10px">
+          <label style="font-size:13px;font-weight:500;color:#333">
+            <input type="radio" name="ups-type" value="standard" checked onchange="toggleUpsType('standard')" style="margin-right:4px"> 标准型号
+          </label>
+          <label style="font-size:13px;font-weight:500;color:#333">
+            <input type="radio" name="ups-type" value="custom" onchange="toggleUpsType('custom')" style="margin-right:4px"> 非标型号
+          </label>
+        </div>
+        <!-- 标准模式：从数据表选择 -->
+        <div id="ups-standard-area" style="display:flex;align-items:center;gap:12px">
+          <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap">⚡ UPS型号：</label>
+          <input type="text" id="unified-ups-model" list="ups-model-list" placeholder="选择或手动输入型号" onchange="fillUpsFromSelection()" style="flex:1;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 12px;font-size:13px">
+          <datalist id="ups-model-list"></datalist>
+          <button onclick="fillUpsFromSelection()" style="background:#2d6a9f;color:white;border:none;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap">填入参数</button>
+          <span id="ups-model-hint" style="font-size:12px;color:#888;min-width:140px"></span>
+        </div>
+        <!-- 非标模式：手动输入 -->
+        <div id="ups-custom-area" style="display:none">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap;width:80px">UPS型号：</label>
+            <input type="text" id="custom-ups-model" placeholder="请输入非标UPS型号" style="flex:1;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 12px;font-size:13px">
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap;width:80px">UPS描述：</label>
+            <input type="text" id="custom-ups-desc" placeholder="请输入描述（如：XXX品牌 200kVA）" style="flex:1;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 12px;font-size:13px">
+          </div>
+          <div style="margin-top:8px;font-size:12px;color:#ff9800">⚠️ 非标型号不在内置数据表中，请确保参数准确</div>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
         <div class="field">
           <label>负载功率 (kW)</label>
@@ -551,6 +583,8 @@ function checkAuth(){
               <th style="padding:8px;border:1px solid #ddd;width:100px">备注</th>
             </tr>
           </thead>
+            </tr>
+          </thead>
           <tbody id="summary-tbody">
             <tr><td colspan="9" style="padding:30px;text-align:center;color:#888">点击"一键计算全部"生成配置清单</td></tr>
           </tbody>
@@ -618,7 +652,7 @@ function checkAuth(){
           <table class="product-table" id="product-table-rec">
             <thead><tr>
               <th style="width:40px"><input type="checkbox" id="select-all-rec" onchange="toggleSelectAll('rec')" title="全选"></th>
-              <th>系列</th><th style="min-width:130px">型号</th><th style="min-width:180px">描述</th>
+              <th>系列</th><th style="min-width:130px">型号</th><th style="width:70px">类型</th><th style="min-width:180px">描述</th>
               <th>容量</th><th>功率因数</th><th>满载效率</th><th style="min-width:110px">输入电压范围</th>
               <th>安装</th><th>并机</th><th>通讯</th><th>详情</th>
             </tr></thead>
@@ -636,7 +670,7 @@ function checkAuth(){
           <table class="product-table" id="product-table-alt">
             <thead><tr>
               <th style="width:40px"><input type="checkbox" id="select-all-alt" onchange="toggleSelectAll('alt')" title="全选"></th>
-              <th>系列</th><th style="min-width:130px">型号</th><th style="min-width:180px">描述</th>
+              <th>系列</th><th style="min-width:130px">型号</th><th style="width:70px">类型</th><th style="min-width:180px">描述</th>
               <th>容量</th><th>功率因数</th><th>满载效率</th><th style="min-width:110px">输入电压范围</th>
               <th>安装</th><th>并机</th><th>通讯</th><th>详情</th>
             </tr></thead>
@@ -969,6 +1003,74 @@ function findProduct(model) {
   );
 }
 
+/**
+ * 识别模块化UPS产品类型
+ * 
+ * 规则：
+ * 1. 含空格 → 整机配置（机框+模块组合），如 "祁连UM-6000TFL-FS/100 祁连UM-1000TFL-M"
+ * 2. 不含空格且以 -M 结尾 → 功率模块，如 "祁连UM-1000TFL-M"
+ * 3. 其他 → 整机（非模块化或机框）
+ * 
+ * @param {string} model - 产品型号
+ * @param {string} series - 产品系列
+ * @returns {object} { type: 类型代码, label: 类型名称 }
+ */
+function getUpsProductType(model, series) {
+  if (!model) return { type: 'unknown', label: '未知' };
+  
+  // 只对祁连UM系列进行模块化识别
+  if (series && series.includes('UM')) {
+    // 含空格 = 整机配置（机框+模块组合）
+    if (model.includes(' ')) {
+      return { type: 'system', label: '整机配置' };
+    }
+    // 以 -M 结尾 = 功率模块
+    if (model.match(/-M\d*$/)) {
+      return { type: 'module', label: '功率模块' };
+    }
+    // 机框（FS/FF/S/D 结尾）
+    if (model.match(/-(FS|FF|S|D)(\/|$)/)) {
+      return { type: 'frame', label: '机框' };
+    }
+  }
+  
+  // 其他系列或非模块化产品
+  return { type: 'ups', label: 'UPS主机' };
+}
+
+/**
+ * 解析祁连UM系列模块化UPS型号，拆分为机框和模块
+ * @param {string} model - 产品型号
+ * @param {object} product - 产品数据对象
+ * @returns {object|null} 如果是整机配置，返回 { frame: 机框型号, module: 模块型号, maxModules: 最大模块数 }
+ */
+function parseModularUpsModel(model, product) {
+  if (!model || !model.includes(' ')) return null;
+
+  // 只对祁连UM系列进行拆分（其他系列含空格是整机型号）
+  const series = product?.["系列"] || "";
+  if (!series.includes('UM')) return null;
+
+  // 拆分型号：祁连UM-6000TFL-FS/100 祁连UM-1000TFL-M
+  const parts = model.split(' ');
+  if (parts.length !== 2) return null;
+
+  // 机框型号：去掉 /100 部分
+  const frameModel = parts[0].replace(/\/\d+$/, '');
+  // 模块型号
+  const moduleModel = parts[1];
+
+  // 解析最大模块数：从 "≤6" 提取数字
+  const maxModulesStr = product?.["模块数量"] || "";
+  const maxModules = parseInt(maxModulesStr.replace(/[^\d]/g, '')) || 1;
+
+  return {
+    frame: frameModel,
+    module: moduleModel,
+    maxModules: maxModules
+  };
+}
+
 let allRecsCache = [];
 
 function buildProductRow(rec, idx) {
@@ -976,12 +1078,75 @@ function buildProductRow(rec, idx) {
   const series = p?.["系列"] || "";
   const bc = series.includes("UR")?"badge-ur":series.includes("UE")?"badge-ue":series.includes("UM")?"badge-um":"badge-ut";
   const kva = p ? (p["描述"]||"").match(/(\d+(?:\.\d+)?)\s*kVA/i)?.[1] || "" : "";
+
+  // 检测是否是祁连UM系列整机配置，需要拆分为机框+模块两行
+  const modularInfo = parseModularUpsModel(rec.model, p);
+
+  // 如果是祁连UM整机配置，返回两行
+  if (modularInfo) {
+    const fragment = document.createDocumentFragment();
+
+    // 第一行：机框
+    const trFrame = document.createElement("tr");
+    if (rec.level === "best") trFrame.classList.add("recommended");
+    trFrame.innerHTML =
+      '<td><input type="checkbox" class="product-checkbox" data-model="'+rec.model+'" data-idx="'+idx+'" onchange="updateCompareBtn()"></td>'
+      +'<td><span class="badge '+bc+'">'+series+'</span></td>'
+      +'<td style="white-space:nowrap;font-weight:600;font-size:13px">'+modularInfo.frame+'</td>'
+      +'<td><span style="background:#9b59b6;color:white;padding:2px 6px;border-radius:4px;font-size:11px;white-space:nowrap">机框</span></td>'
+      +'<td style="font-size:12px;color:#555">'+(p?.["描述"]||"")+'</td>'
+      +'<td style="white-space:nowrap">'+(kva ? kva+'kVA' : "")+'</td>'
+      +'<td>'+(p?.["功率因数"]||"")+'</td>'
+      +'<td>'+(p?.["满载效率"]||"")+'</td>'
+      +'<td style="white-space:nowrap;font-size:12px">'+(p?.["输入电压范围(V)"]||"")+'</td>'
+      +'<td>'+(p?.["安装"]||"")+'</td>'
+      +'<td>'+(p?.["并机数量"]||"无")+'</td>'
+      +'<td style="font-size:12px">'+(p?.["通讯"]||"")+'</td>'
+      +'<td><button class="detail-btn" data-idx="'+idx+'" '
+        +'style="background:#2d6a9f;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">详情</button></td>';
+    fragment.appendChild(trFrame);
+
+    // 第二行：功率模块
+    const trModule = document.createElement("tr");
+    if (rec.level === "best") trModule.classList.add("recommended");
+    trModule.className += " module-row";
+
+    // 生成模块数量下拉选项（1到最大值）
+    let moduleQtyOptions = '';
+    for (let i = 1; i <= modularInfo.maxModules; i++) {
+      moduleQtyOptions += '<option value="'+i+'"'+(i === modularInfo.maxModules ? ' selected' : '')+'>'+i+'</option>';
+    }
+
+    trModule.innerHTML =
+      '<td></td>'  // checkbox 列留空
+      +'<td></td>'  // 系列列留空
+      +'<td style="white-space:nowrap;font-weight:600;font-size:13px;padding-left:24px">└ '+modularInfo.module+'</td>'
+      +'<td><span style="background:#e67e22;color:white;padding:2px 6px;border-radius:4px;font-size:11px;white-space:nowrap">功率模块</span></td>'
+      +'<td colspan="2" style="font-size:12px;color:#555">'
+        +'模块数量：<select class="module-qty-select" data-model="'+rec.model+'" data-frame="'+modularInfo.frame+'" data-module="'+modularInfo.module+'" style="padding:2px 6px;border-radius:4px;border:1px solid #ccc;font-size:12px">'+moduleQtyOptions+'</select>'
+        +' <span style="color:#999;font-size:11px">（最多'+modularInfo.maxModules+'个）</span>'
+      +'</td>'
+      +'<td>'+(p?.["功率因数"]||"")+'</td>'
+      +'<td>'+(p?.["满载效率"]||"")+'</td>'
+      +'<td colspan="4"></td>';  // 其他列留空
+    fragment.appendChild(trModule);
+
+    return fragment;
+  }
+
+  // 非模块化产品，正常单行显示
+  const prodType = getUpsProductType(rec.model, series);
+  const typeBadgeStyle = prodType.type === 'system' ? 'background:#27ae60;color:white' :
+                         prodType.type === 'module' ? 'background:#e67e22;color:white' :
+                         prodType.type === 'frame' ? 'background:#9b59b6;color:white' : '';
+
   const tr = document.createElement("tr");
   if (rec.level === "best") tr.classList.add("recommended");
   tr.innerHTML =
     '<td><input type="checkbox" class="product-checkbox" data-model="'+rec.model+'" data-idx="'+idx+'" onchange="updateCompareBtn()"></td>'
     +'<td><span class="badge '+bc+'">'+series+'</span></td>'
     +'<td style="white-space:nowrap;font-weight:600;font-size:13px">'+rec.model+'</td>'
+    +'<td>'+(typeBadgeStyle ? '<span style="'+typeBadgeStyle+';padding:2px 6px;border-radius:4px;font-size:11px;white-space:nowrap">'+prodType.label+'</span>' : '')+'</td>'
     +'<td style="font-size:12px;color:#555">'+(p?.["描述"]||"")+'</td>'
     +'<td style="white-space:nowrap">'+(kva ? kva+'kVA' : "")+'</td>'
     +'<td>'+(p?.["功率因数"]||"")+'</td>'
@@ -1036,6 +1201,9 @@ function renderResult(result) {
 
   document.getElementById("result-section").classList.add("show");
   document.getElementById("result-section").scrollIntoView({ behavior: "smooth" });
+  
+  // 更新电池配置面板的UPS型号下拉选项
+  updateUpsModelSelect();
 }
 
 
@@ -1679,6 +1847,8 @@ function toggleBatteryCalc() {
   if (panel.style.display === "none") {
     panel.style.display = "block";
     panel.scrollIntoView({ behavior: "smooth" });
+    // 更新UPS型号下拉选项（从AI选型结果）
+    updateUpsModelSelect();
   } else {
     panel.style.display = "none";
   }
@@ -2175,7 +2345,7 @@ function exportMonitorConfig() {
 
 // 项目汇总数据存储
 window.projectSummary = {
-  ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '' },
+  ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
   battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, totalCells: 0, price: 0, note: '' },
   switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', qty: 0, price: 0, neutralLine: '', note: '' },
   monitor: { config: [] }
@@ -2305,37 +2475,105 @@ function renderProjectSummary() {
   // UPS主机
   const ups = window.projectSummary.ups;
   if (ups.model) {
-    const subtotal = (ups.qty || 1) * (ups.price || 0);
-    total += subtotal;
-    html += `
-      <tr style="background:#e3f2fd">
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">UPS</td>
-        <td style="padding:8px;border:1px solid #ddd">${ups.code || '-'}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-weight:500">${ups.model}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${ups.capacity || ''}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">台</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">${ups.qty || 1}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && ups.price ? ups.price.toFixed(2) : '-'}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.note || ''}</td>
-      </tr>
-    `;
-    rowNum++;
+    // 检测是否是祁连UM模块化UPS，需要分两行显示
+    if (ups.isModular && ups.frame && ups.module) {
+      // 第一行：机框
+      const frameSubtotal = (ups.qty || 1) * (ups.framePrice || 0);
+      total += frameSubtotal;
+      html += `
+        <tr style="background:#e3f2fd">
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">UPS机框</td>
+          <td style="padding:8px;border:1px solid #ddd">${ups.code || '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-weight:500">${ups.frame}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${ups.capacity || ''}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">台</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${ups.qty || 1}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && ups.framePrice ? ups.framePrice.toFixed(2) : '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && frameSubtotal ? frameSubtotal.toFixed(2) : '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.note || ''}</td>
+        </tr>
+      `;
+      rowNum++;
+
+      // 第二行：功率模块
+      const moduleTotal = (ups.moduleQty || 1) * (ups.qty || 1);
+      const moduleSubtotal = moduleTotal * (ups.modulePrice || 0);
+      total += moduleSubtotal;
+      // 生成模块数量下拉框
+      let moduleQtyOptions = '';
+      for (let i = 1; i <= (ups.maxModules || 10); i++) {
+        moduleQtyOptions += `<option value="${i}"${i === ups.moduleQty ? ' selected' : ''}>${i}</option>`;
+      }
+      html += `
+        <tr style="background:#e3f2fd">
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">功率模块</td>
+          <td style="padding:8px;border:1px solid #ddd">${ups.moduleCode || '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-weight:500;padding-left:20px">└ ${ups.module}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">
+            每台模块数：<select onchange="updateModuleQty(this.value)" style="padding:2px 6px;border-radius:4px;border:1px solid #ccc;font-size:12px">${moduleQtyOptions}</select>
+            <span style="color:#999">（最多${ups.maxModules}个）</span>
+          </td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">个</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${moduleTotal}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && ups.modulePrice ? ups.modulePrice.toFixed(2) : '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && moduleSubtotal ? moduleSubtotal.toFixed(2) : '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.qty || 1}台 × ${ups.moduleQty}个/台</td>
+        </tr>
+      `;
+      rowNum++;
+    } else {
+      // 非模块化UPS，单行显示
+      const subtotal = (ups.qty || 1) * (ups.price || 0);
+      total += subtotal;
+      
+      // 非标UPS：型号和描述可编辑
+      const categoryLabel = ups.isCustom ? 'UPS（非标）' : 'UPS';
+      const categoryStyle = ups.isCustom ? 'background:#ff9800;color:white' : '';
+      const modelCell = ups.isCustom 
+        ? `<input type="text" value="${ups.model || ''}" onchange="updateCustomUps('model', this.value)" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`
+        : (ups.model || '-');
+      const capacityCell = ups.isCustom
+        ? `<input type="text" value="${ups.customDesc || ups.capacity || ''}" onchange="updateCustomUps('customDesc', this.value)" placeholder="输入描述" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`
+        : (ups.capacity || '');
+      const noteCell = ups.isCustom 
+        ? '⚠️ 非标型号，请确认参数'
+        : (ups.note || '');
+      
+      html += `
+        <tr style="background:#e3f2fd">
+          <td style="padding:8px;border:1px solid #ddd;text-align:center"><span style="${categoryStyle};padding:2px 6px;border-radius:4px;font-size:11px">${categoryLabel}</span></td>
+          <td style="padding:8px;border:1px solid #ddd">${ups.code || '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-weight:500">${modelCell}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${capacityCell}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">台</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${ups.qty || 1}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && ups.price ? ups.price.toFixed(2) : '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
+          <td style="padding:8px;border:1px solid #ddd;font-size:12px">${noteCell}</td>
+        </tr>
+      `;
+      rowNum++;
+    }
   }
 
-  // 电池
+  // 电池（型号和描述可编辑）
   const bat = window.projectSummary.battery;
-  if (bat.model) {
+  if (bat.model || bat.customModel || bat.totalCells > 0) {
     const subtotal = bat.totalCells * (bat.price || 0);
     total += subtotal;
-    // 电池描述：UPS台数 × (每台组数 × 每组只数) = 总只数
-    const batDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
+    // 电池型号：可编辑
+    const batModel = bat.customModel || bat.model || '';
+    const modelCell = `<input type="text" value="${batModel}" onchange="updateCustomBattery('customModel', this.value)" placeholder="输入电池型号" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`;
+    // 电池描述：可编辑，默认为计算结果
+    const defaultDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
+    const batDesc = bat.customDesc || defaultDesc;
+    const descCell = `<input type="text" value="${batDesc}" onchange="updateCustomBattery('customDesc', this.value)" placeholder="输入描述" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`;
     html += `
       <tr style="background:#e8f5e9">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">电池</td>
         <td style="padding:8px;border:1px solid #ddd">${bat.code || '-'}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-weight:500">${bat.model}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${batDesc}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-weight:500">${modelCell}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${descCell}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">只</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${bat.totalCells}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && bat.price ? bat.price.toFixed(2) : '-'}</td>
@@ -2351,7 +2589,7 @@ function renderProjectSummary() {
   if (sw.model) {
     const subtotal = sw.qty * (sw.price || 0);
     total += subtotal;
-    // 根据分开关数量决定描述格式，添加中性线信息
+    // 根据分开关数量决定描述格式
     const neutralText = sw.neutralLine === 'yes' ? 'UPS带中性线' : (sw.neutralLine === 'no' ? 'UPS无中性线' : '');
     const swDesc = (sw.subSwitchQty && sw.subSwitchQty >= 2)
       ? `总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty}路${neutralText ? '; ' + neutralText : ''}`
@@ -2411,11 +2649,37 @@ function renderProjectSummary() {
   window.projectSummary.generatedAt = new Date().toISOString();
 }
 
+// 更新模块化UPS的模块数量
+function updateModuleQty(qty) {
+  const newQty = parseInt(qty) || 1;
+  window.projectSummary.ups.moduleQty = newQty;
+  renderProjectSummary();
+}
+
+/**
+ * 更新非标UPS的字段（型号/描述）
+ * @param {string} field - 'model' 或 'customDesc'
+ * @param {string} value - 新值
+ */
+function updateCustomUps(field, value) {
+  if (!window.projectSummary.ups.isCustom) return;
+  window.projectSummary.ups[field] = value;
+}
+
+/**
+ * 更新电池的自定义字段（型号/描述）
+ * @param {string} field - 'customModel' 或 'customDesc'
+ * @param {string} value - 新值
+ */
+function updateCustomBattery(field, value) {
+  window.projectSummary.battery[field] = value;
+}
+
 // 清空项目汇总
 function clearProjectSummary() {
   window.projectSummary = {
-    ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '' },
-    battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, totalCells: 0, price: 0, note: '' },
+    ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
+    battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, totalCells: 0, price: 0, note: '', customModel: '', customDesc: '' },
     switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', qty: 0, price: 0, neutralLine: '', note: '' },
     monitor: { config: [] }
   };
@@ -2450,6 +2714,147 @@ function getNextBreakerSize(calcCurrent) {
   return STANDARD_BREAKER_SIZES[STANDARD_BREAKER_SIZES.length - 1];
 }
 
+// ==================== 标准/非标UPS切换 ====================
+/**
+ * 切换UPS型号输入模式（标准/非标）
+ * @param {string} type - 'standard' 或 'custom'
+ */
+function toggleUpsType(type) {
+  const standardArea = document.getElementById('ups-standard-area');
+  const customArea = document.getElementById('ups-custom-area');
+  
+  if (type === 'standard') {
+    standardArea.style.display = 'flex';
+    customArea.style.display = 'none';
+  } else {
+    standardArea.style.display = 'none';
+    customArea.style.display = 'block';
+  }
+}
+
+/**
+ * 获取当前UPS类型（标准/非标）
+ * @returns {string} 'standard' 或 'custom'
+ */
+function getUpsType() {
+  const radio = document.querySelector('input[name="ups-type"]:checked');
+  return radio ? radio.value : 'standard';
+}
+
+// ==================== UPS型号选择自动填入 ====================
+/**
+ * 更新UPS型号下拉选择框（从AI选型结果 + 全部产品）
+ * 在以下情况调用：
+ * 1. AI选型完成后
+ * 2. 打开电池配置面板时
+ * 
+ * 支持两种输入方式：
+ * 1. 从AI推荐列表选择
+ * 2. 手动输入任意型号
+ */
+function updateUpsModelSelect() {
+  const datalist = document.getElementById('ups-model-list');
+  const hint = document.getElementById('ups-model-hint');
+  
+  if (!datalist) return;
+  
+  // 清空现有选项
+  datalist.innerHTML = '';
+  
+  // 收集所有型号（AI推荐优先显示）
+  const models = new Set();
+  
+  // 1. AI推荐型号（优先）
+  if (lastResult) {
+    const recs = lastResult.recommended || [];
+    const alts = lastResult.also_consider || [];
+    [...recs, ...alts].forEach(r => models.add(r.model));
+  }
+  
+  // 2. 全部产品型号（供手动输入参考）
+  PRODUCTS.forEach(p => {
+    if (p['型号']) models.add(p['型号']);
+  });
+  
+  // 添加到 datalist
+  models.forEach(model => {
+    const opt = document.createElement('option');
+    opt.value = model;
+    datalist.appendChild(opt);
+  });
+  
+  // 更新提示
+  if (hint) {
+    if (lastResult && (lastResult.recommended?.length || lastResult.also_consider?.length)) {
+      hint.textContent = 'AI推荐型号已加载，也可手动输入';
+    } else {
+      hint.textContent = '可手动输入或从列表选择';
+    }
+  }
+}
+
+/**
+ * 从选择的UPS型号自动填入参数
+ * 支持两种方式：
+ * 1. 从下拉列表选择AI推荐型号
+ * 2. 手动输入任意型号
+ * 
+ * 填入内容：
+ * - UPS容量(kVA)：从产品描述提取
+ * - 功率因数：从产品数据获取
+ */
+function fillUpsFromSelection() {
+  const input = document.getElementById('unified-ups-model');
+  const hint = document.getElementById('ups-model-hint');
+  const model = input?.value?.trim();
+  
+  if (!model) {
+    if (hint) {
+      hint.textContent = '输入型号后点击填入';
+      hint.style.color = '#888';
+    }
+    return;
+  }
+  
+  // 查找产品数据
+  const product = findProduct(model);
+  
+  if (!product) {
+    if (hint) {
+      hint.textContent = `⚠️ "${model}" 未在产品库中`;
+      hint.style.color = '#e74c3c';
+    }
+    // 即使未找到产品，也允许用户继续使用（手动填写容量和功率因数）
+    return;
+  }
+  
+  // 提取UPS容量（从描述中提取kVA数值）
+  const desc = product['描述'] || '';
+  const kvaMatch = desc.match(/(\d+(?:\.\d+)?)\s*kVA/i);
+  if (kvaMatch) {
+    const kva = parseFloat(kvaMatch[1]);
+    document.getElementById('unified-ups-cap').value = kva;
+  }
+  
+  // 填入功率因数
+  const pf = product['功率因数'];
+  if (pf) {
+    const pfNum = parseFloat(pf);
+    if (!isNaN(pfNum) && pfNum >= 0.8 && pfNum <= 1) {
+      document.getElementById('unified-pf').value = pfNum;
+    }
+  }
+  
+  // 更新提示
+  if (hint) {
+    const kvaText = kvaMatch ? kvaMatch[1] + 'kVA' : '?kVA';
+    const pfText = pf || '?';
+    const series = product['系列'] || '';
+    hint.innerHTML = `✓ <b>${model}</b> ${series} | ${kvaText} / PF:${pfText}`;
+    hint.style.color = '#27ae60';
+  }
+}
+
 // ==================== 一键计算全部 ====================
 /**
  * UPS与电池配置统一计算函数
@@ -2472,6 +2877,22 @@ function calcAllBatteryConfig() {
   const loadKw = parseFloat(document.getElementById('unified-load-kw').value) || 0;
   const upsCap = parseFloat(document.getElementById('unified-ups-cap').value) || 0;
   const upsNum = parseInt(document.getElementById('unified-ups-num').value) || 1;
+  
+  // 获取UPS类型（标准/非标）
+  const upsType = getUpsType();
+  let upsModel = '';
+  let upsProduct = null;
+  let customUpsDesc = '';
+  
+  if (upsType === 'custom') {
+    // 非标模式：从手动输入获取
+    upsModel = document.getElementById('custom-ups-model')?.value?.trim() || '';
+    customUpsDesc = document.getElementById('custom-ups-desc')?.value?.trim() || '';
+  } else {
+    // 标准模式：从输入框获取
+    upsModel = document.getElementById('unified-ups-model')?.value?.trim() || '';
+    upsProduct = upsModel ? findProduct(upsModel) : null;
+  }
   const pf = parseFloat(document.getElementById('unified-pf').value) || 0.9;
   const cellsPerGroup = parseInt(document.getElementById('unified-cells').value) || 32;
   const groups = parseInt(document.getElementById('unified-groups').value) || 1;
@@ -2485,6 +2906,11 @@ function calcAllBatteryConfig() {
   const optVm = document.getElementById('unified-opt-vm').checked;
 
   // ===== 输入验证 =====
+  // 非标模式必须输入型号
+  if (upsType === 'custom' && !upsModel) {
+    alert('非标模式请输入UPS型号');
+    return;
+  }
   if (upsCap <= 0 && loadKw <= 0) {
     alert('请输入UPS容量或负载功率');
     return;
@@ -2658,8 +3084,38 @@ function calcAllBatteryConfig() {
   document.getElementById('unified-monitor-result').innerHTML = monitorHtml;
 
   // ===== 4. 更新项目汇总 =====
+  // 构建UPS描述
+  const upsCapacity = upsCap + 'kVA';
+  let upsDesc = '';
+  if (upsType === 'custom') {
+    // 非标模式：使用手动输入的描述
+    upsDesc = customUpsDesc || upsCapacity;
+  } else {
+    // 标准模式：系列 + 容量
+    const upsSeries = upsProduct ? (upsProduct['系列'] || '') : '';
+    upsDesc = upsSeries ? `${upsSeries} ${upsCapacity}` : upsCapacity;
+  }
+
+  // 检测是否是祁连UM模块化UPS（仅标准模式）
+  const modularInfo = (upsType === 'standard') ? parseModularUpsModel(upsModel, upsProduct) : null;
+
   window.projectSummary = {
-    ups: { model: '', capacity: upsCap + 'kVA', qty: upsNum, price: 0, note: '' },
+    ups: {
+      model: upsModel,           // UPS型号
+      capacity: upsDesc,         // 描述
+      qty: upsNum,
+      price: 0,
+      note: upsModel ? '' : '请输入UPS型号',
+      // 非标标志
+      isCustom: upsType === 'custom',
+      customDesc: customUpsDesc, // 非标描述（可编辑）
+      // 模块化UPS字段（仅标准模式有效）
+      isModular: !!modularInfo,
+      frame: modularInfo ? modularInfo.frame : '',
+      module: modularInfo ? modularInfo.module : '',
+      moduleQty: modularInfo ? modularInfo.maxModules : 0,  // 默认满配
+      maxModules: modularInfo ? modularInfo.maxModules : 0
+    },
     battery: {
       model: batteryResult ? batteryResult.model : '',
       cellsPerGroup,
@@ -2748,30 +3204,45 @@ function exportProjectSummary() {
   // UPS
   const ups = window.projectSummary.ups;
   if (ups.model) {
-    const subtotal = (ups.qty || 1) * (ups.price || 0);
-    wsData.push(['UPS', ups.code || '', ups.model, ups.capacity || '', '台', ups.qty || 1, ups.price || '', subtotal || '', ups.note || '']);
+    // 检测是否是祁连UM模块化UPS，需要分两行导出
+    if (ups.isModular && ups.frame && ups.module) {
+      // 第一行：机框
+      const frameSubtotal = (ups.qty || 1) * (ups.framePrice || 0);
+      wsData.push(['UPS机框', ups.code || '', ups.frame, ups.capacity || '', '台', ups.qty || 1, ups.framePrice || '', frameSubtotal || '', ups.note || '']);
+
+      // 第二行：功率模块
+      const moduleTotal = (ups.moduleQty || 1) * (ups.qty || 1);
+      const moduleSubtotal = moduleTotal * (ups.modulePrice || 0);
+      wsData.push(['功率模块', ups.moduleCode || '', ups.module, `每台${ups.moduleQty}个模块（最多${ups.maxModules}个）`, '个', moduleTotal, ups.modulePrice || '', moduleSubtotal || '', `${ups.qty || 1}台 × ${ups.moduleQty}个/台`]);
+    } else {
+      // 非模块化UPS，单行导出
+      const subtotal = (ups.qty || 1) * (ups.price || 0);
+      const categoryLabel = ups.isCustom ? 'UPS（非标）' : 'UPS';
+      const capacityText = ups.isCustom ? (ups.customDesc || ups.capacity || '') : (ups.capacity || '');
+      const noteText = ups.isCustom ? '非标型号，请确认参数' : (ups.note || '');
+      wsData.push([categoryLabel, ups.code || '', ups.model, capacityText, '台', ups.qty || 1, ups.price || '', subtotal || '', noteText]);
+    }
   }
 
-  // 电池
+  // 电池（使用可编辑的型号和描述）
   const bat = window.projectSummary.battery;
-  if (bat.model) {
+  if (bat.model || bat.customModel || bat.totalCells > 0) {
     const subtotal = bat.totalCells * (bat.price || 0);
-    // 电池描述：UPS台数 × (每台组数 × 每组只数) = 总只数
-    const batDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
-    wsData.push(['电池', bat.code || '', bat.model, batDesc, '只', bat.totalCells, bat.price || '', subtotal || '', bat.note || '']);
+    // 使用自定义型号/描述，或默认值
+    const batModel = bat.customModel || bat.model || '';
+    const defaultDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
+    const batDesc = bat.customDesc || defaultDesc;
+    wsData.push(['电池', bat.code || '', batModel, batDesc, '只', bat.totalCells, bat.price || '', subtotal || '', bat.note || '']);
   }
 
   // 电池开关箱/柜
   const sw = window.projectSummary.switchBox;
   if (sw.model) {
     const subtotal = sw.qty * (sw.price || 0);
-    // 描述中添加中性线信息
-    const neutralText = sw.neutralLine === 'yes' ? 'UPS带中性线' : (sw.neutralLine === 'no' ? 'UPS无中性线' : '');
     const swDesc = (sw.subSwitchQty && sw.subSwitchQty >= 2)
-      ? `总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty}路${neutralText ? '; ' + neutralText : ''}`
-      : `总开关:${sw.mainSwitch || '-'} (单组无分开关)${neutralText ? '; ' + neutralText : ''}`;
-    const swNote = (sw.note || '') + (sw.neutralLine ? ' ⚠️请确认UPS中性线' : '');
-    wsData.push(['电池开关箱/柜', sw.code || '', sw.model, swDesc, '套', sw.qty, sw.price || '', subtotal || '', swNote]);
+      ? `总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty}路`
+      : `总开关:${sw.mainSwitch || '-'} (单组无分开关)`;
+    wsData.push(['电池开关箱/柜', sw.code || '', sw.model, swDesc, '套', sw.qty, sw.price || '', subtotal || '', sw.note || '']);
   }
 
   // 监控
