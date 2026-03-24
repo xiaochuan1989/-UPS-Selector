@@ -1,6 +1,51 @@
 # 已修复的Bug与开发注意事项
 
-（已更新：2026-03-24 v1.5）
+（已更新：2026-03-24 v1.5.1）
+
+## v1.5.1 清除按钮不响应修复（2026-03-24）⚠️ 新增教训
+
+### Bug：项目汇总清空按钮点击无反应
+
+#### 问题现象
+- 点击"清空"按钮没有任何反应
+- 同时Excel导出功能也受影响
+
+#### 根本原因
+1. **访问不存在的DOM元素** - `clearProjectSummary()` 函数中访问了从未定义的元素ID：
+   - `summary-ups-model`
+   - `summary-ups-cap`
+   - `summary-ups-qty`
+   - `summary-ups-code`
+   - `summary-ups-price`
+2. **这些元素ID可能是旧版本遗留的**，但在当前HTML中从未定义
+3. **`importUpsFromResult()` 函数也有同样问题**
+
+#### 错误代码
+```javascript
+function clearProjectSummary() {
+  window.projectSummary = { ... };
+  document.getElementById('summary-ups-model').value = '';  // ❌ 元素不存在，返回null
+  document.getElementById('summary-ups-cap').value = '';    // ❌ null.value 报错
+  // ...
+}
+```
+
+#### 修复方案
+删除对不存在元素的访问代码。
+
+#### 新增教训：DOM元素存在性验证
+```
+⚠️ 修改函数时，必须确认其中引用的DOM元素确实存在：
+1. 搜索 getElementById 调用
+2. 验证每个元素ID在HTML中确实定义
+3. 不能假设"以前能用"就永远能用
+4. 清理旧版本遗留的无效代码引用
+
+❌ 错误：函数中访问了从未定义的DOM元素
+✓ 正确：修改函数前，grep搜索所有getElementById调用，验证元素存在
+```
+
+---
 
 ## v1.5 电池架和电池开关功能（2026-03-24）
 

@@ -502,5 +502,43 @@ window.projectSummary.battery = {
 - 修改updateXxx函数后需要检查是否需要调用renderProjectSummary
 
 ---
+
+## ⚠️ v1.5.1 教训：清除按钮不响应（访问不存在的DOM元素）
+
+### 问题回顾
+点击项目汇总清单的"清空"按钮没有任何反应，同时Excel导出功能也受影响。
+
+### 根本原因
+| 问题 | 说明 |
+|------|------|
+| **访问不存在的DOM元素** | `clearProjectSummary()` 函数访问了从未定义的元素ID |
+| **旧版本遗留代码** | `summary-ups-model` 等ID可能是旧版本遗留，当前HTML中不存在 |
+| **JS报错阻断执行** | `getElementById` 返回 `null`，访问 `null.value` 报错 |
+
+### 错误代码示例
+```javascript
+function clearProjectSummary() {
+  window.projectSummary = { ... };
+  document.getElementById('summary-ups-model').value = '';  // ❌ 元素不存在
+  document.getElementById('summary-ups-cap').value = '';    // ❌ null.value 报错
+}
+```
+
+### 修复方案
+删除对不存在元素的访问代码。
+
+### 正确做法（必读！）
+```
+⚠️ 修改函数时，必须确认其中引用的DOM元素确实存在：
+
+❌ 错误：函数中访问了从未定义的DOM元素
+✓ 正确：
+   1. 搜索 getElementById 调用
+   2. 验证每个元素ID在HTML中确实定义
+   3. 不能假设"以前能用"就永远能用
+   4. 清理旧版本遗留的无效代码引用
+```
+
+---
 *由 Claude Code 自动生成*
 *创建时间: 2026-03-09 | 最后更新: 2026-03-24*
