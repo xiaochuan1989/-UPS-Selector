@@ -2360,9 +2360,9 @@ function exportMonitorConfig() {
 
 // 项目汇总数据存储
 window.projectSummary = {
-  ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
-  battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, totalCells: 0, price: 0, note: '' },
-  switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', qty: 0, price: 0, neutralLine: '', note: '' },
+  ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
+  battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', customModel: '', customDesc: '' },
+  switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', note: '' },
   batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
   monitor: { config: [] }
 };
@@ -2738,8 +2738,8 @@ function updateCustomBattery(field, value) {
 function clearProjectSummary() {
   window.projectSummary = {
     ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
-    battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, totalCells: 0, price: 0, note: '', customModel: '', customDesc: '' },
-    switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', qty: 0, price: 0, neutralLine: '', note: '' },
+    battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', customModel: '', customDesc: '' },
+    switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', note: '' },
     batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
     monitor: { config: [] }
   };
