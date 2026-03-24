@@ -2393,8 +2393,6 @@ function importUpsFromResult() {
     const rec = lastResult.recommendations[0];
     window.projectSummary.ups.model = rec.model || '';
     window.projectSummary.ups.capacity = rec.capacity || '';
-    document.getElementById('summary-ups-model').value = rec.model || '';
-    document.getElementById('summary-ups-cap').value = rec.capacity || '';
     alert('已从UPS选型结果导入: ' + (rec.model || '未知型号'));
   } else {
     alert('没有可用的UPS选型结果，请手动填写');
@@ -2743,11 +2741,6 @@ function clearProjectSummary() {
     batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
     monitor: { config: [] }
   };
-  document.getElementById('summary-ups-model').value = '';
-  document.getElementById('summary-ups-cap').value = '';
-  document.getElementById('summary-ups-qty').value = 1;
-  document.getElementById('summary-ups-code').value = '';
-  document.getElementById('summary-ups-price').value = '';
   renderProjectSummary();
   alert('已清空汇总数据');
 }
