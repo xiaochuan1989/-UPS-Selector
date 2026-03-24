@@ -486,6 +486,21 @@ function checkAuth(){
             <option value="no">无（无中性线）</option>
           </select>
         </div>
+        <div class="field">
+          <label>电池架含铜排</label>
+          <select id="unified-rack-cable">
+            <option value="no">不含</option>
+            <option value="yes">含连接铜排/电缆</option>
+          </select>
+        </div>
+        <div class="field" style="display:flex;align-items:center;gap:4px">
+          <label>电池开关</label>
+          <span class="tip-icon" title="重要提示：合资开关为施耐德/ABB/西门子等品牌，国产开关为良信/正泰/天正/德力西等品牌" style="cursor:help;color:#e65100;font-size:14px">❗</span>
+          <select id="unified-switch-type">
+            <option value="imported">合资开关</option>
+            <option value="domestic">国产开关</option>
+          </select>
+        </div>
       </div>
       <div style="margin-top:10px">
         <button class="save-btn" onclick="calcAllBatteryConfig()" style="padding:12px 24px">🚀 一键计算全部</button>
@@ -569,10 +584,11 @@ function checkAuth(){
         </div>
       </div>
       <div style="overflow-x:auto">
-        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:800px">
+        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
           <thead>
             <tr style="background:#2d6a9f;color:white">
-              <th style="padding:8px;border:1px solid #ddd;width:50px">类别</th>
+              <th style="padding:8px;border:1px solid #ddd;width:40px">序号</th>
+              <th style="padding:8px;border:1px solid #ddd;width:60px">类别</th>
               <th style="padding:8px;border:1px solid #ddd;width:90px">编码</th>
               <th style="padding:8px;border:1px solid #ddd">型号</th>
               <th style="padding:8px;border:1px solid #ddd">描述</th>
@@ -583,15 +599,13 @@ function checkAuth(){
               <th style="padding:8px;border:1px solid #ddd;width:100px">备注</th>
             </tr>
           </thead>
-            </tr>
-          </thead>
           <tbody id="summary-tbody">
-            <tr><td colspan="9" style="padding:30px;text-align:center;color:#888">点击"一键计算全部"生成配置清单</td></tr>
+            <tr><td colspan="10" style="padding:30px;text-align:center;color:#888">点击"一键计算全部"生成配置清单</td></tr>
           </tbody>
           <tfoot id="summary-tfoot" style="display:none;background:#f5f7fa;font-weight:600">
             <tr>
-              <td colspan="6" style="padding:10px;border:1px solid #ddd;text-align:right">合计：</td>
-              <td id="summary-total" colspan="3" style="padding:10px;border:1px solid #ddd;color:#e74c3c;font-size:14px">¥0.00</td>
+              <td colspan="7" style="padding:10px;border:1px solid #ddd;text-align:right">合计：</td>
+              <td id="summary-total" colspan="3" style="padding:10px;border:1px solid #ddd;color:#e74c3c;font-size:14px"></td>
             </tr>
           </tfoot>
         </table>
@@ -2348,6 +2362,7 @@ window.projectSummary = {
   ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
   battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, totalCells: 0, price: 0, note: '' },
   switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', qty: 0, price: 0, neutralLine: '', note: '' },
+  batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
   monitor: { config: [] }
 };
 
@@ -2470,7 +2485,7 @@ function renderProjectSummary() {
   const showPrice = window.summaryShowPrice || false;
   let html = '';
   let total = 0;
-  let rowNum = 0;
+  let rowNum = 1;
 
   // UPS主机
   const ups = window.projectSummary.ups;
@@ -2482,6 +2497,7 @@ function renderProjectSummary() {
       total += frameSubtotal;
       html += `
         <tr style="background:#e3f2fd">
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNum++}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">UPS机框</td>
           <td style="padding:8px;border:1px solid #ddd">${ups.code || '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-weight:500">${ups.frame}</td>
@@ -2506,6 +2522,7 @@ function renderProjectSummary() {
       }
       html += `
         <tr style="background:#e3f2fd">
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNum++}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">功率模块</td>
           <td style="padding:8px;border:1px solid #ddd">${ups.moduleCode || '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-weight:500;padding-left:20px">└ ${ups.module}</td>
@@ -2541,6 +2558,7 @@ function renderProjectSummary() {
       
       html += `
         <tr style="background:#e3f2fd">
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNum++}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center"><span style="${categoryStyle};padding:2px 6px;border-radius:4px;font-size:11px">${categoryLabel}</span></td>
           <td style="padding:8px;border:1px solid #ddd">${ups.code || '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-weight:500">${modelCell}</td>
@@ -2570,6 +2588,7 @@ function renderProjectSummary() {
     const descCell = `<input type="text" value="${batDesc}" onchange="updateCustomBattery('customDesc', this.value)" placeholder="输入描述" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`;
     html += `
       <tr style="background:#e8f5e9">
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNum++}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">电池</td>
         <td style="padding:8px;border:1px solid #ddd">${bat.code || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${modelCell}</td>
@@ -2589,15 +2608,18 @@ function renderProjectSummary() {
   if (sw.model) {
     const subtotal = sw.qty * (sw.price || 0);
     total += subtotal;
+    // 开关类型文字
+    const switchTypeText = sw.switchType === 'domestic' ? '国产开关' : '合资开关';
     // 根据分开关数量决定描述格式
     const neutralText = sw.neutralLine === 'yes' ? 'UPS带中性线' : (sw.neutralLine === 'no' ? 'UPS无中性线' : '');
     const swDesc = (sw.subSwitchQty && sw.subSwitchQty >= 2)
-      ? `总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty}路${neutralText ? '; ' + neutralText : ''}`
-      : `总开关:${sw.mainSwitch || '-'} (单组无分开关)${neutralText ? '; ' + neutralText : ''}`;
+      ? `${switchTypeText} | 总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty}路${neutralText ? '; ' + neutralText : ''}`
+      : `${switchTypeText} | 总开关:${sw.mainSwitch || '-'} (单组无分开关)${neutralText ? '; ' + neutralText : ''}`;
     // 备注中添加重要提示
     const swNote = (sw.note || '') + (sw.neutralLine ? ' ⚠️请确认UPS中性线' : '');
     html += `
       <tr style="background:#fff3e0">
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNum++}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">电池开关箱/柜</td>
         <td style="padding:8px;border:1px solid #ddd">${sw.code || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${sw.model}</td>
@@ -2612,6 +2634,36 @@ function renderProjectSummary() {
     rowNum++;
   }
 
+  // 电池架
+  const rack = window.projectSummary.batteryRack;
+  if (rack && rack.qty > 0) {
+    const subtotal = rack.qty * (rack.price || 0);
+    total += subtotal;
+    const batModel = window.projectSummary.battery.customModel || window.projectSummary.battery.model || '';
+    let rackDesc = '安装' + rack.cellsPerRack + '节/架';
+    if (batModel) {
+      rackDesc += '，电池型号：' + batModel;
+    }
+    if (rack.includeCable && rack.cableAmp) {
+      rackDesc += '，含' + rack.cableAmp + '连接铜排或电缆';
+    }
+    html += `
+      <tr style="background:#fce4ec">
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNum++}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">电池架</td>
+        <td style="padding:8px;border:1px solid #ddd">${rack.code || '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-weight:500">${rack.model || '电池架'}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${rackDesc}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">架</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${rack.qty}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && rack.price ? rack.price.toFixed(2) : '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px">${rack.note || ''}</td>
+      </tr>
+    `;
+    rowNum++;
+  }
+
   // 电池监控
   const mon = window.projectSummary.monitor;
   if (mon.config && mon.config.length > 0) {
@@ -2620,6 +2672,7 @@ function renderProjectSummary() {
       total += subtotal;
       html += `
         <tr style="background:#f3e5f5">
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNum++}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">电池监控</td>
           <td style="padding:8px;border:1px solid #ddd">${item.code || ''}</td>
           <td style="padding:8px;border:1px solid #ddd;font-weight:500">${item.name || ''}</td>
@@ -2673,6 +2726,11 @@ function updateCustomUps(field, value) {
  */
 function updateCustomBattery(field, value) {
   window.projectSummary.battery[field] = value;
+  // 同时更新电池架中的电池型号
+  if (field === 'customModel') {
+    window.projectSummary.batteryRack.batteryModel = value;
+  }
+  renderProjectSummary();
 }
 
 // 清空项目汇总
@@ -2681,6 +2739,7 @@ function clearProjectSummary() {
     ups: { code: '', model: '', capacity: '', qty: 1, price: 0, note: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
     battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, totalCells: 0, price: 0, note: '', customModel: '', customDesc: '' },
     switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', qty: 0, price: 0, neutralLine: '', note: '' },
+    batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
     monitor: { config: [] }
   };
   document.getElementById('summary-ups-model').value = '';
@@ -2899,6 +2958,8 @@ function calcAllBatteryConfig() {
   const battType = document.getElementById('unified-batt-type').value;
   const terminalType = document.getElementById('unified-terminal').value || 'M8';  // 端子类型
   const hasNeutral = document.getElementById('unified-neutral').value;  // UPS中性线: 'yes' 或 'no'
+  const rackCable = document.getElementById('unified-rack-cable').value;  // 电池架含铜排: 'yes' 或 'no'
+  const switchType = document.getElementById('unified-switch-type').value;  // 电池开关: 'imported' 或 'domestic'
   const dischargeTime = parseInt(document.getElementById('unified-discharge-time').value) || 15;
   const endV = parseFloat(document.getElementById('unified-end-v').value) || 1.75;
   const eff = parseFloat(document.getElementById('unified-eff').value) || 0.95;
@@ -3135,7 +3196,17 @@ function calcAllBatteryConfig() {
       qty: upsNum,
       price: 0,
       neutralLine: hasNeutral,  // 保存中性线选项
+      switchType: switchType,    // 电池开关类型: 'imported' 合资 或 'domestic' 国产
       note: (groups >= 2 ? '' : '单组电池无需分开关; ') + neutralDesc
+    },
+    batteryRack: {
+      cellsPerRack: cellsPerGroup,
+      batteryModel: batteryResult ? batteryResult.model : '',
+      includeCable: rackCable === 'yes',
+      cableAmp: rackCable === 'yes' && groups >= 2 ? subSwitchSize + 'A' : '',
+      qty: totalGroups,
+      price: 0,
+      note: ''
     },
     monitor: { config: monitorConfig }
   };
@@ -3181,7 +3252,7 @@ function getVoltLevel(cells, battType) {
   return { level, levelNum, maxChargeVoltage };
 }
 
-// 导出项目汇总清单（Excel格式）
+// 导出项目汇总清单（Excel格式，含样式）
 function exportProjectSummary() {
   if (!window.projectSummary || (!window.projectSummary.ups.model && !window.projectSummary.battery.model && !window.projectSummary.switchBox.model && (!window.projectSummary.monitor.config || window.projectSummary.monitor.config.length === 0))) {
     alert('请先导入配置数据');
@@ -3191,6 +3262,19 @@ function exportProjectSummary() {
   const date = new Date().toISOString().slice(0, 10);
   const wb = XLSX.utils.book_new();
   const wsData = [];
+  const showPrice = window.summaryShowPrice || false;
+
+  // 样式定义
+  const border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+  const titleStyle = { font:{bold:true, sz:14, color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'2D6A9F'}}, alignment:{horizontal:'center', vertical:'center'}, border };
+  const headerStyle = { font:{bold:true, sz:11, color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1A3A5C'}}, alignment:{horizontal:'center', vertical:'center'}, border };
+  const cellStyle = { font:{sz:11}, border, alignment:{vertical:'center', wrapText:true} };
+  const cellCenter = { font:{sz:11}, border, alignment:{horizontal:'center', vertical:'center'} };
+  const cellRight = { font:{sz:11}, border, alignment:{horizontal:'right', vertical:'center'}, numFmt:'#,##0.00' };
+  const cellBold = { font:{bold:true, sz:11}, border, alignment:{horizontal:'center', vertical:'center'} };
+  const cellCategory = { font:{sz:11, bold:true}, border, alignment:{horizontal:'center', vertical:'center', wrapText:true} };
+  const totalLabelStyle = { font:{bold:true, sz:12}, border, alignment:{horizontal:'right', vertical:'center'} };
+  const totalValueStyle = { font:{bold:true, sz:12, color:{rgb:'E74C3C'}}, border, alignment:{horizontal:'right', vertical:'center'} };
 
   // 标题
   wsData.push(['项目配置汇总清单']);
@@ -3198,51 +3282,93 @@ function exportProjectSummary() {
   wsData.push(['生成日期: ' + date]);
   wsData.push([]);
 
+  // 根据是否显示价格决定列结构
+  const colCount = showPrice ? 10 : 8;
+  const lastCol = colCount - 1;
+
   // 表头
-  wsData.push(['类别', '产品编码', '产品型号', '产品描述', '单位', '数量', '单价(元)', '小计(元)', '备注']);
+  if (showPrice) {
+    wsData.push(['序号', '类别', '产品编码', '产品型号', '产品描述', '单位', '数量', '单价(元)', '小计(元)', '备注']);
+  } else {
+    wsData.push(['序号', '类别', '产品编码', '产品型号', '产品描述', '单位', '数量', '备注']);
+  }
+
+  // 数据行序号
+  let rowIndex = 1;
 
   // UPS
   const ups = window.projectSummary.ups;
   if (ups.model) {
-    // 检测是否是祁连UM模块化UPS，需要分两行导出
     if (ups.isModular && ups.frame && ups.module) {
-      // 第一行：机框
       const frameSubtotal = (ups.qty || 1) * (ups.framePrice || 0);
-      wsData.push(['UPS机框', ups.code || '', ups.frame, ups.capacity || '', '台', ups.qty || 1, ups.framePrice || '', frameSubtotal || '', ups.note || '']);
+      if (showPrice) {
+        wsData.push([rowIndex++, 'UPS机框', ups.code || '', ups.frame, ups.capacity || '', '台', ups.qty || 1, ups.framePrice || '', frameSubtotal || '', ups.note || '']);
+      } else {
+        wsData.push([rowIndex++, 'UPS机框', ups.code || '', ups.frame, ups.capacity || '', '台', ups.qty || 1, ups.note || '']);
+      }
 
-      // 第二行：功率模块
       const moduleTotal = (ups.moduleQty || 1) * (ups.qty || 1);
       const moduleSubtotal = moduleTotal * (ups.modulePrice || 0);
-      wsData.push(['功率模块', ups.moduleCode || '', ups.module, `每台${ups.moduleQty}个模块（最多${ups.maxModules}个）`, '个', moduleTotal, ups.modulePrice || '', moduleSubtotal || '', `${ups.qty || 1}台 × ${ups.moduleQty}个/台`]);
+      if (showPrice) {
+        wsData.push([rowIndex++, '功率模块', ups.moduleCode || '', ups.module, `每台${ups.moduleQty}个模块（最多${ups.maxModules}个）`, '个', moduleTotal, ups.modulePrice || '', moduleSubtotal || '', `${ups.qty || 1}台 × ${ups.moduleQty}个/台`]);
+      } else {
+        wsData.push([rowIndex++, '功率模块', ups.moduleCode || '', ups.module, `每台${ups.moduleQty}个模块（最多${ups.maxModules}个）`, '个', moduleTotal, `${ups.qty || 1}台 × ${ups.moduleQty}个/台`]);
+      }
     } else {
-      // 非模块化UPS，单行导出
       const subtotal = (ups.qty || 1) * (ups.price || 0);
       const categoryLabel = ups.isCustom ? 'UPS（非标）' : 'UPS';
       const capacityText = ups.isCustom ? (ups.customDesc || ups.capacity || '') : (ups.capacity || '');
       const noteText = ups.isCustom ? '非标型号，请确认参数' : (ups.note || '');
-      wsData.push([categoryLabel, ups.code || '', ups.model, capacityText, '台', ups.qty || 1, ups.price || '', subtotal || '', noteText]);
+      if (showPrice) {
+        wsData.push([rowIndex++, categoryLabel, ups.code || '', ups.model, capacityText, '台', ups.qty || 1, ups.price || '', subtotal || '', noteText]);
+      } else {
+        wsData.push([rowIndex++, categoryLabel, ups.code || '', ups.model, capacityText, '台', ups.qty || 1, noteText]);
+      }
     }
   }
 
-  // 电池（使用可编辑的型号和描述）
+  // 电池
   const bat = window.projectSummary.battery;
   if (bat.model || bat.customModel || bat.totalCells > 0) {
     const subtotal = bat.totalCells * (bat.price || 0);
-    // 使用自定义型号/描述，或默认值
     const batModel = bat.customModel || bat.model || '';
-    const defaultDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
+    const defaultDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalCells || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
     const batDesc = bat.customDesc || defaultDesc;
-    wsData.push(['电池', bat.code || '', batModel, batDesc, '只', bat.totalCells, bat.price || '', subtotal || '', bat.note || '']);
+    if (showPrice) {
+      wsData.push([rowIndex++, '电池', bat.code || '', batModel, batDesc, '只', bat.totalCells, bat.price || '', subtotal || '', bat.note || '']);
+    } else {
+      wsData.push([rowIndex++, '电池', bat.code || '', batModel, batDesc, '只', bat.totalCells, bat.note || '']);
+    }
   }
 
   // 电池开关箱/柜
   const sw = window.projectSummary.switchBox;
   if (sw.model) {
     const subtotal = sw.qty * (sw.price || 0);
+    const switchTypeText = sw.switchType === 'domestic' ? '国产开关' : '合资开关';
     const swDesc = (sw.subSwitchQty && sw.subSwitchQty >= 2)
-      ? `总开关:${sw.mainSwitch || '-'} 分开关:${sw.subSwitch || '-'} × ${sw.subSwitchQty}路`
-      : `总开关:${sw.mainSwitch || '-'} (单组无分开关)`;
-    wsData.push(['电池开关箱/柜', sw.code || '', sw.model, swDesc, '套', sw.qty, sw.price || '', subtotal || '', sw.note || '']);
+      ? switchTypeText + ' | 总开关:' + (sw.mainSwitch || '-') + ' 分开关:' + (sw.subSwitch || '-') + ' × ' + sw.subSwitchQty + '路'
+      : switchTypeText + ' | 总开关:' + (sw.mainSwitch || '-') + ' (单组无分开关)';
+    if (showPrice) {
+      wsData.push([rowIndex++, '电池开关箱/柜', sw.code || '', sw.model, swDesc, '套', sw.qty, sw.price || '', subtotal || '', sw.note || '']);
+    } else {
+      wsData.push([rowIndex++, '电池开关箱/柜', sw.code || '', sw.model, swDesc, '套', sw.qty, sw.note || '']);
+    }
+  }
+
+  // 电池架
+  const rack = window.projectSummary.batteryRack;
+  if (rack && rack.qty > 0) {
+    const subtotal = rack.qty * (rack.price || 0);
+    const batModel = window.projectSummary.battery.customModel || window.projectSummary.battery.model || '';
+    let rackDesc = '安装' + rack.cellsPerRack + '节/架';
+    if (batModel) { rackDesc += '，电池型号：' + batModel; }
+    if (rack.includeCable && rack.cableAmp) { rackDesc += '，含' + rack.cableAmp + '连接铜排或电缆'; }
+    if (showPrice) {
+      wsData.push([rowIndex++, '电池架', rack.code || '', rack.model || '电池架', rackDesc, '架', rack.qty, rack.price || '', subtotal || '', rack.note || '']);
+    } else {
+      wsData.push([rowIndex++, '电池架', rack.code || '', rack.model || '电池架', rackDesc, '架', rack.qty, rack.note || '']);
+    }
   }
 
   // 监控
@@ -3250,28 +3376,98 @@ function exportProjectSummary() {
   if (mon.config && mon.config.length > 0) {
     mon.config.forEach(item => {
       const subtotal = item.qty * (item.unitPrice || 0);
-      wsData.push(['监控', item.code || '', item.name || '', item.desc || '', item.unit || '', item.qty || 0, item.unitPrice || '', subtotal, item.note || '']);
+      if (showPrice) {
+        wsData.push([rowIndex++, '监控', item.code || '', item.name || '', item.desc || '', item.unit || '', item.qty || 0, item.unitPrice || '', subtotal, item.note || '']);
+      } else {
+        wsData.push([rowIndex++, '监控', item.code || '', item.name || '', item.desc || '', item.unit || '', item.qty || 0, item.note || '']);
+      }
     });
   }
 
   // 合计行
   wsData.push([]);
-  wsData.push(['', '', '', '', '', '合计:', '', '', document.getElementById('summary-total').textContent]);
+  if (showPrice) {
+    wsData.push(['', '', '', '', '', '', '', '合计:', '', document.getElementById('summary-total').textContent]);
+  } else {
+    wsData.push(['', '', '', '', '', '', '合计:', document.getElementById('summary-total').textContent]);
+  }
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // 设置列宽
-  ws['!cols'] = [
-    {wch: 8},   // 类别
-    {wch: 12},  // 编码
-    {wch: 20},  // 型号
-    {wch: 50},  // 描述
-    {wch: 6},   // 单位
-    {wch: 8},   // 数量
-    {wch: 10},  // 单价
-    {wch: 10},  // 小计
-    {wch: 15}   // 备注
-  ];
+  if (showPrice) {
+    ws['!cols'] = [
+      {wch:5},   // 序号
+      {wch:14},  // 类别
+      {wch:12},  // 编码
+      {wch:18},  // 型号
+      {wch:45},  // 描述
+      {wch:6},   // 单位
+      {wch:8},   // 数量
+      {wch:12},  // 单价
+      {wch:12},  // 小计
+      {wch:20}   // 备注
+    ];
+  } else {
+    ws['!cols'] = [
+      {wch:5},   // 序号
+      {wch:14},  // 类别
+      {wch:12},  // 编码
+      {wch:18},  // 型号
+      {wch:50},  // 描述
+      {wch:6},   // 单位
+      {wch:8},   // 数量
+      {wch:25}   // 备注
+    ];
+  }
+
+  // 合并标题单元格
+  ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:lastCol} }];
+
+  // 应用样式 - 标题行
+  for (let c = 0; c <= lastCol; c++) {
+    const addr = XLSX.utils.encode_cell({r:0, c});
+    if (ws[addr]) ws[addr].s = titleStyle;
+  }
+
+  // 应用样式 - 表头行（第4行，index=4）
+  const headerRow = 4;
+  for (let c = 0; c <= lastCol; c++) {
+    const addr = XLSX.utils.encode_cell({r:headerRow, c});
+    if (ws[addr]) ws[addr].s = headerStyle;
+  }
+
+  // 应用样式 - 数据行
+  const dataStart = 5;
+  const dataEnd = wsData.length - 2; // 减去空行和合计行
+  for (let r = dataStart; r <= dataEnd; r++) {
+    for (let c = 0; c <= lastCol; c++) {
+      const addr = XLSX.utils.encode_cell({r, c});
+      if (!ws[addr]) continue;
+      if (c === 0) ws[addr].s = cellCenter;       // 序号
+      else if (c === 1) ws[addr].s = cellCategory;  // 类别（加粗换行）
+      else if (c === 5) ws[addr].s = cellCenter;     // 单位
+      else if (c === 6) ws[addr].s = cellBold;       // 数量
+      else if (showPrice && (c === 7 || c === 8)) ws[addr].s = cellRight; // 单价/小计
+      else ws[addr].s = cellStyle; // 其他列包括备注
+    }
+  }
+
+  // 应用样式 - 合计行
+  const totalRowIndex = wsData.length - 1;
+  for (let c = 0; c <= lastCol; c++) {
+    const addr = XLSX.utils.encode_cell({r:totalRowIndex, c});
+    if (!ws[addr]) { ws[addr] = {v:'', t:'s'}; }
+    if (showPrice) {
+      if (c === lastCol - 1) ws[addr].s = totalLabelStyle;
+      else if (c === lastCol) ws[addr].s = totalValueStyle;
+      else ws[addr].s = { border };
+    } else {
+      if (c === lastCol - 1) ws[addr].s = totalLabelStyle;
+      else if (c === lastCol) ws[addr].s = totalValueStyle;
+      else ws[addr].s = { border };
+    }
+  }
 
   XLSX.utils.book_append_sheet(wb, ws, '项目配置汇总');
   XLSX.writeFile(wb, `项目配置汇总清单_${date}.xlsx`);
