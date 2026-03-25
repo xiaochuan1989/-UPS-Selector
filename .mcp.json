@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "serena": {
+      "type": "stdio",
+      "command": "C:\\Users\\woaig\\.local\\bin\\uv.exe",
+      "args": [
+        "run",
+        "--directory",
+        "C:\\Users\\woaig\\Downloads\\serena-main",
+        "serena-mcp-server",
+        "D:\\Claude 安装\\UPS选型助手_开发包\\.serena\\project.yml"
+      ],
+      "env": {}
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking@latest"
+      ],
+      "env": {}
+    }
+  }
+}

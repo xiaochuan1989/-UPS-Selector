@@ -1,0 +1,44 @@
+{
+  "id": "case-001",
+  "title": "标准48V直流列头柜MTBF计算",
+  "input": "帮我做一个48V直流列头柜的MTBF计算书。配置如下：输入4路630A熔断器，输出72路63A熔断器（单极），防雷4组15kA 8/20μs，7寸触摸屏，国产工业级器件，MTBF要求≥100,000h。项目名称：XX数据中心。请直接给出计算摘要。",
+  "expectedBehavior": "应正确应用MIL-HDBK-217F零件计数法，划分配电和监控两个子系统，使用正确的λ_G和πQ值，计算出合理的MTBF值并判定是否满足要求",
+  "expectations": [
+    {
+      "id": "exp-1",
+      "description": "Output explicitly divides the system into two subsystems: SS1 (配电子系统) covering input protection, output protection, lightning arresters, busbars, terminals, and internal cables; and SS2 (监控子系统) covering HMI, controller, power supply, Hall sensors, relays, and LEDs. Both subsystems must be labeled and calculated separately.",
+      "type": "format",
+      "priority": 1
+    },
+    {
+      "id": "exp-2",
+      "description": "Applies πQ=2.0 for all standard electronic components (fuses, MOV, terminals, Hall sensors, relays) under the stated 国产工业级 grade. Specifically: fuse λ_G=0.0100 × πQ=2.0 = 0.0200 per unit, MOV λ_G=0.0030 × πQ=2.0 = 0.0060 per unit.",
+      "type": "differential",
+      "priority": 1
+    },
+    {
+      "id": "exp-3",
+      "description": "Uses the MIL-HDBK-217F Part Count formula with correct component counts: 4 input fuses, 72 output fuses (single-pole), and 4 MOV lightning protection groups. The output fuse contribution alone must be 72 × 0.0200 = 1.4400 ×10⁻⁶/h.",
+      "type": "content",
+      "priority": 1
+    },
+    {
+      "id": "exp-4",
+      "description": "Treats SS2 monitoring components with skill-prescribed fixed λ values: 7-inch HMI = 3.3333 ×10⁻⁶/h (from 300,000h MTBF), main controller = 1.2500 ×10⁻⁶/h, DIN rail PSU = 0.5000 ×10⁻⁶/h. The HMI must be the single largest contributor.",
+      "type": "differential",
+      "priority": 1
+    },
+    {
+      "id": "exp-5",
+      "description": "Reports a final MTBF result in the range of 100,000h to 125,000h (v1.5 adjusted range accounting for additional monitoring components: communication module, RTC battery, data storage), and explicitly judges this as satisfying the ≥100,000h requirement with a positive margin statement.",
+      "type": "content",
+      "priority": 1
+    },
+    {
+      "id": "exp-6",
+      "description": "Presents the summary showing subsystem breakdown with percentage contributions: λ1 (配电) and λ2 (监控) with percentages. The monitoring subsystem (SS2) must be shown as the dominant failure source, contributing approximately 75-80% of total.",
+      "type": "format",
+      "priority": 2
+    }
+  ]
+}
