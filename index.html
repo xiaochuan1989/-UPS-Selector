@@ -449,6 +449,7 @@ function checkAuth(){
           <select id="unified-batt-type">
             <option value="12v">12V铅酸</option>
             <option value="2v">2V铅酸</option>
+            <option value="dianneng">电能GBT12V</option>
           </select>
         </div>
         <div class="field">
@@ -749,7 +750,7 @@ function checkAuth(){
       <button onclick="closeBatteryDataTable()" style="background:none;border:none;color:white;font-size:26px;cursor:pointer">×</button>
     </div>
     <div style="padding:16px 24px;background:#f5f7fa;border-bottom:1px solid #e0e0e0;display:flex;gap:12px;flex-wrap:wrap">
-      <div><label style="font-size:12px;color:#888;margin-right:6px">分类:</label><select id="batt-data-category" onchange="filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="all">全部</option><option value="normal">普通电池</option><option value="highpower">高功率电池</option><option value="2v">2V电池</option></select></div>
+      <div><label style="font-size:12px;color:#888;margin-right:6px">分类:</label><select id="batt-data-category" onchange="filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="all">全部</option><option value="normal">普通电池</option><option value="highpower">高功率电池</option><option value="2v">2V电池</option><option value="dianneng">电能电池</option></select></div>
       <div><label style="font-size:12px;color:#888;margin-right:6px">截止电压:</label><select id="batt-data-voltage" onchange="filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="1.60">1.60V</option><option value="1.65">1.65V</option><option value="1.67">1.67V</option><option value="1.70">1.70V</option><option value="1.75" selected>1.75V</option><option value="1.80">1.80V</option><option value="1.85">1.85V</option></select></div>
       <div><label style="font-size:12px;color:#888;margin-right:6px">搜索:</label><input type="text" id="batt-data-search" oninput="filterBatteryDataTable()" placeholder="输入型号" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px;width:140px"></div>
     </div>
@@ -2999,33 +3000,44 @@ function calcAllBatteryConfig() {
   const reqPower = loadW / (cellsPerGroup * cellMultiplier * eff * groups);
   const recommendations = getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
   let batteryHtml = '';
-  let batteryResult = null;
 
-  if (recommendations.normal.suitable.length > 0) {
-    batteryResult = recommendations.normal.suitable[0];
-    batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐: ${batteryResult.model}</div>`;
+  // 根据用户选择的电池类型确定优先级
+  var typePriority = [];
+  if (battType === 'dianneng') {
+    typePriority = ['dianneng', 'normal', 'highpower', '2v'];
+  } else if (battType === '2v') {
+    typePriority = ['2v', 'normal', 'highpower', 'dianneng'];
+  } else if (battType === 'highpower') {
+    typePriority = ['highpower', 'normal', 'dianneng', '2v'];
+  } else {
+    typePriority = ['normal', 'highpower', 'dianneng', '2v']; // 12v default
+  }
+
+  // 按优先级查找推荐电池
+  var foundBattery = null;
+  for (var i = 0; i < typePriority.length; i++) {
+    var cat = typePriority[i];
+    if (recommendations[cat] && recommendations[cat].suitable.length > 0) {
+      foundBattery = { data: recommendations[cat].suitable[0], category: cat };
+      break;
+    }
+  }
+
+  if (foundBattery) {
+    var batteryResult = foundBattery.data;
+    var catLabel = { normal: '', highpower: '(高功率)', '2v': '(2V电池)', dianneng: '(电能电池)' }[foundBattery.category];
+    batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐${catLabel}: ${batteryResult.model}</div>`;
     batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
     batteryHtml += `<div>恒功率: <b>${batteryResult.power}W</b> (余量+${batteryResult.marginPercent}%)</div>`;
     batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
-  } else if (recommendations.highpower.suitable.length > 0) {
-    batteryResult = recommendations.highpower.suitable[0];
-    batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐(高功率): ${batteryResult.model}</div>`;
-    batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
-    batteryHtml += `<div>恒功率: <b>${batteryResult.power}W</b> (余量+${batteryResult.marginPercent}%)</div>`;
-    batteryHtml += `<div>总数量: <b>${totalCells}</b>只</div>`;
-  } else if (recommendations['2v'].suitable.length > 0) {
-    batteryResult = recommendations['2v'].suitable[0];
-    batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐(2V电池): ${batteryResult.model}</div>`;
-    batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
-    batteryHtml += `<div>恒功率: <b>${batteryResult.power}W</b> (余量+${batteryResult.marginPercent}%)</div>`;
-    batteryHtml += `<div>总数量: <b>${totalCells}</b>只</div>`;
   } else {
     batteryHtml = `<div style="color:#e74c3c">⚠️ 未找到满足要求的电池型号</div>`;
     batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体 (可能需要多组并联)</div>`;
     // 显示所有可选电池（功率不足的）
-    if (recommendations.normal.all.length > 0) {
+    var firstCat = typePriority[0];
+    if (recommendations[firstCat] && recommendations[firstCat].all.length > 0) {
       batteryHtml += `<details style="margin-top:8px"><summary style="cursor:pointer;color:#888;font-size:12px">查看普通电池选项</summary>`;
-      recommendations.normal.all.forEach(b => {
+      recommendations[firstCat].all.forEach(function(b) {
         batteryHtml += `<div style="padding:4px 0;font-size:12px">${b.model}: ${b.power}W (差${(reqPower - b.power).toFixed(0)}W)</div>`;
       });
       batteryHtml += `</details>`;
@@ -28868,6 +28880,187 @@ var BATTERY_POWER_DATA = [
         ]
       }
     ]
+  },
+  // 电能电池 GBT12V 恒功率数据
+  {
+    "model": "GBT12-7",
+    "category": "dianneng",
+    "capacity": "7Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":44.43},{"time":15,"power":22.57},{"time":30,"power":13.7},{"time":60,"power":8.16},{"time":120,"power":4.79},{"time":180,"power":3.543},{"time":300,"power":2.43},{"time":480,"power":1.681},{"time":600,"power":1.383},{"time":1200,"power":0.743}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":41.9},{"time":15,"power":21.98},{"time":30,"power":13.55},{"time":60,"power":8.06},{"time":120,"power":4.74},{"time":180,"power":3.508},{"time":300,"power":2.409},{"time":480,"power":1.669},{"time":600,"power":1.373},{"time":1200,"power":0.738}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":40.48},{"time":15,"power":21.61},{"time":30,"power":13.46},{"time":60,"power":8.01},{"time":120,"power":4.7},{"time":180,"power":3.483},{"time":300,"power":2.397},{"time":480,"power":1.66},{"time":600,"power":1.366},{"time":1200,"power":0.734}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":37.54},{"time":15,"power":20.84},{"time":30,"power":13.24},{"time":60,"power":7.9},{"time":120,"power":4.63},{"time":180,"power":3.436},{"time":300,"power":2.369},{"time":480,"power":1.64},{"time":600,"power":1.348},{"time":1200,"power":0.725}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":34.41},{"time":15,"power":20.01},{"time":30,"power":13},{"time":60,"power":7.77},{"time":120,"power":4.55},{"time":180,"power":3.388},{"time":300,"power":2.333},{"time":480,"power":1.613},{"time":600,"power":1.327},{"time":1200,"power":0.713}] }
+    ]
+  },
+  {
+    "model": "GBT12-9",
+    "category": "dianneng",
+    "capacity": "9Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":66.5},{"time":15,"power":34},{"time":30,"power":19},{"time":60,"power":11.17},{"time":120,"power":6.36},{"time":180,"power":4.52},{"time":300,"power":2.99},{"time":480,"power":2.06},{"time":600,"power":1.69},{"time":1200,"power":0.91}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":63.5},{"time":15,"power":33},{"time":30,"power":18.9},{"time":60,"power":11.05},{"time":120,"power":6.3},{"time":180,"power":4.49},{"time":300,"power":2.97},{"time":480,"power":2.04},{"time":600,"power":1.68},{"time":1200,"power":0.904}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":62.2},{"time":15,"power":32.3},{"time":30,"power":18.8},{"time":60,"power":10.98},{"time":120,"power":6.27},{"time":180,"power":4.47},{"time":300,"power":2.96},{"time":480,"power":2.03},{"time":600,"power":1.67},{"time":1200,"power":0.901}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":60.1},{"time":15,"power":31.4},{"time":30,"power":18.5},{"time":60,"power":10.88},{"time":120,"power":6.22},{"time":180,"power":4.43},{"time":300,"power":2.94},{"time":480,"power":2.02},{"time":600,"power":1.66},{"time":1200,"power":0.898}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":57.5},{"time":15,"power":30.3},{"time":30,"power":18.2},{"time":60,"power":10.75},{"time":120,"power":6.17},{"time":180,"power":4.39},{"time":300,"power":2.92},{"time":480,"power":2},{"time":600,"power":1.65},{"time":1200,"power":0.895}] }
+    ]
+  },
+  {
+    "model": "GBT12-17",
+    "category": "dianneng",
+    "capacity": "17Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":111.158},{"time":15,"power":56.356},{"time":30,"power":35.258},{"time":60,"power":20.349},{"time":120,"power":11.579},{"time":180,"power":8.225},{"time":300,"power":5.45},{"time":480,"power":3.752},{"time":600,"power":3.085},{"time":1200,"power":1.66}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":98.668},{"time":15,"power":53.47},{"time":30,"power":34.522},{"time":60,"power":20.203},{"time":120,"power":11.492},{"time":180,"power":8.172},{"time":300,"power":5.419},{"time":480,"power":3.735},{"time":600,"power":3.073},{"time":1200,"power":1.655}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":93.422},{"time":15,"power":52.192},{"time":30,"power":34.222},{"time":60,"power":20.08},{"time":120,"power":11.425},{"time":180,"power":8.14},{"time":300,"power":5.401},{"time":480,"power":3.724},{"time":600,"power":3.064},{"time":1200,"power":1.651}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":87.046},{"time":15,"power":50.626},{"time":30,"power":33.743},{"time":60,"power":19.912},{"time":120,"power":11.326},{"time":180,"power":8.096},{"time":300,"power":5.371},{"time":480,"power":3.702},{"time":600,"power":3.049},{"time":1200,"power":1.642}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":80.669},{"time":15,"power":49.059},{"time":30,"power":33.263},{"time":60,"power":19.743},{"time":120,"power":11.226},{"time":180,"power":8.051},{"time":300,"power":5.341},{"time":480,"power":3.68},{"time":600,"power":3.034},{"time":1200,"power":1.633}] }
+    ]
+  },
+  {
+    "model": "GBT12-24",
+    "category": "dianneng",
+    "capacity": "24Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":129.838},{"time":15,"power":72.182},{"time":30,"power":46.015},{"time":60,"power":24.838},{"time":120,"power":14.136},{"time":180,"power":10.05},{"time":300,"power":6.66},{"time":480,"power":4.59},{"time":600,"power":3.77},{"time":1200,"power":2.03}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":115.249},{"time":15,"power":68.486},{"time":30,"power":45.055},{"time":60,"power":24.659},{"time":120,"power":14.032},{"time":180,"power":9.968},{"time":300,"power":6.603},{"time":480,"power":4.549},{"time":600,"power":3.738},{"time":1200,"power":2.013}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":109.122},{"time":15,"power":66.849},{"time":30,"power":44.663},{"time":60,"power":24.509},{"time":120,"power":13.951},{"time":180,"power":9.912},{"time":300,"power":6.562},{"time":480,"power":4.521},{"time":600,"power":3.715},{"time":1200,"power":2.001}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":100.826},{"time":15,"power":64.562},{"time":30,"power":44.031},{"time":60,"power":24.289},{"time":120,"power":13.827},{"time":180,"power":9.829},{"time":300,"power":6.504},{"time":480,"power":4.482},{"time":600,"power":3.683},{"time":1200,"power":1.985}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":92.53},{"time":15,"power":62.275},{"time":30,"power":43.4},{"time":60,"power":24.069},{"time":120,"power":13.702},{"time":180,"power":9.745},{"time":300,"power":6.445},{"time":480,"power":4.442},{"time":600,"power":3.651},{"time":1200,"power":1.969}] }
+    ]
+  },
+  {
+    "model": "GBT12-38",
+    "category": "dianneng",
+    "capacity": "38Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":220.096},{"time":15,"power":110.975},{"time":30,"power":67.728},{"time":60,"power":40.698},{"time":120,"power":23.143},{"time":180,"power":16.452},{"time":300,"power":10.903},{"time":480,"power":7.52},{"time":600,"power":6.18},{"time":1200,"power":3.33}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":195.366},{"time":15,"power":105.292},{"time":30,"power":66.314},{"time":60,"power":40.406},{"time":120,"power":22.989},{"time":180,"power":16.35},{"time":300,"power":10.835},{"time":480,"power":7.477},{"time":600,"power":6.143},{"time":1200,"power":3.307}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":184.979},{"time":15,"power":102.775},{"time":30,"power":65.737},{"time":60,"power":40.159},{"time":120,"power":22.878},{"time":180,"power":16.279},{"time":300,"power":10.794},{"time":480,"power":7.447},{"time":600,"power":6.118},{"time":1200,"power":3.294}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":171.207},{"time":15,"power":99.109},{"time":30,"power":64.867},{"time":60,"power":39.816},{"time":120,"power":22.723},{"time":180,"power":16.177},{"time":300,"power":10.732},{"time":480,"power":7.404},{"time":600,"power":6.082},{"time":1200,"power":3.274}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":157.436},{"time":15,"power":95.442},{"time":30,"power":63.997},{"time":60,"power":39.473},{"time":120,"power":22.567},{"time":180,"power":16.074},{"time":300,"power":10.669},{"time":480,"power":7.361},{"time":600,"power":6.046},{"time":1200,"power":3.253}] }
+    ]
+  },
+  {
+    "model": "GBT12-50",
+    "category": "dianneng",
+    "capacity": "50Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":147.645},{"time":15,"power":89.64},{"time":30,"power":53.865},{"time":60,"power":39.457},{"time":120,"power":22.449},{"time":180,"power":15.96},{"time":300,"power":10.58},{"time":480,"power":7.29},{"time":600,"power":5.99},{"time":1200,"power":3.225}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":140.084},{"time":15,"power":87.769},{"time":30,"power":53.478},{"time":60,"power":39.076},{"time":120,"power":22.243},{"time":180,"power":15.816},{"time":300,"power":10.492},{"time":480,"power":7.227},{"time":600,"power":5.938},{"time":1200,"power":3.197}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":136.736},{"time":15,"power":87.005},{"time":30,"power":53.152},{"time":60,"power":39.052},{"time":120,"power":22.132},{"time":180,"power":15.738},{"time":300,"power":10.443},{"time":480,"power":7.196},{"time":600,"power":5.913},{"time":1200,"power":3.183}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":131.949},{"time":15,"power":85.794},{"time":30,"power":52.676},{"time":60,"power":38.987},{"time":120,"power":21.982},{"time":180,"power":15.622},{"time":300,"power":10.369},{"time":480,"power":7.15},{"time":600,"power":5.874},{"time":1200,"power":3.163}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":127.163},{"time":15,"power":84.584},{"time":30,"power":52.2},{"time":60,"power":38.921},{"time":120,"power":21.832},{"time":180,"power":15.505},{"time":300,"power":10.294},{"time":480,"power":7.103},{"time":600,"power":5.835},{"time":1200,"power":3.143}] }
+    ]
+  },
+  {
+    "model": "GBT12-65",
+    "category": "dianneng",
+    "capacity": "65Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":310},{"time":15,"power":178},{"time":30,"power":114.9},{"time":60,"power":70.6},{"time":120,"power":40.2},{"time":180,"power":28.6},{"time":300,"power":18.9},{"time":480,"power":13},{"time":600,"power":10.7},{"time":1200,"power":5.76}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":292},{"time":15,"power":171},{"time":30,"power":112.3},{"time":60,"power":69.9},{"time":120,"power":39.8},{"time":180,"power":28.3},{"time":300,"power":18.7},{"time":480,"power":12.9},{"time":600,"power":10.6},{"time":1200,"power":5.71}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":282},{"time":15,"power":167},{"time":30,"power":111.1},{"time":60,"power":69.5},{"time":120,"power":39.5},{"time":180,"power":28.1},{"time":300,"power":18.6},{"time":480,"power":12.8},{"time":600,"power":10.5},{"time":1200,"power":5.67}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":268},{"time":15,"power":161},{"time":30,"power":109.4},{"time":60,"power":68.8},{"time":120,"power":39.1},{"time":180,"power":27.8},{"time":300,"power":18.4},{"time":480,"power":12.7},{"time":600,"power":10.4},{"time":1200,"power":5.6}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":254},{"time":15,"power":155},{"time":30,"power":107.7},{"time":60,"power":68.1},{"time":120,"power":38.7},{"time":180,"power":27.5},{"time":300,"power":18.2},{"time":480,"power":12.5},{"time":600,"power":10.3},{"time":1200,"power":5.54}] }
+    ]
+  },
+  {
+    "model": "GBT12-70",
+    "category": "dianneng",
+    "capacity": "70Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":343},{"time":15,"power":205},{"time":30,"power":129},{"time":60,"power":78},{"time":120,"power":44.4},{"time":180,"power":31.6},{"time":300,"power":20.9},{"time":480,"power":14.4},{"time":600,"power":11.8},{"time":1200,"power":6.36}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":325},{"time":15,"power":197},{"time":30,"power":127},{"time":60,"power":77.1},{"time":120,"power":43.9},{"time":180,"power":31.2},{"time":300,"power":20.7},{"time":480,"power":14.3},{"time":600,"power":11.7},{"time":1200,"power":6.31}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":314},{"time":15,"power":193},{"time":30,"power":126},{"time":60,"power":76.6},{"time":120,"power":43.6},{"time":180,"power":31},{"time":300,"power":20.5},{"time":480,"power":14.1},{"time":600,"power":11.6},{"time":1200,"power":6.26}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":299},{"time":15,"power":186},{"time":30,"power":124},{"time":60,"power":75.7},{"time":120,"power":43},{"time":180,"power":30.6},{"time":300,"power":20.3},{"time":480,"power":14},{"time":600,"power":11.5},{"time":1200,"power":6.18}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":284},{"time":15,"power":179},{"time":30,"power":122},{"time":60,"power":74.8},{"time":120,"power":42.5},{"time":180,"power":30.2},{"time":300,"power":20},{"time":480,"power":13.8},{"time":600,"power":11.3},{"time":1200,"power":6.1}] }
+    ]
+  },
+  {
+    "model": "GBT12-80",
+    "category": "dianneng",
+    "capacity": "80Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":497},{"time":15,"power":250},{"time":30,"power":155},{"time":60,"power":90.4},{"time":120,"power":51.4},{"time":180,"power":36.6},{"time":300,"power":24.2},{"time":480,"power":16.7},{"time":600,"power":13.7},{"time":1200,"power":7.38}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":467},{"time":15,"power":240},{"time":30,"power":151},{"time":60,"power":88.4},{"time":120,"power":50.3},{"time":180,"power":35.8},{"time":300,"power":23.7},{"time":480,"power":16.3},{"time":600,"power":13.4},{"time":1200,"power":7.22}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":450},{"time":15,"power":234},{"time":30,"power":149},{"time":60,"power":87.4},{"time":120,"power":49.7},{"time":180,"power":35.4},{"time":300,"power":23.4},{"time":480,"power":16.1},{"time":600,"power":13.2},{"time":1200,"power":7.12}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":425},{"time":15,"power":225},{"time":30,"power":146},{"time":60,"power":85.9},{"time":120,"power":48.8},{"time":180,"power":34.7},{"time":300,"power":23},{"time":480,"power":15.8},{"time":600,"power":13},{"time":1200,"power":6.98}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":400},{"time":15,"power":216},{"time":30,"power":143},{"time":60,"power":84.4},{"time":120,"power":48},{"time":180,"power":34.1},{"time":300,"power":22.6},{"time":480,"power":15.6},{"time":600,"power":12.8},{"time":1200,"power":6.85}] }
+    ]
+  },
+  {
+    "model": "GBT12-90",
+    "category": "dianneng",
+    "capacity": "90Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":246.075},{"time":15,"power":151.392},{"time":30,"power":89.775},{"time":60,"power":65.761},{"time":120,"power":37.433},{"time":180,"power":26.632},{"time":300,"power":17.64},{"time":480,"power":12.154},{"time":600,"power":9.983},{"time":1200,"power":5.376}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":233.474},{"time":15,"power":148.232},{"time":30,"power":89.13},{"time":60,"power":65.126},{"time":120,"power":37.06},{"time":180,"power":26.357},{"time":300,"power":17.447},{"time":480,"power":12.019},{"time":600,"power":9.873},{"time":1200,"power":5.316}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":227.893},{"time":15,"power":146.942},{"time":30,"power":88.587},{"time":60,"power":65.087},{"time":120,"power":36.835},{"time":180,"power":26.2},{"time":300,"power":17.333},{"time":480,"power":11.937},{"time":600,"power":9.805},{"time":1200,"power":5.281}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":219.844},{"time":15,"power":144.664},{"time":30,"power":87.818},{"time":60,"power":64.994},{"time":120,"power":36.501},{"time":180,"power":25.97},{"time":300,"power":17.169},{"time":480,"power":11.824},{"time":600,"power":9.71},{"time":1200,"power":5.23}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":211.795},{"time":15,"power":142.387},{"time":30,"power":87.049},{"time":60,"power":64.9},{"time":120,"power":36.166},{"time":180,"power":25.74},{"time":300,"power":17.005},{"time":480,"power":11.71},{"time":600,"power":9.614},{"time":1200,"power":5.179}] }
+    ]
+  },
+  {
+    "model": "GBT12-100",
+    "category": "dianneng",
+    "capacity": "100Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":295.29},{"time":15,"power":181.272},{"time":30,"power":105.137},{"time":60,"power":77.013},{"time":120,"power":43.83},{"time":180,"power":31.169},{"time":300,"power":20.65},{"time":480,"power":14.234},{"time":600,"power":11.692},{"time":1200,"power":6.297}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":280.169},{"time":15,"power":177.488},{"time":30,"power":104.382},{"time":60,"power":76.27},{"time":120,"power":43.418},{"time":180,"power":30.865},{"time":300,"power":20.437},{"time":480,"power":14.08},{"time":600,"power":11.564},{"time":1200,"power":6.228}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":273.472},{"time":15,"power":175.943},{"time":30,"power":103.745},{"time":60,"power":76.224},{"time":120,"power":43.185},{"time":180,"power":30.702},{"time":300,"power":20.311},{"time":480,"power":13.99},{"time":600,"power":11.487},{"time":1200,"power":6.185}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":263.529},{"time":15,"power":173.235},{"time":30,"power":102.757},{"time":60,"power":76.127},{"time":120,"power":42.825},{"time":180,"power":30.446},{"time":300,"power":20.137},{"time":480,"power":13.867},{"time":600,"power":11.378},{"time":1200,"power":6.124}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":253.585},{"time":15,"power":170.527},{"time":30,"power":101.77},{"time":60,"power":76.03},{"time":120,"power":42.464},{"time":180,"power":30.19},{"time":300,"power":19.962},{"time":480,"power":13.744},{"time":600,"power":11.268},{"time":1200,"power":6.063}] }
+    ]
+  },
+  {
+    "model": "GBT12-120",
+    "category": "dianneng",
+    "capacity": "120Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":607},{"time":15,"power":342},{"time":30,"power":218},{"time":60,"power":133},{"time":120,"power":75.7},{"time":180,"power":53.8},{"time":300,"power":35.7},{"time":480,"power":24.6},{"time":600,"power":20.2},{"time":1200,"power":10.88}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":574},{"time":15,"power":330},{"time":30,"power":215},{"time":60,"power":130},{"time":120,"power":74},{"time":180,"power":52.6},{"time":300,"power":34.9},{"time":480,"power":24},{"time":600,"power":19.7},{"time":1200,"power":10.61}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":547},{"time":15,"power":322},{"time":30,"power":213},{"time":60,"power":128},{"time":120,"power":72.9},{"time":180,"power":51.9},{"time":300,"power":34.4},{"time":480,"power":23.7},{"time":600,"power":19.5},{"time":1200,"power":10.5}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":507},{"time":15,"power":310},{"time":30,"power":209},{"time":60,"power":125},{"time":120,"power":71.1},{"time":180,"power":50.6},{"time":300,"power":33.6},{"time":480,"power":23.1},{"time":600,"power":19},{"time":1200,"power":10.23}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":467},{"time":15,"power":298},{"time":30,"power":205},{"time":60,"power":122},{"time":120,"power":69.4},{"time":180,"power":49.4},{"time":300,"power":32.7},{"time":480,"power":22.5},{"time":600,"power":18.5},{"time":1200,"power":9.96}] }
+    ]
+  },
+  {
+    "model": "GBT12-150",
+    "category": "dianneng",
+    "capacity": "150Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":449.69},{"time":15,"power":292.824},{"time":30,"power":161.595},{"time":60,"power":118.37},{"time":120,"power":67.35},{"time":180,"power":47.89},{"time":300,"power":31.76},{"time":480,"power":21.89},{"time":600,"power":17.98},{"time":1200,"power":9.68}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":426.662},{"time":15,"power":286.711},{"time":30,"power":160.435},{"time":60,"power":117.227},{"time":120,"power":66.72},{"time":180,"power":47.45},{"time":300,"power":31.46},{"time":480,"power":21.66},{"time":600,"power":17.81},{"time":1200,"power":9.59}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":416.464},{"time":15,"power":284.216},{"time":30,"power":159.457},{"time":60,"power":117.157},{"time":120,"power":66.4},{"time":180,"power":47.23},{"time":300,"power":31.32},{"time":480,"power":21.55},{"time":600,"power":17.72},{"time":1200,"power":9.54}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":400.818},{"time":15,"power":280.119},{"time":30,"power":158.062},{"time":60,"power":117.027},{"time":120,"power":65.89},{"time":180,"power":46.87},{"time":300,"power":31.07},{"time":480,"power":21.38},{"time":600,"power":17.58},{"time":1200,"power":9.46}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":385.173},{"time":15,"power":276.022},{"time":30,"power":156.667},{"time":60,"power":116.898},{"time":120,"power":65.38},{"time":180,"power":46.51},{"time":300,"power":30.81},{"time":480,"power":21.21},{"time":600,"power":17.43},{"time":1200,"power":9.38}] }
+    ]
+  },
+  {
+    "model": "GBT12-200",
+    "category": "dianneng",
+    "capacity": "200Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":884},{"time":15,"power":566},{"time":30,"power":366},{"time":60,"power":221},{"time":120,"power":126},{"time":180,"power":89.5},{"time":300,"power":59.3},{"time":480,"power":40.8},{"time":600,"power":33.5},{"time":1200,"power":18.04}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":844},{"time":15,"power":543},{"time":30,"power":358},{"time":60,"power":217},{"time":120,"power":123},{"time":180,"power":87.5},{"time":300,"power":58},{"time":480,"power":39.9},{"time":600,"power":32.7},{"time":1200,"power":17.61}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":817},{"time":15,"power":528},{"time":30,"power":354},{"time":60,"power":214},{"time":120,"power":122},{"time":180,"power":86.5},{"time":300,"power":57.3},{"time":480,"power":39.4},{"time":600,"power":32.3},{"time":1200,"power":17.4}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":774},{"time":15,"power":505},{"time":30,"power":347},{"time":60,"power":209},{"time":120,"power":119},{"time":180,"power":84.5},{"time":300,"power":56},{"time":480,"power":38.5},{"time":600,"power":31.6},{"time":1200,"power":17.02}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":731},{"time":15,"power":482},{"time":30,"power":340},{"time":60,"power":204},{"time":120,"power":116},{"time":180,"power":82.5},{"time":300,"power":54.7},{"time":480,"power":37.7},{"time":600,"power":30.9},{"time":1200,"power":16.64}] }
+    ]
+  },
+  {
+    "model": "GBT12-250",
+    "category": "dianneng",
+    "capacity": "250Ah",
+    "voltages": [
+      { "endVoltage": 1.6, "powers": [{"time":5,"power":974.4},{"time":15,"power":705.28},{"time":30,"power":470.496},{"time":60,"power":276.544},{"time":120,"power":157.44},{"time":180,"power":111.936},{"time":300,"power":74.176},{"time":480,"power":51.072},{"time":600,"power":41.952},{"time":1200,"power":22.592}] },
+      { "endVoltage": 1.67, "powers": [{"time":5,"power":914.08},{"time":15,"power":672.8},{"time":30,"power":451.008},{"time":60,"power":271.904},{"time":120,"power":154.752},{"time":180,"power":109.824},{"time":300,"power":72.768},{"time":480,"power":50.048},{"time":600,"power":41.056},{"time":1200,"power":22.08}] },
+      { "endVoltage": 1.7, "powers": [{"time":5,"power":881.6},{"time":15,"power":649.6},{"time":30,"power":441.728},{"time":60,"power":269.12},{"time":120,"power":153.28},{"time":180,"power":108.8},{"time":300,"power":72},{"time":480,"power":49.472},{"time":600,"power":40.576},{"time":1200,"power":21.824}] },
+      { "endVoltage": 1.75, "powers": [{"time":5,"power":828.8},{"time":15,"power":614.4},{"time":30,"power":426.496},{"time":60,"power":264.704},{"time":120,"power":150.784},{"time":180,"power":107.008},{"time":300,"power":70.912},{"time":480,"power":48.768},{"time":600,"power":40.032},{"time":1200,"power":21.504}] },
+      { "endVoltage": 1.8, "powers": [{"time":5,"power":776},{"time":15,"power":579.2},{"time":30,"power":411.264},{"time":60,"power":260.288},{"time":120,"power":148.288},{"time":180,"power":105.216},{"time":300,"power":69.824},{"time":480,"power":48.064},{"time":600,"power":39.488},{"time":1200,"power":21.184}] }
+    ]
   }
 ];
 
@@ -28938,6 +29131,7 @@ function calcLeadBatteryMethod2() {
   renderBatteryRecommendations('normal', recommendations.normal, reqPower);
   renderBatteryRecommendations('highpower', recommendations.highpower, reqPower);
   renderBatteryRecommendations('2v', recommendations['2v'], reqPower);
+  renderBatteryRecommendations('dianneng', recommendations.dianneng, reqPower);
 
   document.getElementById('lead2-result').style.display = 'block';
 }
@@ -28945,7 +29139,8 @@ function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
   var result = {
     normal: { suitable: [], all: [] },
     highpower: { suitable: [], all: [] },
-    '2v': { suitable: [], all: [] }
+    '2v': { suitable: [], all: [] },
+    dianneng: { suitable: [], all: [] }
   };
 
   BATTERY_POWER_DATA.forEach(function(battery) {
@@ -29067,7 +29262,7 @@ function renderBatteryDataTable() {
   theadHtml += '</tr>';
   document.getElementById('battery-power-thead').innerHTML = theadHtml;
 
-  var categoryLabels = { normal: '普通', highpower: '高功率', '2v': '2V' };
+  var categoryLabels = { normal: '普通', highpower: '高功率', '2v': '2V', dianneng: '电能' };
   var html = '';
   BATTERY_POWER_DATA.forEach(function(battery) {
     if (category !== 'all' && battery.category !== category) return;
