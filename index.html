@@ -2436,6 +2436,14 @@ function importBatteryFromCalc() {
     window.projectSummary.battery.totalCells = cellsPerGroup * groups;
     window.projectSummary.battery.note = battType === '2v' ? '2V电池' : '12V电池';
 
+    // 同步更新电池架信息（保持现有配置）
+    window.projectSummary.batteryRack.batteryModel = batteryModel;
+    // 如果电池架数量为0，设置默认值
+    if (!window.projectSummary.batteryRack.qty) {
+      window.projectSummary.batteryRack.qty = groups;
+      window.projectSummary.batteryRack.cellsPerRack = cellsPerGroup;
+    }
+
     alert('已从电池计算导入: ' + batteryModel + ' × ' + window.projectSummary.battery.totalCells + '只');
   } else {
     alert('没有可用的电池计算结果，请先进行电池计算');
@@ -3031,6 +3039,7 @@ function calcAllBatteryConfig() {
     batteryHtml += `<div>恒功率: <b>${batteryResult.power}W</b> (余量+${batteryResult.marginPercent}%)</div>`;
     batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
   } else {
+    var batteryResult = null;  // 无推荐电池时设为null
     batteryHtml = `<div style="color:#e74c3c">⚠️ 未找到满足要求的电池型号</div>`;
     batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体 (可能需要多组并联)</div>`;
     // 显示所有可选电池（功率不足的）
@@ -3208,7 +3217,7 @@ function calcAllBatteryConfig() {
       cellsPerRack: cellsPerGroup,
       batteryModel: batteryResult ? batteryResult.model : '',
       includeCable: rackCable === 'yes',
-      cableAmp: rackCable === 'yes' && groups >= 2 ? subSwitchSize + 'A' : '',
+      cableAmp: rackCable === 'yes' ? (groups >= 2 ? subSwitchSize : mainSwitchSize) + 'A' : '',
       qty: totalGroups,
       price: 0,
       note: ''
