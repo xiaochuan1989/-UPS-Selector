@@ -1651,9 +1651,6 @@ let isOcrProcessing = false;
 async function extractTextFromImages() {
   if (pastedImages.length === 0 || isOcrProcessing) return;
 
-async function extractTextFromImages() {
-  if (pastedImages.length === 0 || isOcrProcessing) return;
-
   isOcrProcessing = true;
   const btn = document.getElementById('ocr-btn');
   if (btn) { btn.disabled = true; btn.textContent = '🔄 AI识别中...'; }
