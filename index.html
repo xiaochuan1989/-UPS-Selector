@@ -98,6 +98,27 @@
   .settings-body { padding:24px; }
   .settings-close { background:none; border:none; color:white; font-size:26px; cursor:pointer; line-height:1; padding:0; opacity:.85; }
   .settings-close:hover { opacity:1; }
+  /* ── 历史记录弹窗 ── */
+  #history-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; overflow-y:auto; padding:40px 16px; }
+  #history-panel { max-width:800px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.25); }
+  .history-header { background:linear-gradient(135deg,#1a3a5c,#2d6a9f); color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+  .history-header h3 { font-size:16px; font-weight:600; margin:0; }
+  .history-close { background:transparent; border:none; color:white; font-size:24px; cursor:pointer; }
+  .history-toolbar { padding:12px 16px; background:#f8f9fa; display:flex; gap:10px; align-items:center; border-bottom:1px solid #e8e8e8; }
+  .history-toolbar input { flex:1; padding:8px 12px; border:1px solid #ddd; border-radius:6px; }
+  .history-toolbar select { padding:8px 12px; border:1px solid #ddd; border-radius:6px; }
+  .history-item { padding:12px 16px; border-bottom:1px solid #eee; cursor:pointer; transition:background 0.2s; }
+  .history-item:hover { background:#f0f7ff; }
+  .history-item-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .history-item-time { color:#2d6a9f; font-weight:600; font-size:13px; }
+  .history-item-models { color:#666; font-size:13px; margin-bottom:4px; }
+  .history-item-requirement { color:#888; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:600px; }
+  .history-actions { display:flex; gap:8px; }
+  .history-actions button { padding:4px 12px; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
+  .btn-restore { background:#2d6a9f; color:#fff; }
+  .btn-delete { background:#e74c3c; color:#fff; }
+  .history-empty { text-align:center; padding:40px; color:#888; }
+  .history-item-detail { display:none; padding:10px; background:#f9f9f9; border-radius:6px; margin-top:8px; font-size:13px; line-height:1.7; white-space:pre-wrap; }
   /* ── 文档上传 ── */
   .doc-upload-label { background:#f0f7ff; border:1.5px dashed #2d6a9f; color:#2d6a9f; border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; white-space:nowrap; }
   .doc-upload-label:hover { background:#e0eeff; border-style:solid; }
@@ -114,6 +135,18 @@
   .followup-row { display:flex; gap:10px; }
   #followup-input { flex:1; border:1.5px solid #e0e0e0; border-radius:8px; padding:10px 14px; font-size:14px; }
   #followup-input:focus { outline:none; border-color:#2d6a9f; }
+  /* ── 图片粘贴区域 ── */
+  .image-preview-container { display:none; margin-top:10px; }
+  .image-preview-container.has-images { display:block; }
+  .image-preview-label { font-size:12px; color:#666; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .image-preview-list { display:flex; flex-wrap:wrap; gap:8px; }
+  .image-preview-item { position:relative; border:1px solid #ddd; border-radius:6px; overflow:hidden; max-width:150px; }
+  .image-preview-item img { width:150px; height:auto; display:block; }
+  .image-preview-remove { position:absolute; top:4px; right:4px; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .image-preview-remove:hover { background:#e74c3c; }
+  .paste-hint { font-size:11px; color:#aaa; margin-top:4px; }
+  .image-drop-zone { border:2px dashed #ccc; border-radius:8px; padding:16px; text-align:center; color:#888; margin-top:8px; transition:all 0.2s; }
+  .image-drop-zone.dragover { border-color:#2d6a9f; background:#f0f7ff; }
   /* ── 设置弹窗 Tab ── */
   .settings-tab { flex:1; padding:10px 0; font-size:13px; font-weight:500; border:none; background:transparent; cursor:pointer; color:#888; border-bottom:2px solid transparent; transition:all 0.2s; }
   .settings-tab:hover { color:#2d6a9f; }
@@ -137,6 +170,7 @@
 <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -199,6 +233,9 @@ function checkAuth(){
     </button>
     <button onclick="openSettings()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
       ⚙️ 设置
+    </button>
+    <button onclick="openHistoryModal()" style="background:#8e44ad;color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
+      📋 历史
     </button>
     <button id="restore-btn" onclick="restoreBuiltinData()" style="display:none;background:rgba(255,200,100,.3);border:1px solid rgba(255,200,100,.6);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
       🔄 恢复内置数据
@@ -638,6 +675,16 @@ function checkAuth(){
           <span id="doc-upload-status">✓ <span id="doc-file-name"></span> 已加载</span>
         </div>
       </div>
+      <!-- 图片粘贴区域 -->
+      <div id="image-preview-container" class="image-preview-container">
+        <div class="image-preview-label">📷 已粘贴的图片（点击×删除）：</div>
+        <div id="image-preview-list" class="image-preview-list"></div>
+        <button id="ocr-btn" onclick="extractTextFromImages()" style="margin-top:8px;background:#e67e22;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;">📷 识别图片文字</button>
+        <span style="margin-top:8px;font-size:11px;color:#888;">💡 需要支持视觉识别的大模型（如kimi2.5、Claude3等）</span>
+      </div>
+      <div id="image-drop-zone" class="image-drop-zone">
+        <span>📷 可粘贴图片（Ctrl+V）或拖拽图片到此处</span>
+      </div>
       <button class="analyze-btn" id="analyze-btn" onclick="analyze()">
         <div class="spinner" id="spinner"></div>
         <span id="btn-text">🔍 开始选型</span>
@@ -913,7 +960,7 @@ function saveConfig() {
   s.textContent = "✓ 已保存"; s.className = "api-status ok";
 }
 
-async function callAI(userMessage, systemPrompt) {
+async function callAI(userMessage, systemPrompt, images) {
   const apikey  = document.getElementById("apikey").value.trim();
   const model   = document.getElementById("model").value.trim();
   const baseUrl = getBaseUrl();
@@ -922,17 +969,31 @@ async function callAI(userMessage, systemPrompt) {
   const isAnthropic = baseUrl.includes("anthropic.com");
   let resp, data;
 
+  // 构建消息内容（文本+图片）
+  let content;
+  if (images && images.length > 0) {
+    content = images.map(img => ({
+      type: "image_url",
+      image_url: { url: img }
+    }));
+    if (userMessage && userMessage.trim()) {
+      content.unshift({ type: "text", text: userMessage });
+    }
+  } else {
+    content = userMessage;
+  }
+
   if (isAnthropic) {
     resp = await fetch(baseUrl + "/messages", {
       method: "POST",
       headers: { "x-api-key": apikey, "anthropic-version": "2023-06-01", "content-type": "application/json", "anthropic-dangerous-direct-browser-access": "true" },
-      body: JSON.stringify({ model, max_tokens: 4096, system: systemPrompt, messages: [{ role: "user", content: userMessage }] })
+      body: JSON.stringify({ model, max_tokens: 4096, system: systemPrompt, messages: [{ role: "user", content }] })
     });
     data = await resp.json();
     if (!resp.ok) throw new Error(data.error?.message || JSON.stringify(data));
     return data.content[0].text;
   } else {
-    const messages = systemPrompt ? [{ role: "system", content: systemPrompt }, { role: "user", content: userMessage }] : [{ role: "user", content: userMessage }];
+    const messages = systemPrompt ? [{ role: "system", content: systemPrompt }, { role: "user", content }] : [{ role: "user", content }];
     resp = await fetch(baseUrl + "/chat/completions", {
       method: "POST",
       headers: { "Authorization": "Bearer " + apikey, "Content-Type": "application/json" },
@@ -969,6 +1030,8 @@ async function analyze() {
   const req = document.getElementById("requirement").value.trim();
   if (!req) { alert("请先输入客户需求"); return; }
 
+  let fullReq = req;
+
   const btn = document.getElementById("analyze-btn");
   btn.disabled = true; btn.classList.add("loading");
   document.getElementById("spinner").style.display = "block";
@@ -981,7 +1044,7 @@ async function analyze() {
     const systemPrompt = getCustomPrompt()
       + `\n\n【产品数据库】（格式：型号|系列|容量|安装|并机|PF|输入电压|描述）：\n${productSummary}\n\n【合法型号清单】（model字段只能从此列表取值）：\n${validModels.join("\n")}\n\n严格按以下JSON格式回复，不要有任何其他文字：\n{\n  "analysis": "按格式要求填写分析内容",\n  "recommended": [\n    {"model": "必须与合法型号清单完全一致的型号", "reason": "不少于80字的推荐理由"}\n  ],\n  "also_consider": [\n    {"model": "必须与合法型号清单完全一致的型号", "reason": "备选理由"}\n  ]\n}`;
 
-    const aiResp = await callAI(req, systemPrompt);
+    const aiResp = await callAI(fullReq, systemPrompt);
     let result;
     try {
       const m = aiResp.match(/\{[\s\S]*\}/);
@@ -994,10 +1057,11 @@ async function analyze() {
     result = validateModels(result, validModels);
 
     chatHistory = [
-      { role: "user",      content: "客户需求：" + req },
+      { role: "user",      content: "客户需求：" + fullReq },
       { role: "assistant", content: JSON.stringify(result) }
     ];
-    lastResult = result; lastRequirement = req;
+    lastResult = result; lastRequirement = fullReq;
+    saveSelectionHistory(result, fullReq, window.projectSummary);
     renderResult(result);
     document.getElementById("followup-card").style.display = "block";
     document.getElementById("chat-history").innerHTML = "";
@@ -1579,6 +1643,168 @@ h1{color:#1a3a5c}h2{color:#2d6a9f;border-bottom:2px solid #e8e8e8;padding-bottom
 let dbSortCol = null, dbSortAsc = true, dbSortSection = "top";
 let dbAllRows = [];
 let dbTopCols = [], dbBotCols = [];
+
+// ==================== 图片粘贴功能 ====================
+let pastedImages = [];
+let isOcrProcessing = false;
+
+async function extractTextFromImages() {
+  if (pastedImages.length === 0 || isOcrProcessing) return;
+
+async function extractTextFromImages() {
+  if (pastedImages.length === 0 || isOcrProcessing) return;
+
+  isOcrProcessing = true;
+  const btn = document.getElementById('ocr-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 AI识别中...'; }
+
+  try {
+    const existingText = document.getElementById('requirement').value.trim();
+
+    const systemPrompt = `你是一个专业的OCR文字识别助手，擅长从技术文档图片中准确提取文字。
+请仔细识别图片中的所有文字内容，只输出识别到的文字，不要做任何分析或选型建议。
+格式要求：
+1. 按图片顺序依次输出
+2. 每张图片识别结果用"---图片N---"分隔
+3. 只输出文字，保持原格式换行
+4. 如果图片模糊或无文字，输出"未识别到文字"`;
+
+    const userPrompt = `请识别以下${pastedImages.length}张图片中的文字：`;
+
+    // 传入图片给AI识别
+    const result = await callAI(userPrompt, systemPrompt, pastedImages);
+
+    // 清理结果
+    let cleanResult = result.trim();
+    cleanResult = cleanResult.replace(/```[\s\S]*?```/g, '').trim();
+
+    if (cleanResult && cleanResult.length > 5) {
+      const finalText = existingText
+        ? existingText + '\n\n--- AI图片识别内容 ---\n' + cleanResult
+        : cleanResult;
+      document.getElementById('requirement').value = finalText;
+      pastedImages = [];
+      updateImagePreviews();
+      alert('图片识别完成！文字已填入需求框，请检查确认。');
+    } else {
+      alert('未能从图片中识别到有效文字，请手动输入。');
+    }
+  } catch (e) {
+    console.error('图片识别错误:', e);
+    alert('图片识别失败：' + e.message);
+  } finally {
+    isOcrProcessing = false;
+    if (btn) { btn.disabled = false; btn.textContent = '📷 识别图片文字'; }
+  }
+}
+
+function handleImagePaste(event) {
+  const items = event.clipboardData?.items;
+  if (!items) return;
+
+  for (let item of items) {
+    if (item.type.startsWith('image/')) {
+      event.preventDefault();
+      const file = item.getAsFile();
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          pastedImages.push(e.target.result);
+          updateImagePreviews();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }
+}
+
+function handleImageDrop(event) {
+  event.preventDefault();
+  event.target.classList.remove('dragover');
+
+  const files = event.dataTransfer?.files;
+  if (!files) return;
+
+  for (let file of files) {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        pastedImages.push(e.target.result);
+        updateImagePreviews();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+}
+
+function handleDragOver(event) {
+  event.preventDefault();
+  event.target.classList.add('dragover');
+}
+
+function handleDragLeave(event) {
+  event.target.classList.remove('dragover');
+}
+
+function removePastedImage(index) {
+  pastedImages.splice(index, 1);
+  updateImagePreviews();
+}
+
+function updateImagePreviews() {
+  const container = document.getElementById('image-preview-container');
+  const list = document.getElementById('image-preview-list');
+  const dropZone = document.getElementById('image-drop-zone');
+  const ocrBtn = document.getElementById('ocr-btn');
+
+  if (pastedImages.length === 0) {
+    container.classList.remove('has-images');
+    dropZone.style.display = 'block';
+    return;
+  }
+
+  container.classList.add('has-images');
+  dropZone.style.display = 'none';
+
+  list.innerHTML = pastedImages.map((img, i) => `
+    <div class="image-preview-item">
+      <img src="${img}" alt="粘贴图片${i + 1}">
+      <button class="image-preview-remove" onclick="removePastedImage(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // 在整个文档上监听粘贴事件，这样任何位置粘贴都能捕获
+  document.addEventListener('paste', function(event) {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    for (let item of items) {
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+        event.stopPropagation();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            pastedImages.push(e.target.result);
+            updateImagePreviews();
+          };
+          reader.readAsDataURL(file);
+        }
+        break; // 只处理第一张图片
+      }
+    }
+  });
+
+  const dropZone = document.getElementById('image-drop-zone');
+  if (dropZone) {
+    dropZone.addEventListener('drop', handleImageDrop);
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+  }
+});
 
 // 产品信息列（上栏）：来自基本表的字段
 const DB_TOP_SET = new Set(["系列","型号","描述","功率因数","满载效率","安装","并机数量","并机卡","并机线","LBS","电池","中性线","电池启动","冷启动","高度","模块高度","主旁不同源","输入THDI","输出THDU","通讯","显示屏","备注","泰尔","CQC节能认证","产品编码","类别","产品系列","产品名称","含税成本"]);
@@ -29783,6 +30009,28 @@ function sortDataTable(colIdx, section) {
     </div>
   </div>
 </div>
+
+<!-- 历史记录弹窗 -->
+<div id="history-modal" onclick="if(event.target===this)closeHistoryModal()">
+  <div id="history-panel">
+    <div class="history-header">
+      <h3>📋 选型历史记录</h3>
+      <button class="history-close" onclick="closeHistoryModal()">×</button>
+    </div>
+    <div class="history-toolbar">
+      <input id="history-search" type="text" placeholder="搜索需求/型号..." oninput="filterHistory()">
+      <select id="history-limit" onchange="filterHistory()">
+        <option value="10">显示10条</option>
+        <option value="20">显示20条</option>
+        <option value="50" selected>显示50条</option>
+      </select>
+      <button onclick="exportHistory()" style="background:#27ae60;color:#fff">📥 导出Excel</button>
+      <button onclick="clearSelectionHistory()" style="background:#e74c3c;color:#fff">🗑 清空</button>
+    </div>
+    <div id="history-list" style="max-height:500px;overflow-y:auto"></div>
+  </div>
+</div>
+
 <script>
 function switchSettingsTab(tab) {
   document.getElementById("settings-body-api").style.display    = tab === "api"    ? "" : "none";
@@ -29830,6 +30078,234 @@ function resetPrompt() {
   const s = document.getElementById('prompt-save-status');
   s.textContent = '✓ 已重置为默认'; s.style.display = 'inline';
   setTimeout(() => { s.style.display = 'none'; s.textContent = '✓ 已保存，下次选型生效'; }, 3000);
+}
+
+// ==================== 选型历史记录 ====================
+
+const HISTORY_KEY = "ups_selection_history";
+const HISTORY_VERSION = 1;
+const HISTORY_MAX = 50;
+
+function generateHistoryId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
+
+function saveSelectionHistory(result, requirement, projectSummary) {
+  const history = loadSelectionHistoryRaw();
+  const record = {
+    id: generateHistoryId(),
+    timestamp: new Date().toLocaleString('zh-CN', { hour12: false }),
+    requirement: requirement,
+    analysis: result.analysis || "",
+    recommended: result.recommended || [],
+    also_consider: result.also_consider || [],
+    projectSummary: JSON.parse(JSON.stringify(projectSummary || {}))
+  };
+  history.records.unshift(record);
+  if (history.records.length > HISTORY_MAX) {
+    history.records = history.records.slice(0, HISTORY_MAX);
+  }
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function loadSelectionHistoryRaw() {
+  try {
+    const data = localStorage.getItem(HISTORY_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (parsed.version === HISTORY_VERSION) return parsed;
+    }
+  } catch (e) {}
+  return { version: HISTORY_VERSION, records: [] };
+}
+
+function getFilteredHistory(keyword, limit) {
+  const history = loadSelectionHistoryRaw();
+  let records = history.records;
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    records = records.filter(r =>
+      r.requirement.toLowerCase().includes(kw) ||
+      (r.recommended || []).some(p => p.model.toLowerCase().includes(kw)) ||
+      (r.also_consider || []).some(p => p.model.toLowerCase().includes(kw))
+    );
+  }
+  return records.slice(0, limit);
+}
+
+function deleteSelectionHistory(id, event) {
+  event.stopPropagation();
+  if (!confirm('确定删除这条历史记录？')) return;
+  const history = loadSelectionHistoryRaw();
+  history.records = history.records.filter(r => r.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  filterHistory();
+}
+
+function clearSelectionHistory() {
+  if (!confirm('确定清空全部历史记录？此操作不可恢复。')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  filterHistory();
+}
+
+function restoreHistory(record, event) {
+  event.stopPropagation();
+  if (!confirm(`确定恢复这条历史记录？\n时间：${record.timestamp}\n推荐：${(record.recommended || []).map(p => p.model).join(', ')}`)) return;
+
+  lastResult = {
+    analysis: record.analysis,
+    recommended: record.recommended || [],
+    also_consider: record.also_consider || []
+  };
+  lastRequirement = record.requirement;
+
+  chatHistory = [
+    { role: "user", content: "客户需求：" + record.requirement },
+    { role: "assistant", content: JSON.stringify(lastResult) }
+  ];
+
+  if (record.projectSummary) {
+    Object.keys(record.projectSummary).forEach(key => {
+      if (window.projectSummary[key] !== undefined) {
+        window.projectSummary[key] = record.projectSummary[key];
+      }
+    });
+  }
+
+  renderResult(lastResult);
+  document.getElementById("followup-card").style.display = "block";
+  document.getElementById("chat-history").innerHTML = "";
+  renderProjectSummary();
+
+  closeHistoryModal();
+  alert('已恢复选型结果');
+}
+
+function filterHistory() {
+  const keyword = document.getElementById('history-search').value.trim();
+  const limit = parseInt(document.getElementById('history-limit').value) || HISTORY_MAX;
+  const records = getFilteredHistory(keyword, limit);
+  renderHistoryList(records);
+}
+
+function renderHistoryList(records) {
+  const container = document.getElementById('history-list');
+  if (!records || records.length === 0) {
+    container.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+    return;
+  }
+  let html = '';
+  records.forEach(record => {
+    const recModels = (record.recommended || []).map(p => p.model).join(', ');
+    const alsoModels = (record.also_consider || []).map(p => p.model).join(', ');
+    html += `
+      <div class="history-item" onclick="expandHistoryItem(this)">
+        <div class="history-item-header">
+          <span class="history-item-time">🕐 ${record.timestamp}</span>
+          <div class="history-actions">
+            <button class="btn-restore" onclick="restoreHistory(${JSON.stringify(record).replace(/"/g, '&quot;')}, event)">恢复</button>
+            <button class="btn-delete" onclick="deleteSelectionHistory('${record.id}', event)">删除</button>
+          </div>
+        </div>
+        <div class="history-item-models">★ ${recModels || '无'}${alsoModels ? ' | ○ ' + alsoModels : ''}</div>
+        <div class="history-item-requirement" title="${record.requirement.replace(/"/g, '&quot;')}">需求：${record.requirement}</div>
+        <div class="history-item-detail">${record.analysis || '无分析内容'}</div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function expandHistoryItem(el) {
+  const content = el.querySelector('.history-item-detail');
+  if (content) {
+    content.style.display = content.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function exportHistory() {
+  const keyword = document.getElementById('history-search').value.trim();
+  const history = loadSelectionHistoryRaw();
+  let records = history.records;
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    records = records.filter(r =>
+      r.requirement.toLowerCase().includes(kw) ||
+      (r.recommended || []).some(p => p.model.toLowerCase().includes(kw)) ||
+      (r.also_consider || []).some(p => p.model.toLowerCase().includes(kw))
+    );
+  }
+
+  if (!records.length) {
+    alert('没有可导出的历史记录');
+    return;
+  }
+
+  const border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+  const headerStyle = { font:{bold:true, color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1A3A5C'}}, border, alignment:{wrapText:true, vertical:'center'} };
+  const dataStyle = { border, alignment:{wrapText:true, vertical:'top'} };
+
+  const wsData = [
+    ['序号', '选型时间', '客户需求', '推荐型号', '备选型号', '分析内容']
+  ];
+
+  records.forEach((r, i) => {
+    wsData.push([
+      i + 1,
+      r.timestamp,
+      r.requirement,
+      (r.recommended || []).map(p => p.model).join('; '),
+      (r.also_consider || []).map(p => p.model).join('; '),
+      (r.analysis || '').replace(/\n/g, ' ')
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [
+    {wch:6}, {wch:18}, {wch:45}, {wch:35}, {wch:35}, {wch:80}
+  ];
+
+  // 表头行高
+  ws['!rows'] = [{hpt:30}];
+
+  for (let c = 0; c < 6; c++) {
+    const addr = XLSX.utils.encode_cell({r:0, c});
+    if (ws[addr]) ws[addr].s = headerStyle;
+  }
+
+  // 数据单元格换行样式 - 根据内容长度动态计算行高
+  const colWidths = [6, 18, 45, 35, 35, 80]; // 每列宽度
+  for (let r = 1; r < wsData.length; r++) {
+    let maxLines = 1;
+    for (let c = 0; c < 6; c++) {
+      const content = String(wsData[r][c] || '');
+      const charsPerLine = Math.floor(colWidths[c] * 0.5); // 估算每行字符数(中文)
+      const lines = Math.max(1, Math.ceil(content.length / charsPerLine));
+      maxLines = Math.max(maxLines, lines);
+    }
+    ws['!rows'].push({hpt: Math.max(30, maxLines * 18) }); // 每行约18pt
+    for (let c = 0; c < 6; c++) {
+      const addr = XLSX.utils.encode_cell({r:r, c});
+      if (ws[addr]) ws[addr].s = dataStyle;
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '选型历史');
+  XLSX.writeFile(wb, `选型历史_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function openHistoryModal() {
+  document.getElementById('history-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('history-search').value = '';
+  document.getElementById('history-limit').value = '50';
+  filterHistory();
+}
+
+function closeHistoryModal() {
+  document.getElementById('history-modal').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });

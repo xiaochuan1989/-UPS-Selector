@@ -1,32 +1,47 @@
-# 开发环境配置
+# 开发环境与部署
 
-## Serena MCP 配置
-- 项目配置: `.serena/project.yml`（语言: typescript，编码: utf-8）
-- 全局配置: `C:\Users\woaig\Downloads\serena-main\serena_config.yml`
-- 全局MCP: `C:\Users\woaig\.claude.json`（user scope）
-- 启动脚本: `C:\Users\woaig\.local\bin\serena.bat`
-
-## 重要: ignored_paths 配置
-必须忽略以下目录，否则TypeScript LSP启动超时：
-```yaml
-ignored_paths:
-  - "test_data/node_modules/**"
-  - "serena/**"
-  - "fix_history/**"
-  - "*.png"
-  - "*.xlsx"
+## 项目结构
+```
+UPS选型助手_开发包/
+├── UPS选型助手.html      # 主开发文件 (~800KB, 29000+行)
+├── index.html            # GitHub Pages入口（必须与主文件同步）
+├── src/css/style.css     # 样式表（已提取）
+├── dev_scripts/          # 开发脚本
+│   ├── build.py         # 构建信息/质量检查/生成文档
+│   ├── serve.py         # HTTP服务/文件监听
+│   ├── test.py          # 统一测试入口
+│   └── inspect_excel.py # Excel数据结构检查
+└── deploy/              # Netlify部署目录
 ```
 
-## Serena 功能可用性
-| 功能 | 状态 | 说明 |
-|------|------|------|
-| 文件列表/读取 | ✅ | 正常 |
-| 代码搜索 | ✅ | search_for_pattern 正常 |
-| 内容替换 | ✅ | replace_content 正常 |
-| 记忆功能 | ✅ | 正常 |
-| 符号分析 | ❌ | HTML文件不支持TypeScript LSP符号提取 |
+## 快速命令
+```bash
+cd dev_scripts
 
-## 工具链
-- uv: `C:\Users\woaig\.local\bin\uv.exe`（Python包管理器）
-- Python: 3.11.15（通过uv安装）
-- Node.js/npm: 全局可用
+# 质量检查
+python build.py --verify
+
+# 启动开发服务器（端口8080）
+python serve.py --port 9000 --watch
+
+# 统一测试
+python test.py --quick   # 快速检查
+python test.py --all     # 全部测试
+```
+
+## 线上部署
+- **GitHub Pages**: https://xiaochuan1989.github.io/-UPS-Selector/
+- **Netlify备选**: https://ups-selector.netlify.app
+
+## 部署命令
+```bash
+git add .
+git commit -m "更新内容"
+git push origin master
+# 等待1-2分钟自动部署
+```
+
+## 注意事项
+- ⚠️ 修改代码后必须同步index.html和UPS选型助手.html
+- ⚠️ IndexedDB相关函数必须在DOMContentLoaded之前定义
+- ⚠️ 不要删除UPS选型助手.html主文件
