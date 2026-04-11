@@ -4,20 +4,9 @@
 
 ## ⚠️ v1.6 核心教训
 
-### 1. 多文件同步（高频错误）
+### 1. 单文件架构
 
-每次修改代码必须同步两个HTML文件：
-- `UPS选型助手.html` - 主开发文件
-- `index.html` - GitHub Pages入口文件
-
-**同步检查清单**：
-```
-□ CSS样式修改
-□ HTML弹窗结构修改
-□ JavaScript函数修改
-□ 按钮onclick修改
-□ localStorage key修改
-```
+现在只有一个主文件 `index.html`，不再需要同步两个HTML文件。
 
 ### 2. file://协议CDN限制
 
@@ -94,7 +83,7 @@ groups = 1: sensorCurrent = maxCurrent
 
 1. **函数定义顺序**：被调用的函数必须定义在调用位置之前
 2. **变量提升**：const/let不会提升，需先定义后使用
-3. **多文件同步**：每次修改后必须同步两个HTML文件
+3. **单文件架构**：已合并为 index.html，无需多文件同步
 4. **组件清单核对**：修改配置类代码时逐项对照
 5. **DOM元素验证**：确认getElementById的元素存在
 6. **语法检查**：修改代码后用 `node -e "new Function(...)"` 验证

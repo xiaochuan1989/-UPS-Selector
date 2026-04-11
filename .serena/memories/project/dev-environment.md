@@ -3,8 +3,7 @@
 ## 项目结构
 ```
 UPS选型助手_开发包/
-├── UPS选型助手.html      # 主开发文件 (~800KB, 29000+行)
-├── index.html            # GitHub Pages入口（必须与主文件同步）
+├── index.html            # 主程序文件（单一文件，已合并）
 ├── src/css/style.css     # 样式表（已提取）
 ├── dev_scripts/          # 开发脚本
 │   ├── build.py         # 构建信息/质量检查/生成文档
@@ -42,6 +41,5 @@ git push origin master
 ```
 
 ## 注意事项
-- ⚠️ 修改代码后必须同步index.html和UPS选型助手.html
 - ⚠️ IndexedDB相关函数必须在DOMContentLoaded之前定义
-- ⚠️ 不要删除UPS选型助手.html主文件
+- ⚠️ 主文件是 index.html，所有修改都在此文件上进行
