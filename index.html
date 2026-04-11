@@ -553,14 +553,15 @@ function checkAuth(){
       <div style="margin-top:10px;padding:14px;background:#fffbf0;border:1px solid #ffe0b2;border-radius:8px;font-size:12px;line-height:1.8">
         <div style="font-weight:600;color:#e65100;margin-bottom:10px">⚡ 电池开关箱/柜计算公式</div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-          <tr style="background:#fff8e1"><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">负载功率</td><td style="padding:6px 10px;border:1px solid #ffcc80">若填负载功率则用负载功率，否则用 <b>UPS容量 × 功率因数</b></td></tr>
+          <tr style="background:#fff8e1"><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">负载功率</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>UPS容量 × 功率因数</b>（开关箱按UPS额定功率计算）</td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">最大放电电流</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>I = P ÷ (电池节数 × 截止电压 × 单格数 × 效率)</b></td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">分开关电流</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>I ÷ (组数 - 1)</b>，当组数≥2时（一组故障时其余组承担全部电流）</td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">电压等级</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>最大充电电压</b> = 2.35V × 单格数 × 电池节数（2V电池单格数=1，12V电池单格数=6）<br>≤250V→250VDC，251~500V→500VDC，>500V→750VDC</td></tr>
         </table>
         <div style="font-weight:600;color:#2e7d32;margin-bottom:10px">🔋 电池功率计算公式</div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-          <tr style="background:#e8f5e9"><td style="padding:6px 10px;border:1px solid #a5d6a7;font-weight:500">单格功率需求</td><td style="padding:6px 10px;border:1px solid #a5d6a7"><b>W = P ÷ (电池节数 × 单格数 × 效率 × 组数)</b></td></tr>
+          <tr style="background:#e8f5e9"><td style="padding:6px 10px;border:1px solid #a5d6a7;font-weight:500">负载功率</td><td style="padding:6px 10px;border:1px solid #a5d6a7">若填负载功率则用负载功率，否则用 <b>UPS容量 × 功率因数</b></td></tr>
+          <tr><td style="padding:6px 10px;border:1px solid #a5d6a7;font-weight:500">单格功率需求</td><td style="padding:6px 10px;border:1px solid #a5d6a7"><b>W = P ÷ (电池节数 × 单格数 × 效率 × 组数)</b></td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #a5d6a7;font-weight:500">电池选型</td><td style="padding:6px 10px;border:1px solid #a5d6a7">查恒功率表，选 <b>恒功率 ≥ 单格功率需求</b> 的电池型号</td></tr>
         </table>
         <div style="font-weight:600;color:#7b1fa2;margin-bottom:10px">📡 监控配置规则</div>
@@ -3225,6 +3226,7 @@ function calcAllBatteryConfig() {
   const totalGroups = groups * upsNum;
   const totalCells = cellsPerGroup * totalGroups;
   const loadW = loadKw > 0 ? loadKw * 1000 : upsCap * pf * 1000;
+  const switchW = upsCap * pf * 1000;  // 开关箱始终用UPS额定功率
   const cellMultiplier = battType === '2v' ? 1 : 6;
 
   // ===== 1. 电池计算 =====
@@ -3277,8 +3279,8 @@ function calcAllBatteryConfig() {
   }
   document.getElementById('unified-battery-result').innerHTML = batteryHtml;
 
-  // ===== 2. 电池开关箱/柜计算 =====
-  const maxCurrent = loadW / (cellsPerGroup * endV * cellMultiplier * eff);
+  // ===== 2. 电池开关箱/柜计算（始终用UPS额定功率） =====
+  const maxCurrent = switchW / (cellsPerGroup * endV * cellMultiplier * eff);
   // 分组开关电流 = 总电流 / (N-1)，N为电池组数（仅当N≥2时）
   let groupCurrent = 0;
   if (groups >= 2) {
