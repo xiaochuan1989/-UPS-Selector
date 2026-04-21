@@ -1,7 +1,7 @@
 # UPS 智能选型助手 - 工程化开发环境
 
-> 版本：v1.6.1
-> 更新日期：2026-04-11
+> 版本：v1.6.3
+> 更新日期：2026-04-21
 
 ## 项目结构
 
@@ -728,6 +728,32 @@ git commit -m "[v1.6] 新增选型历史记录和图片OCR识别功能"
 ```
 
 ---
+
+
+
+## ⚠️ v1.6.3 教训：importUpsFromResult属性名错误
+
+### 问题描述
+函数访问了不存在的属性 `lastResult.recommendations`，实际结构是 `recommended` 和 `also_consider`。
+
+### 修复方案
+```javascript
+// 修复前（错误）
+if (lastResult.recommendations && lastResult.recommendations.length > 0)
+
+// 修复后
+const recs = lastResult.recommended?.length ? lastResult.recommended : (lastResult.also_consider || []);
+if (recs.length > 0) { ... }
+```
+
+### 经验教训
+```
+⚠️ 访问嵌套属性前，先确认实际数据结构
+✓ 正确做法：
+   1. 查看相同变量在其他地方的用法（如 renderResult）
+   2. 使用可选链 ?. 避免空指针
+   3. 提供 fallback 备选方案
+```
 
 *由 Claude Code 自动生成*
 *创建时间: 2026-03-09 | 最后更新: 2026-04-11*
