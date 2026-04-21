@@ -2613,8 +2613,14 @@ function toggleSummaryPrice() {
 
 // 从UPS选型结果导入
 function importUpsFromResult() {
-  if (typeof lastResult !== 'undefined' && lastResult && lastResult.recommendations && lastResult.recommendations.length > 0) {
-    const rec = lastResult.recommendations[0];
+  if (!lastResult) {
+    alert('没有可用的UPS选型结果，请先进行AI选型');
+    return;
+  }
+  // 优先取首选推荐，其次取备选方案
+  const recs = lastResult.recommended?.length ? lastResult.recommended : (lastResult.also_consider || []);
+  if (recs.length > 0) {
+    const rec = recs[0];
     window.projectSummary.ups.model = rec.model || '';
     window.projectSummary.ups.capacity = rec.capacity || '';
     alert('已从UPS选型结果导入: ' + (rec.model || '未知型号'));

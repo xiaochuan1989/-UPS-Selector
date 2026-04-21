@@ -54,6 +54,20 @@ ws['!rows'].push({hpt: Math.max(30, lines * 18)});
 - 单组电池：铜排用主开关规格
 - 多组电池：铜排用分开关规格
 
+### v1.6.3 importUpsFromResult属性名错误
+
+**问题**：`lastResult.recommendations` 属性不存在，实际结构是 `recommended` 和 `also_consider`。
+
+**修复**：
+```javascript
+// 修复前（错误）
+if (lastResult.recommendations && lastResult.recommendations.length > 0)
+
+// 修复后
+const recs = lastResult.recommended?.length ? lastResult.recommended : (lastResult.also_consider || []);
+if (recs.length > 0) { ... }
+```
+
 ### v1.5.3 变量重复声明
 
 **问题**：`let batteryResult` 声明两次导致语法错误。
