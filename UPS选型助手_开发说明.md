@@ -1,7 +1,7 @@
 # UPS 智能选型助手 - 工程化开发环境
 
 > 版本：v1.6.3
-> 更新日期：2026-04-21
+> 更新日期：2026-04-30
 
 ## 项目结构
 
@@ -756,4 +756,87 @@ if (recs.length > 0) { ... }
 ```
 
 *由 Claude Code 自动生成*
-*创建时间: 2026-03-09 | 最后更新: 2026-04-11*
+*创建时间: 2026-03-09 | 最后更新: 2026-04-30*
+
+---
+
+## ⚠️ v1.6.3-v1.6.5 教训：电池分类更新导致多处不匹配
+
+### 问题回顾
+
+电池分类名更新（12V铅酸→SP12V 等）后，出现多个问题：
+- 下拉选择 SP12V 但结果推荐其他类型
+- 选择某类型后无输出
+- JS 报错 null 引用
+
+### 根本原因
+
+| 问题 | 说明 |
+|------|------|
+| **两套计算函数并存** | `calcLeadBatteryMethod2`（dead code）引用不存在的 `lead2-*` 元素ID |
+| **下拉框遗漏更新** | 只更新了数据表下拉框，遗漏 `unified-batt-type` |
+| **映射表未同步** | `categoryLabels` 对象未更新 |
+| **跨分类 fallback** | 选某类型后 fallback 到其他分类 |
+| **空结果无输出** | 无匹配电池时无任何显示 |
+
+### 修复方案
+
+1. **删除死代码**：`calcLeadBatteryMethod2`、`showBatteryCategory`
+2. **同步所有下拉框**：`unified-batt-type` 和 `battType` 保持一致
+3. **同步映射表**：`categoryLabels` 与 UI 选项名一致
+4. **限制分类搜索**：只搜索用户选定的分类，不 fallback
+5. **空结果也输出**：显示计算参数 + 手动输入提示
+
+### 预防机制
+
+| 层级 | 机制 | 说明 |
+|------|------|------|
+| **机制级** | `pre-push hook` | push 前自动验证 JS 语法 |
+| **规则级** | 全局 grep | 修改下拉/分类时搜索所有相关引用 |
+| **认知级** | 删除前确认 | 删除代码前先 grep 确认无引用 |
+
+### 经验教训
+
+```
+⚠️ 修改批量名称时，必须全局搜索所有相关引用
+
+✓ 正确流程：
+   1. 修改下拉选项 → 全局 grep 所有同功能元素
+   2. 修改分类名 → 同步 categoryLabels 等映射表
+   3. 删除函数 → grep 确认无引用再删
+   4. 同一功能只留一套实现
+```
+
+---
+
+## ⚠️ JS 语法验证：pre-push hook 已部署
+
+### 功能说明
+
+自动验证 `index.html` 中的 JavaScript 语法，在 git push 前拦截错误。
+
+### 位置
+
+`.git/hooks/pre-push`
+
+### 验证方式
+
+提取所有 `<script>` 标签内容，用 `new Function()` 验证语法。
+
+### 效果
+
+- 不再依赖人工记得去验证
+- JS 语法错误会在 push 前被拦截
+
+### 示例输出
+
+```
+Running pre-push hook: validating index.html...
+Script block 1: OK
+Script block 2: OK
+Script block 3: OK
+Script block 4: OK
+All script blocks validated successfully.
+JS syntax validation passed.
+Pre-push check completed.
+```
