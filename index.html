@@ -3233,33 +3233,43 @@ function calcAllBatteryConfig() {
   const recommendations = getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
   let batteryHtml = '';
 
-  // 只在用户选择的电池类型中查找推荐
+  // 优先在用户选择的电池类型中查找推荐
   var selectedCat = battType;
   var foundBattery = null;
+  var batteryResult = null;
+
   if (recommendations[selectedCat] && recommendations[selectedCat].suitable.length > 0) {
     foundBattery = { data: recommendations[selectedCat].suitable[0], category: selectedCat };
+    batteryResult = foundBattery.data;
   }
 
+  var catLabelMap = { normal: 'SP12V', highpower: 'SPG12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率' };
+  var catLabel = catLabelMap[battType] || battType;
+
   if (foundBattery) {
-    var batteryResult = foundBattery.data;
-    var catLabel = { normal: '(SP12V)', highpower: '(SPG12V高功率)', '2v': '(GFMD-2V)', dianneng: '(电能GBT12-20小时率)' }[foundBattery.category];
-    batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐${catLabel}: ${batteryResult.model}</div>`;
+    var catLabelDisplay = { normal: '(SP12V)', highpower: '(SPG12V高功率)', '2v': '(GFMD-2V)', dianneng: '(电能GBT12-20小时率)' }[foundBattery.category];
+    batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐${catLabelDisplay}: ${batteryResult.model}</div>`;
     batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
     batteryHtml += `<div>恒功率: <b>${batteryResult.power}W</b> (余量+${batteryResult.marginPercent}%)</div>`;
     batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
   } else {
-    var batteryResult = null;  // 无推荐电池时设为null
-    batteryHtml = `<div style="color:#e74c3c">⚠️ 未找到满足要求的电池型号</div>`;
-    batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体 (可能需要多组并联)</div>`;
-    // 显示所有可选电池（功率不足的）
-    var firstCat = typePriority[0];
-    if (recommendations[firstCat] && recommendations[firstCat].all.length > 0) {
-      batteryHtml += `<details style="margin-top:8px"><summary style="cursor:pointer;color:#888;font-size:12px">查看其他电池选项</summary>`;
-      recommendations[firstCat].all.forEach(function(b) {
-        batteryHtml += `<div style="padding:4px 0;font-size:12px">${b.model}: ${b.power}W (差${(reqPower - b.power).toFixed(0)}W)</div>`;
-      });
-      batteryHtml += `</details>`;
+    // 未找到推荐电池时，仍显示计算结果，用户可手动输入电池型号
+    batteryHtml = `<div style="margin-bottom:8px"><span style="color:#e74c3c">⚠️ 未找到满足要求的${catLabel}电池</span></div>`;
+    batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
+    batteryHtml += `<div>电池类型: <b>${catLabel}</b></div>`;
+    batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
+    // 显示功率不足的选项供参考
+    if (recommendations[selectedCat] && recommendations[selectedCat].all.length > 0) {
+      var insufficient = recommendations[selectedCat].all.filter(b => !b.isSuitable);
+      if (insufficient.length > 0) {
+        batteryHtml += `<details style="margin-top:8px"><summary style="cursor:pointer;color:#888;font-size:12px">查看${insufficient.length}个功率不足的型号</summary>`;
+        insufficient.forEach(function(b) {
+          batteryHtml += `<div style="padding:4px 0;font-size:12px">${b.model}: ${b.power}W (差${(reqPower - b.power).toFixed(0)}W)</div>`;
+        });
+        batteryHtml += `</details>`;
+      }
     }
+    batteryHtml += `<div style="margin-top:8px;padding:6px;background:#e3f2fd;border-radius:4px;font-size:11px;color:#1565c0">💡 可在项目汇总清单中手动输入电池型号</div>`;
   }
   document.getElementById('unified-battery-result').innerHTML = batteryHtml;
 
@@ -3408,7 +3418,7 @@ function calcAllBatteryConfig() {
       upsNum,                    // UPS台数
       totalCells,
       price: 0,
-      note: battType === '2v' ? 'GFMD-2V电池' : (battType === 'highpower' ? 'SPG12V高功率电池' : 'SP12V电池')
+      note: catLabelMap[battType] + '电池'
     },
     switchBox: {
       model: voltLevel + ' 电池开关箱/柜',
