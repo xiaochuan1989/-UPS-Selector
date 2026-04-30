@@ -9577,11 +9577,6 @@ function calcLeadBatteryMethod2() {
   document.getElementById('lead2-req-power').textContent = reqPower.toFixed(2);
   document.getElementById('lead2-groups-display').textContent = groups;
 
-  var is2v = battType === '2v';
-  document.getElementById('cat-normal-btn').style.display = (is2v || battType === 'highpower') ? 'none' : 'inline-block';
-  document.getElementById('cat-highpower-btn').style.display = (is2v || battType === 'normal') ? 'none' : 'inline-block';
-  document.getElementById('cat-2v-btn').style.display = is2v ? 'inline-block' : 'none';
-
   var defaultCategory = battType;
   showBatteryCategory(defaultCategory);
 
