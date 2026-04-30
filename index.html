@@ -484,7 +484,8 @@ function checkAuth(){
         <div class="field">
           <label>电池类型</label>
           <select id="unified-batt-type">
-            <option value="12v">SP12V</option>
+            <option value="normal">SP12V</option>
+            <option value="highpower">SPG12V高功率</option>
             <option value="2v">GFMD-2V</option>
             <option value="dianneng">电能GBT12-20小时率</option>
           </select>
@@ -2271,10 +2272,10 @@ function calcMonitorConfig() {
   };
   cableCode = terminalMap[terminalType] || '88091148';
 
-  if (battType === '12v') {
+  if (battType === 'normal' || battType === 'highpower') {
     // 12V铅酸：单体测量模块数量 = 每组节数 × 电池总组数（每只电池1个）
     slaveQty = totalCells;
-    slaveCode = '88091145';
+    slaveCode = battType === 'highpower' ? '88091145' : '88091145';
     cableQty = totalCells; // 每只电池1根线
   } else if (battType === '2v') {
     // 2V铅酸：单体测量模块数量 = 每组节数 × 电池总组数
@@ -2445,7 +2446,7 @@ function exportMonitorConfig() {
 
   const { battGroups, cellPerGroup, battType, terminalType, maxCurrent, config } = window.currentMonitorConfig;
   const total = config.reduce((sum, item) => sum + item.total, 0);
-  const battTypeMap = { '12v': '12V铅酸电池', '2v': '2V铅酸电池' };
+  const battTypeMap = { 'normal': 'SP12V电池', 'highpower': 'SPG12V高功率电池', '2v': 'GFMD-2V电池', 'dianneng': '电能GBT12-20小时率电池' };
   const showPrice = document.getElementById('mon-show-price').checked;
 
   // 样式定义
@@ -2664,7 +2665,7 @@ function importBatteryFromCalc() {
     window.projectSummary.battery.cellsPerGroup = cellsPerGroup;
     window.projectSummary.battery.groups = groups;
     window.projectSummary.battery.totalCells = cellsPerGroup * groups;
-    window.projectSummary.battery.note = battType === '2v' ? '2V电池' : '12V电池';
+    window.projectSummary.battery.note = battType === '2v' ? 'GFMD-2V电池' : (battType === 'highpower' ? 'SPG12V高功率电池' : 'SP12V电池');
 
     // 同步更新电池架信息（保持现有配置）
     window.projectSummary.batteryRack.batteryModel = batteryModel;
@@ -3430,7 +3431,7 @@ function calcAllBatteryConfig() {
       upsNum,                    // UPS台数
       totalCells,
       price: 0,
-      note: battType === '2v' ? '2V电池' : '12V电池'
+      note: battType === '2v' ? 'GFMD-2V电池' : (battType === 'highpower' ? 'SPG12V高功率电池' : 'SP12V电池')
     },
     switchBox: {
       model: voltLevel + ' 电池开关箱/柜',
