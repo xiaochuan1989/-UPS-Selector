@@ -3233,26 +3233,11 @@ function calcAllBatteryConfig() {
   const recommendations = getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
   let batteryHtml = '';
 
-  // 根据用户选择的电池类型确定优先级
-  var typePriority = [];
-  if (battType === 'dianneng') {
-    typePriority = ['dianneng', 'normal', 'highpower', '2v'];
-  } else if (battType === '2v') {
-    typePriority = ['2v', 'normal', 'highpower', 'dianneng'];
-  } else if (battType === 'highpower') {
-    typePriority = ['highpower', 'normal', 'dianneng', '2v'];
-  } else {
-    typePriority = ['normal', 'highpower', 'dianneng', '2v']; // 12v default
-  }
-
-  // 按优先级查找推荐电池
+  // 只在用户选择的电池类型中查找推荐
+  var selectedCat = battType;
   var foundBattery = null;
-  for (var i = 0; i < typePriority.length; i++) {
-    var cat = typePriority[i];
-    if (recommendations[cat] && recommendations[cat].suitable.length > 0) {
-      foundBattery = { data: recommendations[cat].suitable[0], category: cat };
-      break;
-    }
+  if (recommendations[selectedCat] && recommendations[selectedCat].suitable.length > 0) {
+    foundBattery = { data: recommendations[selectedCat].suitable[0], category: selectedCat };
   }
 
   if (foundBattery) {
@@ -9544,61 +9529,6 @@ function showBatteryCategory(category) {
       }
     }
   });
-}
-function calcLeadBatteryMethod2() {
-  var loadKw = parseFloat(document.getElementById('unified-load-kw').value);
-  var upsCap = parseFloat(document.getElementById('unified-ups-cap').value) || 0;
-  var pf = parseFloat(document.getElementById('unified-pf').value) || 1;
-  var battNum = parseFloat(document.getElementById('unified-cells').value) || 36;
-  var battType = document.getElementById('unified-batt-type').value;
-  var endV = parseFloat(document.getElementById('unified-end-v').value) || 1.75;
-  var eff = parseFloat(document.getElementById('unified-eff').value) || 0.95;
-  var dischargeTime = parseInt(document.getElementById('unified-discharge-time').value) || 15;
-  var groups = parseFloat(document.getElementById('unified-groups').value) || 2;
-
-  if (!upsCap || !battNum || !groups) {
-    alert('请填写UPS容量、电池节数和电池组数');
-    return;
-  }
-
-  var loadPower = (loadKw === 0 || isNaN(loadKw)) ? (upsCap * pf * 1000) : (loadKw * 1000);
-  var cellNum = battType === '2v' ? 1 : 6;
-  var reqPower = loadPower / (battNum * cellNum * eff * groups);
-
-  var recommendations = getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
-  var typePriority = [];
-  if (battType === 'dianneng') {
-    typePriority = ['dianneng', 'normal', 'highpower', '2v'];
-  } else if (battType === '2v') {
-    typePriority = ['2v', 'dianneng', 'normal', 'highpower'];
-  } else if (battType === 'highpower') {
-    typePriority = ['highpower', 'normal', 'dianneng', '2v'];
-  } else {
-    typePriority = ['normal', 'highpower', 'dianneng', '2v'];
-  }
-
-  var foundBattery = null;
-  for (var i = 0; i < typePriority.length; i++) {
-    var cat = typePriority[i];
-    if (recommendations[cat] && recommendations[cat].suitable.length > 0) {
-      foundBattery = { data: recommendations[cat].suitable[0], category: cat };
-      break;
-    }
-  }
-
-  var catLabel = { normal: 'SP12V', highpower: 'SPG12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率' };
-  var batteryHtml = '';
-  if (foundBattery) {
-    var b = foundBattery.data;
-    batteryHtml = '<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐(' + catLabel[foundBattery.category] + '): ' + b.model + '</div>';
-    batteryHtml += '<div>所需功率: <b>' + reqPower.toFixed(1) + 'W</b>/单体</div>';
-    batteryHtml += '<div>恒功率: <b>' + b.power + 'W</b> (余量+' + b.marginPercent + '%)</div>';
-    batteryHtml += '<div>电池类型: <b>' + catLabel[foundBattery.category] + '</b></div>';
-  } else {
-    batteryHtml = '<div style="color:#e74c3c">⚠️ 未找到满足要求的电池型号</div>';
-  }
-
-  document.getElementById('unified-battery-result').innerHTML = batteryHtml;
 }
 function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
   var result = {
