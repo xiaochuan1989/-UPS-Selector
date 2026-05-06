@@ -2,12 +2,8 @@
   "mcpServers": {
     "serena": {
       "type": "stdio",
-      "command": "C:\\Users\\woaig\\.local\\bin\\uv.exe",
+      "command": "C:\\Users\\woaig\\Downloads\\serena\\.venv\\Scripts\\serena-mcp-server.exe",
       "args": [
-        "run",
-        "--directory",
-        "C:\\Users\\woaig\\Downloads\\serena-main",
-        "serena-mcp-server",
         "D:\\Claude 安装\\UPS选型助手_开发包\\.serena\\project.yml"
       ],
       "env": {}

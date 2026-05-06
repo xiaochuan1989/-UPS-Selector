@@ -4,6 +4,7 @@
     "xlsx": "^0.18.5"
   },
   "dependencies": {
+    "jsdom": "^29.1.1",
     "tesseract.js": "^7.0.0"
   }
 }
