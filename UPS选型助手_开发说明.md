@@ -1,18 +1,26 @@
 # UPS 智能选型助手 - 工程化开发环境
 
-> 版本：v1.6.6
-> 更新日期：2026-05-06
+> 版本：v1.6.7
+> 更新日期：2026-05-22
+
+## 当前结论
+
+- 当前主程序只有一个：`index.html`。
+- 不再维护旧版中文命名 HTML 和 `index.html` 两份同步文件。
+- GitHub Pages 直接发布仓库根目录，入口为 `index.html`。
+- Netlify 备选部署也应访问根目录的 `index.html`。
+- `dev_scripts/` 是辅助开发脚本；脚本默认入口应指向项目根目录的 `index.html`。
 
 ## 项目结构
 
 ```
-UPS选型助手_开发包_v1.2/
-├── UPS选型助手.html          # 最终发布的单文件产品
+UPS选型助手_开发包/
+├── index.html                # 主程序文件（单文件产品）
 ├── 常用UPS速查表-V7.5.xlsx   # UPS产品数据源
 ├── 锂电池-选型模板-A00.xlsx  # 锂电池选型参考模板
 ├── UPS选型助手_开发文档.md    # 产品开发文档
 ├── UPS选型助手_开发说明.md    # 本文件
-├── netlify.toml              # Netlify 部署配置 ⭐
+├── netlify.toml              # Netlify 部署配置
 ├── .gitignore               # Git 忽略配置
 │
 ├── .mcp.json                 # MCP 服务器配置（Serena 等）
@@ -26,13 +34,10 @@ UPS选型助手_开发包_v1.2/
 │
 ├── dist/                     # 构建输出目录（预留）
 │
-├── deploy/                   # Netlify 部署目录
-│   └── index.html           # 部署文件（从 UPS选型助手.html 复制）
-│
 ├── dev_scripts/              # 开发辅助脚本
-│   ├── build.py             # 构建脚本 ⭐
-│   ├── serve.py             # 开发服务器 ⭐
-│   ├── test.py              # 统一测试入口 ⭐
+│   ├── build.py             # 构建信息/质量检查/开发服务
+│   ├── serve.py             # 开发服务器
+│   ├── test.py              # 统一测试入口
 │   ├── check_prompt_feature.py
 │   ├── verify.py
 │   ├── check_html.py
@@ -48,56 +53,50 @@ UPS选型助手_开发包_v1.2/
 ### 1. 构建命令
 
 ```bash
-# 进入开发脚本目录
-cd dev_scripts
-
 # 显示构建信息
-python build.py --info
+python dev_scripts/build.py --info
 
 # 运行质量检查
-python build.py --verify
+python dev_scripts/build.py --verify
 
 # 生成开发说明
-python build.py --readme
+python dev_scripts/build.py --readme
 
 # 启动开发服务器
-python build.py --serve
-
-# 启动开发服务器（指定端口）
-python build.py --serve --port 9000
+python dev_scripts/build.py --serve
 ```
 
 ### 2. 开发服务器
 
 ```bash
 # 启动开发服务器（默认端口 8080）
-python serve.py
+python dev_scripts/serve.py
 
 # 指定端口
-python serve.py --port 9000
+python dev_scripts/serve.py --port 9000
 
 # 不自动打开浏览器
-python serve.py --no-open
+python dev_scripts/serve.py --no-open
 
 # 开启文件监听（需安装 watchdog）
-python serve.py --watch
+python dev_scripts/serve.py --watch
 ```
 
 ### 3. 统一测试入口
 
 ```bash
 # 快速检查（环境 + HTML）
-python test.py --quick
+python dev_scripts/test.py --quick
 
 # 运行所有测试
-python test.py --all
+python dev_scripts/test.py --all
 
 # 单独运行某项测试
-python test.py --prompt    # 提示词验证
-python test.py --excel     # Excel 验证
-python test.py --html      # HTML 验证
-python test.py --js        # JS 代码扫描
-python test.py --env       # 环境检查
+python dev_scripts/test.py --prompt    # 提示词验证
+python dev_scripts/test.py --excel     # Excel 验证
+python dev_scripts/test.py --html      # HTML 验证
+python dev_scripts/test.py --js        # JS 代码扫描
+python dev_scripts/test.py --env       # 环境检查
 ```
 
 ## 工程化说明
@@ -116,23 +115,23 @@ python test.py --env       # 环境检查
 ```
 1. 修改代码
    ↓
-2. 运行测试 (python test.py --quick)
+2. 运行测试 (python dev_scripts/test.py --quick)
    ↓
-3. 用浏览器测试 (python serve.py)
+3. 用浏览器测试 (python dev_scripts/serve.py)
    ↓
 4. 验证通过后提交并推送到 GitHub
    git add .
    git commit -m "描述更新内容"
    git push origin master
    ↓
-5. Netlify 自动部署（约1-2分钟）
-   访问 https://ups-selector.netlify.app 查看
+5. GitHub Pages 自动部署（约1-2分钟）
+   访问 https://xiaochuan1989.github.io/-UPS-Selector/ 查看
 ```
 
 ### 代码修改后测试
 
 1. **方式一：直接打开**
-   - 双击 `UPS选型助手.html` 在浏览器中打开
+   - 双击 `index.html` 在浏览器中打开
 
 2. **方式二：开发服务器**
    ```bash
@@ -189,7 +188,7 @@ python test.py --env       # 环境检查
 **后续部署流程（每次功能更新）：**
 ```bash
 # 1. 进入项目目录
-cd "D:\Claude 安装\UPS选型助手_开发包_v1.2"
+cd "D:\Claude 安装\UPS选型助手_开发包"
 
 # 2. 提交修改并推送到 GitHub
 git add .
@@ -223,7 +222,7 @@ git push origin master
 
 ```bash
 # 1. 进入项目目录
-cd "D:\Claude 安装\UPS选型助手_开发包_v1.2"
+cd "D:\Claude 安装\UPS选型助手_开发包"
 
 # 2. 提交修改并推送到 GitHub
 git add .
@@ -239,7 +238,7 @@ git push origin master
 
 ⚠️ **重要**：每次修改代码后，一定要执行 `git add .` 把文件添加到暂存区，否则文件不会提交到 GitHub。
 
-⚠️ **不要删除 UPS选型助手.html 文件**，这是主程序文件，必须保留在项目文件夹中。
+⚠️ **不要删除 index.html 文件**，这是主程序文件，必须保留在项目文件夹中。
 
 ### 手动部署（备选）
 
@@ -248,22 +247,18 @@ git push origin master
 ```bash
 # 方式一：手动上传
 # 打开 https://app.netlify.com/sites/ups-selector
-# 拖拽 UPS选型助手.html 到页面
+# 拖拽 index.html 到页面
 
 # 方式二：使用 Netlify CLI
-cp UPS选型助手.html deploy/index.html
-cd deploy
 netlify deploy --dir . --prod --site c662b019-245f-4a7f-af88-53c9b72502da
 ```
 
 ## 注意事项
 
-- 当前主要代码仍在 `UPS选型助手.html` 中
-- ⚠️ **多文件同步**：项目有两个HTML文件，修改代码时必须同时更新：
-  - `UPS选型助手.html` - 主开发文件
-  - `index.html` - GitHub Pages入口文件（需与主文件保持同步）
+- 当前主要代码在 `index.html` 中
+- 当前已是单文件主线，不再做两个 HTML 文件同步
 - `src/` 目录的模块化是渐进式的，不会影响现有功能
-- 修改 `UPS选型助手.html` 后可直接在浏览器测试
+- 修改 `index.html` 后可直接在浏览器测试
 - 需要 Python 3.8+ 环境
 - IndexedDB 持久化相关函数（`openDatabase`、`saveProductsToDB`、`loadProductsFromDB`）必须定义在 `DOMContentLoaded` 回调之前，否则页面加载时会报 `Cannot access 'db' before initialization` 错误
 - Serena MCP 配置在 `.serena/project.yml` 中，全局配置在 `C:\Users\woaig\.claude.json` 中
@@ -394,7 +389,7 @@ const sensorCurrent = groups >= 2 ? groupCurrent : maxCurrent;
 | 问题 | 说明 |
 |------|------|
 | **未确认函数返回类型** | `getVoltLevel` 返回对象 `{level, levelNum, maxChargeVoltage}`，但调用处直接当字符串使用 |
-| **多文件不同步** | `index.html` 中的 `getVoltLevel` 返回字符串，与 `UPS选型助手.html` 不一致 |
+| **历史双文件不同步** | 旧版本曾同时维护两个 HTML，容易出现函数返回类型不一致 |
 
 ### 正确做法
 
@@ -560,19 +555,19 @@ function clearProjectSummary() {
 
 ### 实现经验
 
-1. **多文件同步**：历史记录功能同时修改了 `UPS选型助手.html` 和 `index.html`
+1. **历史双文件同步成本高**：v1.6 历史记录功能曾需要同时修改两份 HTML，容易遗漏
 2. **数据版本管理**：使用 `version: 1` 字段便于后续升级
 3. **数量限制**：超出50条时 `slice(0, 50)` 自动清理
 
 ### 经验教训
 
 ```
-⚠️ 新功能需要同步两个HTML文件
+⚠️ 当前已改为单文件主线
 
 ✓ 正确流程：
-   1. 修改 UPS选型助手.html
-   2. 同步修改 index.html
-   3. 验证两个文件都有相同功能
+   1. 修改 index.html
+   2. 验证 JS 语法和关键交互
+   3. 同步更新相关文档
 ```
 
 ---
@@ -582,7 +577,7 @@ function clearProjectSummary() {
 ### 功能概述（v1.6）
 
 **实现历程**：
-1. 最初尝试使用 Tesseract.js（开源OCR）→ 失败（CORS限制，本地file://无法加载CDN）
+1. 最初尝试使用本地 OCR 库 → 失败（CORS限制，本地file://无法加载CDN）
 2. 改用 AI 视觉识别 → 成功
 
 **API多模态支持**：
@@ -602,7 +597,7 @@ async function callAI(userMessage, systemPrompt, images) {
    - 或使用支持视觉识别的AI API直接识别
 
 2. **OCR vs AI视觉**：
-   - Tesseract.js：本地OCR，需加载模型，识别精度一般
+   - 本地OCR：需加载模型，识别精度一般，且本地 file:// 场景容易受限
    - AI视觉：调用云端API，识别精度高，但需要支持视觉的模型
 
 3. **粘贴事件处理**：
@@ -616,7 +611,7 @@ async function callAI(userMessage, systemPrompt, images) {
 
 ✓ 正确做法：
    1. 使用本地服务器运行（python -m http.server）
-   2. 或使用内嵌版本的库（如Tesseract.js本地文件）
+   2. 或使用内嵌版本的 OCR 库文件
    3. 或依赖浏览器不限制的API（如AI视觉识别）
 
 ❌ 直接双击HTML打开时，某些CDN资源会被浏览器阻止
@@ -690,17 +685,35 @@ git commit -m "[v1.6] 新增选型历史记录和图片OCR识别功能"
 | `UPS选型助手_开发说明.md` | 经验教训、工程规范 |
 | Serena Memory | 项目概览、待办事项 |
 
-### 多文件同步检查清单
+### 单文件更新检查清单
 
 每次代码修改后：
 
 ```
-□ UPS选型助手.html 已修改
-□ index.html 已同步修改
+□ index.html 已修改
 □ 相关文档已更新
 □ 功能测试通过
 □ GitHub 已推送
 ```
+
+---
+
+## v1.6.7 更新记录（2026-05-22）
+
+### 功能优化
+- `UPS与电池配置计算`中的标准UPS型号控件由 `input + datalist` 改为真正的 `select` 下拉框。
+- 选择过一个UPS型号后，再次点击下拉框可直接切换其他型号，无需先删除已选文本。
+- 非标UPS仍通过“非标型号”模式手动输入，不影响原有非标流程。
+
+### 工程化同步
+- 主程序入口统一为 `index.html`，README、开发说明、Netlify配置和开发脚本同步更新。
+- 移除未使用的本地OCR外部依赖引用，favicon改为内嵌SVG，减少外部资源失效风险。
+- 开发脚本默认读取项目根目录的 `index.html`，并修复Windows控制台UTF-8输出和Excel检查脚本旧绝对路径问题。
+
+### 验证
+- `index.html` 7个script块语法检查通过。
+- `dev_scripts/test.py --all`：5/5通过。
+- `dev_scripts/build.py --verify`：6/6通过。
 
 ---
 

@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/"
-  to = "/UPS选型助手.html"
+  to = "/index.html"
   status = 200
 
 [context.production]

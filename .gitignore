@@ -9,10 +9,7 @@ serena/
 chats/
 fix_history/
 dist/
-src/
-dev_scripts/
 test_data/
 .claude/
 *.png
 *.xlsx
-UPS选型助手_开发说明.md
