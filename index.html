@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.16";
+const APP_VERSION = "v1.6.17";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -651,6 +651,7 @@ function checkAuth(){
             <option value="highpower">SPG12V高功率</option>
             <option value="2v">GFMD-2V</option>
             <option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option>
+            <option value="custom">自定义/客户指定</option>
           </select>
         </div>
         <div class="field">
@@ -2892,7 +2893,7 @@ function exportMonitorConfig() {
 
   const { battGroups, cellPerGroup, battType, terminalType, maxCurrent, config } = window.currentMonitorConfig;
   const total = config.reduce((sum, item) => sum + item.total, 0);
-  const battTypeMap = { 'normal': 'SP12V电池', 'highpower': 'SPG12V高功率电池', '2v': 'GFMD-2V电池', 'dianneng': '电能GBT12-20小时率电池', 'dianneng10h': '电能GBT12-10小时率电池' };
+  const battTypeMap = { 'normal': 'SP12V电池', 'highpower': 'SPG12V高功率电池', '2v': 'GFMD-2V电池', 'dianneng': '电能GBT12-20小时率电池', 'dianneng10h': '电能GBT12-10小时率电池', 'custom': '客户指定电池' };
   const showPrice = document.getElementById('mon-show-price').checked;
 
   // 样式定义
@@ -3103,7 +3104,8 @@ function importBatteryFromCalc() {
     window.projectSummary.battery.cellsPerGroup = cellsPerGroup;
     window.projectSummary.battery.groups = groups;
     window.projectSummary.battery.totalCells = cellsPerGroup * groups;
-    window.projectSummary.battery.note = battType === '2v' ? 'GFMD-2V电池' : (battType === 'highpower' ? 'SPG12V高功率电池' : 'SP12V电池');
+    const battTypeMap = { 'normal': 'SP12V电池', 'highpower': 'SPG12V高功率电池', '2v': 'GFMD-2V电池', 'dianneng': '电能GBT12-20小时率电池', 'dianneng10h': '电能GBT12-10小时率电池', 'custom': '客户指定电池' };
+    window.projectSummary.battery.note = battTypeMap[battType] || '电池';
 
     // 同步更新电池架信息（保持现有配置）
     window.projectSummary.batteryRack.batteryModel = batteryModel;
@@ -3677,10 +3679,11 @@ function calcAllBatteryConfig() {
   const loadW = loadKw > 0 ? loadKw * 1000 : upsCap * pf * 1000;
   const switchW = upsCap * pf * 1000;  // 开关箱始终用UPS额定功率
   const cellMultiplier = battType === '2v' ? 1 : 6;
+  const isCustomBatteryType = battType === 'custom';
 
   // ===== 1. 电池计算 =====
   const reqPower = loadW / (cellsPerGroup * cellMultiplier * eff * groups);
-  const recommendations = getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
+  const recommendations = isCustomBatteryType ? null : getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
   let batteryHtml = '';
 
   // 优先在用户选择的电池类型中查找推荐
@@ -3688,15 +3691,21 @@ function calcAllBatteryConfig() {
   var foundBattery = null;
   var batteryResult = null;
 
-  if (recommendations[selectedCat] && recommendations[selectedCat].suitable.length > 0) {
+  if (recommendations && recommendations[selectedCat] && recommendations[selectedCat].suitable.length > 0) {
     foundBattery = { data: recommendations[selectedCat].suitable[0], category: selectedCat };
     batteryResult = foundBattery.data;
   }
 
-  var catLabelMap = { normal: 'SP12V', highpower: 'SPG12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率', dianneng10h: '电能GBT12-10小时率' };
+  var catLabelMap = { normal: 'SP12V', highpower: 'SPG12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率', dianneng10h: '电能GBT12-10小时率', custom: '自定义/客户指定' };
   var catLabel = catLabelMap[battType] || battType;
 
-  if (foundBattery) {
+  if (isCustomBatteryType) {
+    batteryHtml = `<div style="font-weight:600;color:#1565c0;margin-bottom:8px">ℹ️ 客户指定电池，跳过内置型号推荐</div>`;
+    batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
+    batteryHtml += `<div>电池类型: <b>${catLabel}</b></div>`;
+    batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
+    batteryHtml += `<div style="margin-top:8px;padding:6px;background:#e3f2fd;border-radius:4px;font-size:11px;color:#1565c0">💡 可在项目汇总清单中手动输入客户指定电池型号</div>`;
+  } else if (foundBattery) {
     var catLabelDisplay = { normal: '(SP12V)', highpower: '(SPG12V高功率)', '2v': '(GFMD-2V)', dianneng: '(电能GBT12-20小时率)', dianneng10h: '(电能GBT12-10小时率)' }[foundBattery.category];
     batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐${catLabelDisplay}: ${batteryResult.model}</div>`;
     batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
@@ -3709,7 +3718,7 @@ function calcAllBatteryConfig() {
     batteryHtml += `<div>电池类型: <b>${catLabel}</b></div>`;
     batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
     // 显示功率不足的选项供参考
-    if (recommendations[selectedCat] && recommendations[selectedCat].all.length > 0) {
+    if (recommendations && recommendations[selectedCat] && recommendations[selectedCat].all.length > 0) {
       var insufficient = recommendations[selectedCat].all.filter(b => !b.isSuitable);
       if (insufficient.length > 0) {
         batteryHtml += `<details style="margin-top:8px"><summary style="cursor:pointer;color:#888;font-size:12px">查看${insufficient.length}个功率不足的型号</summary>`;
@@ -3868,7 +3877,7 @@ function calcAllBatteryConfig() {
       upsNum,                    // UPS台数
       totalCells,
       price: 0,
-      note: catLabelMap[battType] + '电池'
+      note: isCustomBatteryType ? '客户指定电池，手动填写型号' : catLabelMap[battType] + '电池'
     },
     switchBox: {
       model: voltLevel + ' 电池开关箱/柜',
@@ -24473,7 +24482,7 @@ function refreshUnifiedBatteryPowerOptions() {
   var voltageEl = document.getElementById('unified-end-v');
   if (!categoryEl || !timeEl || !voltageEl) return;
 
-  var meta = getBatteryPowerMeta(categoryEl.value);
+  var meta = getBatteryPowerMeta(categoryEl.value === 'custom' ? 'all' : categoryEl.value);
   setSelectOptions(
     timeEl,
     meta.times,
