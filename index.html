@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.15";
+const APP_VERSION = "v1.6.16";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -646,7 +646,7 @@ function checkAuth(){
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:10px">
         <div class="field">
           <label>电池类型</label>
-          <select id="unified-batt-type">
+          <select id="unified-batt-type" onchange="refreshUnifiedBatteryPowerOptions()">
             <option value="normal">SP12V</option>
             <option value="highpower">SPG12V高功率</option>
             <option value="2v">GFMD-2V</option>
@@ -962,8 +962,8 @@ function checkAuth(){
       <button onclick="closeBatteryDataTable()" style="background:none;border:none;color:white;font-size:26px;cursor:pointer">×</button>
     </div>
     <div style="padding:16px 24px;background:#f5f7fa;border-bottom:1px solid #e0e0e0;display:flex;gap:12px;flex-wrap:wrap">
-      <div><label style="font-size:12px;color:#888;margin-right:6px">分类:</label><select id="batt-data-category" onchange="filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="all">全部</option><option value="normal">SP12V</option><option value="highpower">SPG12V高功率</option><option value="2v">GFMD-2V</option><option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option></select></div>
-      <div><label style="font-size:12px;color:#888;margin-right:6px">截止电压:</label><select id="batt-data-voltage" onchange="filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="1.60">1.60V</option><option value="1.65">1.65V</option><option value="1.67">1.67V</option><option value="1.70">1.70V</option><option value="1.75" selected>1.75V</option><option value="1.80">1.80V</option><option value="1.85">1.85V</option></select></div>
+      <div><label style="font-size:12px;color:#888;margin-right:6px">分类:</label><select id="batt-data-category" onchange="refreshBatteryDataVoltageOptions();filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="all">全部</option><option value="normal">SP12V</option><option value="highpower">SPG12V高功率</option><option value="2v">GFMD-2V</option><option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option></select></div>
+      <div><label style="font-size:12px;color:#888;margin-right:6px">截止电压:</label><select id="batt-data-voltage" onchange="filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="1.75" selected>1.75V</option></select></div>
       <div><label style="font-size:12px;color:#888;margin-right:6px">搜索:</label><input type="text" id="batt-data-search" oninput="filterBatteryDataTable()" placeholder="输入型号" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px;width:140px"></div>
     </div>
     <div style="padding:16px 24px;overflow:auto;max-height:calc(100vh - 200px)">
@@ -1054,6 +1054,8 @@ function getCustomPrompt() {
 
 // 使用 DOMContentLoaded 确保所有函数定义完成后再执行
 document.addEventListener('DOMContentLoaded', function() {
+  refreshUnifiedBatteryPowerOptions();
+
   const cfg = JSON.parse(localStorage.getItem("ups_config") || "{}");
   if (cfg.provider && document.getElementById("provider")) document.getElementById("provider").value = cfg.provider;
   if (cfg.model    && document.getElementById("model"))    document.getElementById("model").value    = cfg.model;
@@ -24409,6 +24411,103 @@ var BATTERY_POWER_DATA = [
   }
 ];
 
+function getBatteryPowerMeta(category) {
+  var times = new Set();
+  var voltages = new Set();
+
+  BATTERY_POWER_DATA.forEach(function(battery) {
+    if (category && category !== 'all' && battery.category !== category) return;
+    battery.voltages.forEach(function(voltageData) {
+      var hasValidPower = false;
+      voltageData.powers.forEach(function(powerPoint) {
+        if (powerPoint.power === null || powerPoint.power === undefined) return;
+        hasValidPower = true;
+        times.add(powerPoint.time);
+      });
+      if (hasValidPower) {
+        voltages.add(Number(voltageData.endVoltage.toFixed(2)));
+      }
+    });
+  });
+
+  return {
+    times: Array.from(times).sort(function(a, b) { return a - b; }),
+    voltages: Array.from(voltages).sort(function(a, b) { return a - b; })
+  };
+}
+
+function formatDischargeTimeLabel(minutes) {
+  return minutes + '分钟';
+}
+
+function formatEndVoltageValue(voltage) {
+  return Number(voltage).toFixed(2);
+}
+
+function setSelectOptions(selectEl, values, preferredValue, fallbackValue, labelFormatter, valueFormatter) {
+  if (!selectEl || !values || values.length === 0) return;
+
+  var normalizedPreferred = preferredValue !== undefined && preferredValue !== null ? String(preferredValue) : '';
+  var normalizedFallback = fallbackValue !== undefined && fallbackValue !== null ? String(fallbackValue) : '';
+  var selectedValue = values.find(function(value) {
+    return String(valueFormatter(value)) === normalizedPreferred;
+  });
+
+  if (selectedValue === undefined) {
+    selectedValue = values.find(function(value) {
+      return String(valueFormatter(value)) === normalizedFallback;
+    });
+  }
+  if (selectedValue === undefined) selectedValue = values[0];
+
+  selectEl.innerHTML = values.map(function(value) {
+    var optionValue = valueFormatter(value);
+    var selectedAttr = String(optionValue) === String(valueFormatter(selectedValue)) ? ' selected' : '';
+    return '<option value="' + optionValue + '"' + selectedAttr + '>' + labelFormatter(value) + '</option>';
+  }).join('');
+}
+
+function refreshUnifiedBatteryPowerOptions() {
+  var categoryEl = document.getElementById('unified-batt-type');
+  var timeEl = document.getElementById('unified-discharge-time');
+  var voltageEl = document.getElementById('unified-end-v');
+  if (!categoryEl || !timeEl || !voltageEl) return;
+
+  var meta = getBatteryPowerMeta(categoryEl.value);
+  setSelectOptions(
+    timeEl,
+    meta.times,
+    timeEl.value,
+    30,
+    formatDischargeTimeLabel,
+    function(value) { return String(value); }
+  );
+  setSelectOptions(
+    voltageEl,
+    meta.voltages,
+    voltageEl.value,
+    '1.75',
+    function(value) { return formatEndVoltageValue(value) + 'V'; },
+    formatEndVoltageValue
+  );
+}
+
+function refreshBatteryDataVoltageOptions() {
+  var categoryEl = document.getElementById('batt-data-category');
+  var voltageEl = document.getElementById('batt-data-voltage');
+  if (!categoryEl || !voltageEl) return;
+
+  var meta = getBatteryPowerMeta(categoryEl.value);
+  setSelectOptions(
+    voltageEl,
+    meta.voltages,
+    voltageEl.value,
+    '1.75',
+    function(value) { return formatEndVoltageValue(value) + 'V'; },
+    formatEndVoltageValue
+  );
+}
+
 function switchLeadMethodTab(method) {
   ['method1', 'method2'].forEach(function(m) {
     var btn = document.getElementById('lead-tab-' + m);
@@ -24460,6 +24559,7 @@ function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
       return p.time === dischargeTime;
     });
     if (!powerInfo) return;
+    if (powerInfo.power === null || powerInfo.power === undefined) return;
 
     var batteryPower = powerInfo.power;
     var isSuitable = batteryPower >= cellPower;
@@ -24542,7 +24642,7 @@ function renderBatteryRecommendations(category, data, cellPower) {
 
   container.innerHTML = html;
 }
-function openBatteryDataTable(){document.getElementById('battery-data-modal').style.display='block';renderBatteryDataTable();}
+function openBatteryDataTable(){document.getElementById('battery-data-modal').style.display='block';refreshBatteryDataVoltageOptions();renderBatteryDataTable();}
 function closeBatteryDataTable(){document.getElementById('battery-data-modal').style.display='none';}
 function renderBatteryDataTable() {
   var category = document.getElementById('batt-data-category').value;
