@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.14";
+const APP_VERSION = "v1.6.15";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -372,9 +372,9 @@ function checkAuth(){
           <input type="number" id="dc-ups-pf" value="1" step="0.01" min="0.1" max="1">
         </div>
         <div class="field" id="dc-ups-qty-field">
-          <label id="dc-ups-qty-label">工作UPS台数 (N)</label>
+          <label id="dc-ups-qty-label">并机UPS数量 (N)</label>
           <input type="number" id="dc-ups-qty" value="2" min="1" oninput="updateDcArchitectureFields()">
-          <div id="dc-ups-qty-hint" style="font-size:11px;color:#888;margin-top:4px">N+1总台数 = 工作UPS台数N + 1台冗余</div>
+          <div id="dc-ups-qty-hint" style="font-size:11px;color:#888;margin-top:4px">N+1总数 = 并机UPS数量N + 1台冗余</div>
         </div>
         <div class="field" id="dc-ups-a-field" style="display:none">
           <label>A路UPS台数</label>
@@ -2318,12 +2318,12 @@ function updateDcArchitectureFields() {
     qtyLabel.textContent = architecture === "N"
       ? "UPS台数"
       : architecture === "N+1"
-        ? "工作UPS台数 (N)"
+        ? "并机UPS数量 (N)"
         : "UPS并机台数";
     qtyHint.textContent = architecture === "N"
       ? "N架构按全部UPS共同承担负载校核"
       : architecture === "N+1"
-        ? "N+1总台数 = 工作UPS台数N + 1台冗余"
+        ? "N+1总数 = 并机UPS数量N + 1台冗余"
         : "分布式冗余按N+1近似校核，最终需结合母线拓扑复核";
   }
 }
@@ -2510,7 +2510,7 @@ function calcDataCenterCheck() {
   if (architecture === "N") {
     capacityLines.push(buildCheckLine(true, `UPS并机台数 = <b>${parallelQty}台</b>，装机容量 = ${formatKw(unitKw)}kW × ${parallelQty} = <b>${formatKw(installedKw)}kW</b>`));
   } else if (architecture === "N+1") {
-    capacityLines.push(buildCheckLine(true, `工作UPS台数N = <b>${parallelQty}台</b>，冗余UPS = <b>1台</b>，UPS总台数 = <b>${totalUpsQty}台</b>`));
+    capacityLines.push(buildCheckLine(true, `并机UPS数量N = <b>${parallelQty}台</b>，冗余UPS = <b>1台</b>，UPS总台数 = <b>${totalUpsQty}台</b>`));
     capacityLines.push(buildCheckLine(true, `装机容量 = ${formatKw(unitKw)}kW × ${totalUpsQty} = <b>${formatKw(installedKw)}kW</b>；任意1台退出后 = ${formatKw(unitKw)}kW × ${parallelQty} = <b>${formatKw(usableKw)}kW</b>`));
   }
   capacityLines.push(buildCheckLine(capacityOk, `${usableLineLabel} <b>${formatKw(usableKw)}kW</b>，容量余量 <b style="color:${capacityOk ? "#1a7f37" : "#c0392b"}">${formatKw(marginKw)}kW</b>`));
