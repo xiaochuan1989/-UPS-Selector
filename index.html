@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.11";
+const APP_VERSION = "v1.6.12";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -414,7 +414,7 @@ function checkAuth(){
           <div style="font-size:22px;font-weight:700;color:#1a5c2a"><span id="dc-result-installed">-</span> kW</div>
         </div>
         <div style="background:#fff8e1;border-left:4px solid #f39c12;border-radius:8px;padding:14px">
-          <div style="font-size:12px;color:#666">故障后可用容量</div>
+          <div id="dc-result-usable-label" style="font-size:12px;color:#666">可用容量</div>
           <div style="font-size:22px;font-weight:700;color:#b26a00"><span id="dc-result-usable">-</span> kW</div>
         </div>
         <div style="background:#f8f9fa;border-left:4px solid #6c757d;border-radius:8px;padding:14px">
@@ -2438,10 +2438,16 @@ function calcDataCenterCheck() {
   let installedKw = unitKw * totalUpsQty;
   let usableKw = installedKw;
   let loadRateBaseKw = installedKw;
+  let usableLabel = "可用容量";
+  let usableLineLabel = "N 可用容量";
+  let failRateLabel = "";
   let architectureNote = "N架构按全部UPS共同承担负载校核。";
 
   if (architecture === "N+1") {
     usableKw = moduleN1Kw > 0 ? moduleN1Kw * parallelQty : unitKw * Math.max(parallelQty - 1, 0);
+    usableLabel = "故障后可用容量";
+    usableLineLabel = "N+1故障后可用容量";
+    failRateLabel = "故障后负载率";
     architectureNote = moduleN1Kw > 0
       ? "N+1按每台UPS少1个功率模块后的容量校核。"
       : "N+1按任意1台UPS退出后的剩余容量校核。";
@@ -2449,9 +2455,15 @@ function calcDataCenterCheck() {
     installedKw = unitKw * totalUpsQty;
     usableKw = unitKw * Math.min(aPathQty, bPathQty);
     loadRateBaseKw = installedKw;
+    usableLabel = "单路可用容量";
+    usableLineLabel = "2N单路可用容量";
+    failRateLabel = "单路承载负载率";
     architectureNote = `2N按A/B两路分别校核，A路${aPathQty}台、B路${bPathQty}台，任一路需独立承担全部IT负载。`;
   } else if (architecture === "DR") {
     usableKw = unitKw * Math.max(parallelQty - 1, 0);
+    usableLabel = "冗余后可用容量";
+    usableLineLabel = "分布式冗余后可用容量";
+    failRateLabel = "冗余切换后负载率";
     architectureNote = "分布式冗余先按N+1近似校核，最终需结合母线拓扑和STS/负载分配复核。";
   }
 
@@ -2463,10 +2475,15 @@ function calcDataCenterCheck() {
 
   const capacityLines = [];
   capacityLines.push(buildCheckLine(true, `规划负载 = IT负载 ${itLoad}kW × (1 + 扩容余量 ${growth || 0}%) = <b>${formatKw(designLoad)}kW</b>`));
-  capacityLines.push(buildCheckLine(true, `单台可用功率 = ${upsKva}kVA × PF ${upsPf} = <b>${formatKw(unitKwByKva)}kW</b>${moduleKw > 0 && moduleQty > 0 ? `；模块装机 = ${moduleKw}kW × ${moduleQty} = <b>${formatKw(unitKw)}kW</b>` : ""}`));
-  capacityLines.push(buildCheckLine(capacityOk, `${architecture} 故障后可用容量 <b>${formatKw(usableKw)}kW</b>，容量余量 <b style="color:${capacityOk ? "#1a7f37" : "#c0392b"}">${formatKw(marginKw)}kW</b>`));
+  capacityLines.push(buildCheckLine(true, `单台UPS可用功率 = ${upsKva}kVA × PF ${upsPf} = <b>${formatKw(unitKwByKva)}kW</b>${moduleKw > 0 && moduleQty > 0 ? `；模块装机 = ${moduleKw}kW × ${moduleQty} = <b>${formatKw(unitKw)}kW</b>` : ""}`));
+  if (architecture === "N") {
+    capacityLines.push(buildCheckLine(true, `UPS并机台数 = <b>${parallelQty}台</b>，装机容量 = ${formatKw(unitKw)}kW × ${parallelQty} = <b>${formatKw(installedKw)}kW</b>`));
+  }
+  capacityLines.push(buildCheckLine(capacityOk, `${usableLineLabel} <b>${formatKw(usableKw)}kW</b>，容量余量 <b style="color:${capacityOk ? "#1a7f37" : "#c0392b"}">${formatKw(marginKw)}kW</b>`));
   capacityLines.push(buildCheckLine(targetOk, `正常运行负载率 <b>${normalLoadRate.toFixed(1)}%</b>，目标不高于 ${targetLoadRate}%`));
-  capacityLines.push(buildCheckLine(failLoadRate <= 100, `故障/冗余切换后负载率 <b>${failLoadRate.toFixed(1)}%</b>`));
+  if (failRateLabel) {
+    capacityLines.push(buildCheckLine(failLoadRate <= 100, `${failRateLabel} <b>${failLoadRate.toFixed(1)}%</b>`));
+  }
   capacityLines.push(`<div style="margin-top:8px;padding:8px;background:#fff;border-radius:6px;color:#666">${architectureNote}</div>`);
 
   const risks = [];
@@ -2489,6 +2506,7 @@ function calcDataCenterCheck() {
 
   document.getElementById("dc-result-design-load").textContent = formatKw(designLoad);
   document.getElementById("dc-result-installed").textContent = formatKw(installedKw);
+  document.getElementById("dc-result-usable-label").textContent = usableLabel;
   document.getElementById("dc-result-usable").textContent = formatKw(usableKw);
   document.getElementById("dc-result-load-rate").textContent = normalLoadRate.toFixed(1);
   document.getElementById("dc-capacity-check").innerHTML = capacityLines.join("");
