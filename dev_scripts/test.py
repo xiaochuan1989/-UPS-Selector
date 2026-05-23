@@ -145,6 +145,7 @@ def main():
     parser.add_argument("--excel", action="store_true", help="Excel 验证")
     parser.add_argument("--html", action="store_true", help="HTML 验证")
     parser.add_argument("--js", action="store_true", help="JS 代码扫描")
+    parser.add_argument("--version", action="store_true", help="版本一致性检查")
     parser.add_argument("--quick", action="store_true", help="快速检查（环境 + HTML）")
 
     args = parser.parse_args()
@@ -157,7 +158,7 @@ def main():
     print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # 默认运行快速检查
-    if not any([args.all, args.env, args.check, args.prompt, args.excel, args.html, args.js, args.quick]):
+    if not any([args.all, args.env, args.check, args.prompt, args.excel, args.html, args.js, args.version, args.quick]):
         args.quick = True
 
     results = {}
@@ -189,6 +190,12 @@ def main():
             "JavaScript 代码扫描"
         )
 
+    if args.version or args.quick or args.all:
+        results['版本'] = run_script(
+            DEV_SCRIPTS_DIR / "check_version.py",
+            "版本一致性检查"
+        )
+
     # 总结
     print("\n" + "="*50)
     print("📊 测试总结")
@@ -211,6 +218,7 @@ def main():
         print("  python dev_scripts/test.py --excel     Excel 验证")
         print("  python dev_scripts/test.py --html      HTML 验证")
         print("  python dev_scripts/test.py --js        JS 代码扫描")
+        print("  python dev_scripts/test.py --version   版本一致性检查")
 
     print("="*50)
 

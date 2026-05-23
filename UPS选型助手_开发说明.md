@@ -1,7 +1,7 @@
 # UPS 智能选型助手 - 工程化开发环境
 
-> 版本：v1.6.7
-> 更新日期：2026-05-22
+> 版本：v1.6.8
+> 更新日期：2026-05-23
 
 ## 当前结论
 
@@ -714,6 +714,26 @@ git commit -m "[v1.6] 新增选型历史记录和图片OCR识别功能"
 - `index.html` 7个script块语法检查通过。
 - `dev_scripts/test.py --all`：5/5通过。
 - `dev_scripts/build.py --verify`：6/6通过。
+
+---
+
+## v1.6.8 更新记录（2026-05-23）
+
+### 版本号防漏机制
+- `index.html` 新增唯一版本来源：`APP_VERSION`。
+- 页面标题和底部 footer 不再硬编码版本号，统一由 `APP_VERSION` 自动填充。
+- 新增 `dev_scripts/check_version.py`，自动核对：
+  - `index.html` 的 `APP_VERSION`
+  - `README.md` 顶部版本
+  - `UPS选型助手_开发文档.md` 顶部版本
+  - `UPS选型助手_开发说明.md` 顶部版本
+- `dev_scripts/test.py --quick/--all` 和 `dev_scripts/build.py --verify` 已接入版本一致性检查。
+
+### 后续版本更新规则
+- 升级版本时，先改 `index.html` 中的 `APP_VERSION`。
+- 同步更新 README 和两份开发文档顶部版本。
+- 执行 `python dev_scripts/test.py --quick`，版本不一致时检查会失败。
+- 不再在页面可见文本中直接写死 `vX.Y.Z`。
 
 ---
 

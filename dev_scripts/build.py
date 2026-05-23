@@ -14,6 +14,7 @@ import sys
 import re
 import argparse
 import hashlib
+import subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -103,7 +104,9 @@ def show_build_info(parts: dict):
     print("=" * 50)
 
     # 版本信息
-    version = "v1.6.7"
+    html = read_file(TEMPLATE_FILE)
+    version_match = re.search(r'const\s+APP_VERSION\s*=\s*"(v\d+\.\d+\.\d+)"', html)
+    version = version_match.group(1) if version_match else "unknown"
     build_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"版本: {version}")
     print(f"构建时间: {build_time}")
@@ -130,6 +133,7 @@ def verify_scripts():
     print("\n🔍 验证开发脚本...")
 
     scripts = [
+        ("check_version.py", "版本一致性检查"),
         ("check_prompt_feature.py", "提示词功能验证"),
         ("verify.py", "双表数据库视图"),
         ("check_html.py", "HTML 基础结构"),
@@ -161,6 +165,7 @@ def run_quality_check():
     checks = [
         ("DOCTYPE", "<!DOCTYPE html>" in html),
         ("UTF-8 编码", 'charset="UTF-8"' in html),
+        ("APP_VERSION", "const APP_VERSION" in html),
         ("SheetJS CDN", "xlsx-js-style" in html or "sheetjs.com" in html),
         ("mammoth.js CDN", "mammoth" in html),
         ("系统提示词", "DEFAULT_SYSTEM_PROMPT" in html),
@@ -292,9 +297,13 @@ def main():
 
     # 质量检查
     if args.verify:
-        verify_scripts()
-        run_quality_check()
-        sys.exit(0)
+        scripts_ok = verify_scripts()
+        quality_ok = run_quality_check()
+        version_ok = subprocess.run(
+            [sys.executable, str(DEV_SCRIPTS_DIR / "check_version.py")],
+            cwd=PROJECT_ROOT
+        ).returncode == 0
+        sys.exit(0 if scripts_ok and quality_ok and version_ok else 1)
 
     # 生成开发说明
     if args.readme:
