@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.12";
+const APP_VERSION = "v1.6.13";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -372,9 +372,9 @@ function checkAuth(){
           <input type="number" id="dc-ups-pf" value="1" step="0.01" min="0.1" max="1">
         </div>
         <div class="field" id="dc-ups-qty-field">
-          <label id="dc-ups-qty-label">UPS并机台数</label>
+          <label id="dc-ups-qty-label">工作UPS台数 (N)</label>
           <input type="number" id="dc-ups-qty" value="2" min="1" oninput="updateDcArchitectureFields()">
-          <div id="dc-ups-qty-hint" style="font-size:11px;color:#888;margin-top:4px">N+1按任意1台UPS故障退出校核</div>
+          <div id="dc-ups-qty-hint" style="font-size:11px;color:#888;margin-top:4px">N+1总台数 = 工作UPS台数N + 1台冗余</div>
         </div>
         <div class="field" id="dc-ups-a-field" style="display:none">
           <label>A路UPS台数</label>
@@ -2312,12 +2312,16 @@ function updateDcArchitectureFields() {
     qtyField.style.display = "block";
     aField.style.display = "none";
     bField.style.display = "none";
-    document.getElementById("dc-ups-total").value = qty || 1;
-    qtyLabel.textContent = architecture === "N" ? "UPS台数" : "UPS并机台数";
+    document.getElementById("dc-ups-total").value = architecture === "N+1" ? (qty || 1) + 1 : (qty || 1);
+    qtyLabel.textContent = architecture === "N"
+      ? "UPS台数"
+      : architecture === "N+1"
+        ? "工作UPS台数 (N)"
+        : "UPS并机台数";
     qtyHint.textContent = architecture === "N"
       ? "N架构按全部UPS共同承担负载校核"
       : architecture === "N+1"
-        ? "N+1按任意1台UPS故障退出校核"
+        ? "N+1总台数 = 工作UPS台数N + 1台冗余"
         : "分布式冗余按N+1近似校核，最终需结合母线拓扑复核";
   }
 }
@@ -2330,6 +2334,8 @@ function setDcUpsQtyFromTotal(totalQty) {
     const bQty = Math.max(qty - aQty, 1);
     document.getElementById("dc-ups-a-qty").value = aQty;
     document.getElementById("dc-ups-b-qty").value = bQty;
+  } else if (architecture === "N+1") {
+    document.getElementById("dc-ups-qty").value = Math.max(qty - 1, 1);
   } else {
     document.getElementById("dc-ups-qty").value = qty;
   }
@@ -2432,8 +2438,7 @@ function calcDataCenterCheck() {
   const designLoad = itLoad * (1 + Math.max(growth, 0) / 100);
   const unitKwByKva = upsKva * upsPf;
   const unitKw = moduleKw > 0 && moduleQty > 0 ? moduleKw * moduleQty : unitKwByKva;
-  const moduleN1Kw = moduleKw > 0 && moduleQty > 1 ? moduleKw * (moduleQty - 1) : 0;
-  const totalUpsQty = architecture === "2N" ? aPathQty + bPathQty : parallelQty;
+  const totalUpsQty = architecture === "2N" ? aPathQty + bPathQty : (architecture === "N+1" ? parallelQty + 1 : parallelQty);
 
   let installedKw = unitKw * totalUpsQty;
   let usableKw = installedKw;
@@ -2444,13 +2449,13 @@ function calcDataCenterCheck() {
   let architectureNote = "N架构按全部UPS共同承担负载校核。";
 
   if (architecture === "N+1") {
-    usableKw = moduleN1Kw > 0 ? moduleN1Kw * parallelQty : unitKw * Math.max(parallelQty - 1, 0);
+    installedKw = unitKw * totalUpsQty;
+    usableKw = unitKw * parallelQty;
+    loadRateBaseKw = installedKw;
     usableLabel = "故障后可用容量";
     usableLineLabel = "N+1故障后可用容量";
     failRateLabel = "故障后负载率";
-    architectureNote = moduleN1Kw > 0
-      ? "N+1按每台UPS少1个功率模块后的容量校核。"
-      : "N+1按任意1台UPS退出后的剩余容量校核。";
+    architectureNote = `N+1表示满足负载需要的N台UPS + 1台冗余。本次N=${parallelQty}，总台数=${totalUpsQty}，任意1台UPS退出后剩余${parallelQty}台承担负载。`;
   } else if (architecture === "2N") {
     installedKw = unitKw * totalUpsQty;
     usableKw = unitKw * Math.min(aPathQty, bPathQty);
@@ -2478,6 +2483,9 @@ function calcDataCenterCheck() {
   capacityLines.push(buildCheckLine(true, `单台UPS可用功率 = ${upsKva}kVA × PF ${upsPf} = <b>${formatKw(unitKwByKva)}kW</b>${moduleKw > 0 && moduleQty > 0 ? `；模块装机 = ${moduleKw}kW × ${moduleQty} = <b>${formatKw(unitKw)}kW</b>` : ""}`));
   if (architecture === "N") {
     capacityLines.push(buildCheckLine(true, `UPS并机台数 = <b>${parallelQty}台</b>，装机容量 = ${formatKw(unitKw)}kW × ${parallelQty} = <b>${formatKw(installedKw)}kW</b>`));
+  } else if (architecture === "N+1") {
+    capacityLines.push(buildCheckLine(true, `工作UPS台数N = <b>${parallelQty}台</b>，冗余UPS = <b>1台</b>，UPS总台数 = <b>${totalUpsQty}台</b>`));
+    capacityLines.push(buildCheckLine(true, `装机容量 = ${formatKw(unitKw)}kW × ${totalUpsQty} = <b>${formatKw(installedKw)}kW</b>；任意1台退出后 = ${formatKw(unitKw)}kW × ${parallelQty} = <b>${formatKw(usableKw)}kW</b>`));
   }
   capacityLines.push(buildCheckLine(capacityOk, `${usableLineLabel} <b>${formatKw(usableKw)}kW</b>，容量余量 <b style="color:${capacityOk ? "#1a7f37" : "#c0392b"}">${formatKw(marginKw)}kW</b>`));
   capacityLines.push(buildCheckLine(targetOk, `正常运行负载率 <b>${normalLoadRate.toFixed(1)}%</b>，目标不高于 ${targetLoadRate}%`));
@@ -2494,7 +2502,7 @@ function calcDataCenterCheck() {
   if (architecture === "N" && (tier === "Tier III" || tier === "Tier IV")) risks.push("Tier III/IV项目不建议采用无冗余N架构，建议至少N+1或2N。");
   if (architecture === "2N" && powerPaths !== "dual") risks.push("2N架构应与双路供电负载匹配，否则无法体现双母线价值。");
   if (architecture === "2N" && aPathQty !== bPathQty) risks.push("2N架构A/B两路UPS数量不一致，需确认是否为非对称双母线设计。");
-  if (architecture === "N+1" && parallelQty < 2) risks.push("N+1架构至少需要2台UPS或2个以上功率模块才能形成冗余。");
+  if (architecture === "N+1" && totalUpsQty < 2) risks.push("N+1架构至少需要1台工作UPS加1台冗余UPS。");
   if (!capacityOk) risks.push("冗余故障后容量不足，需要增加UPS容量、台数或模块数。");
   if (!targetOk) risks.push("正常运行负载率高于目标值，后期扩容或高温降额时风险较高。");
   if (failLoadRate > 90 && capacityOk) risks.push("故障后负载率超过90%，建议复核过载能力、环境温度降额和维护余量。");
