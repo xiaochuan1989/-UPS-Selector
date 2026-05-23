@@ -1,6 +1,6 @@
 # UPS 智能选型助手
 
-**版本**: v1.6.8
+**版本**: v1.6.9
 
 面向销售和技术人员的本地 Web 工具，支持粘贴客户需求后由 AI 自动匹配 UPS 产品型号。单文件架构，无需安装，双击即可运行。
 
@@ -12,6 +12,7 @@
 - 本地预览：直接打开 `index.html`，或在 Python 可用时运行 `python dev_scripts/serve.py --no-open`
 - 基线验证：`node -e "const fs=require('fs'); const html=fs.readFileSync('index.html','utf8'); [...html.matchAll(/<script[^>]*>([\\s\\S]*?)<\\/script>/gi)].forEach((m,i)=>new Function(m[1])); console.log('JS syntax OK')"`
 - 部署入口：GitHub Pages 直接发布仓库根目录的 `index.html`
+- 新增入口：顶部 `数据中心方案校核`，用于容量、冗余架构和风险提示校核
 
 ---
 

@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.8";
+const APP_VERSION = "v1.6.9";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -224,7 +224,7 @@ function checkAuth(){
     <h1>UPS 智能选型助手</h1>
     <div class="version" id="data-source-label">内置数据 V7.5 | 太行UR / 昆仑UE / 祁连UM / 泰山UT | 共179款产品</div>
   </div>
-  <div style="display:flex;gap:10px;align-items:center">
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
     <label style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap" title="导入Excel后将替换内置数据">
       📂 导入Excel
       <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
@@ -234,6 +234,9 @@ function checkAuth(){
     </button>
     <button onclick="toggleBatteryCalcV1()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
       🔋 电池计算(方法一/锂电)
+    </button>
+    <button onclick="toggleDataCenterCheck()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
+      🏢 数据中心方案校核
     </button>
     <button onclick="toggleDataTable()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
       📊 查看数据库
@@ -278,6 +281,144 @@ function checkAuth(){
         <thead id="db-thead-bot"></thead>
         <tbody id="db-tbody-bot"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- 数据中心方案校核面板 -->
+  <div id="dc-check-panel" style="display:none" class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 data-icon="🏢" style="margin:0">数据中心方案校核</h2>
+      <button onclick="importDcFromCurrentSelection()" style="background:#fff;border:1px solid #2d6a9f;color:#2d6a9f;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">导入当前UPS选型结果</button>
+    </div>
+
+    <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">① 场景参数</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div class="field">
+          <label>IT负载功率 (kW)</label>
+          <input type="number" id="dc-it-load" placeholder="必填">
+        </div>
+        <div class="field">
+          <label>未来扩容余量 (%)</label>
+          <input type="number" id="dc-growth" value="20" min="0" max="200">
+        </div>
+        <div class="field">
+          <label>目标运行负载率 (%)</label>
+          <input type="number" id="dc-target-load" value="70" min="10" max="95">
+        </div>
+        <div class="field">
+          <label>冗余架构</label>
+          <select id="dc-architecture">
+            <option value="N">N（无冗余）</option>
+            <option value="N+1" selected>N+1</option>
+            <option value="2N">2N（双母线）</option>
+            <option value="DR">分布式冗余</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>供电路径</label>
+          <select id="dc-power-paths">
+            <option value="single">单路负载</option>
+            <option value="dual" selected>双路负载</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>可靠性等级</label>
+          <select id="dc-tier">
+            <option value="">未明确</option>
+            <option value="Tier I/II">Tier I/II</option>
+            <option value="Tier III">Tier III</option>
+            <option value="Tier IV">Tier IV</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>后备时间 (分钟)</label>
+          <input type="number" id="dc-backup-min" value="15" min="0">
+        </div>
+        <div class="field">
+          <label>柴油发电机</label>
+          <select id="dc-generator">
+            <option value="">未明确</option>
+            <option value="yes" selected>有柴发</option>
+            <option value="no">无柴发</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>输入/输出制式</label>
+          <select id="dc-voltage-system">
+            <option value="">未明确</option>
+            <option value="380V 3P4W" selected>380V 三相四线</option>
+            <option value="400V 3P4W">400V 三相四线</option>
+            <option value="415V 3P4W">415V 三相四线</option>
+            <option value="220V 1P">220V 单相</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#fff8e1;border:1.5px solid #ffcc80;border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-weight:600;margin-bottom:12px;color:#e65100">② UPS配置参数</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div class="field">
+          <label>当前UPS型号</label>
+          <input type="text" id="dc-ups-model" placeholder="可选">
+        </div>
+        <div class="field">
+          <label>单台UPS容量 (kVA)</label>
+          <input type="number" id="dc-ups-kva" placeholder="必填">
+        </div>
+        <div class="field">
+          <label>输出功率因数</label>
+          <input type="number" id="dc-ups-pf" value="1" step="0.01" min="0.1" max="1">
+        </div>
+        <div class="field">
+          <label>UPS台数（2N按每路）</label>
+          <input type="number" id="dc-ups-qty" value="2" min="1">
+        </div>
+        <div class="field">
+          <label>单模块容量 (kW，可选)</label>
+          <input type="number" id="dc-module-kw" placeholder="模块化UPS填写">
+        </div>
+        <div class="field">
+          <label>每台模块数（可选）</label>
+          <input type="number" id="dc-module-qty" placeholder="模块化UPS填写" min="1">
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+        <button class="save-btn" onclick="calcDataCenterCheck()" style="padding:10px 24px;background:#1a5c3a">开始校核</button>
+        <button onclick="resetDataCenterCheck()" style="background:#95a5a6;color:white;border:none;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer">清空结果</button>
+      </div>
+    </div>
+
+    <div id="dc-check-result" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div style="background:#eef4fb;border-left:4px solid #2d6a9f;border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:#666">规划IT负载</div>
+          <div style="font-size:22px;font-weight:700;color:#1a3a5c"><span id="dc-result-design-load">-</span> kW</div>
+        </div>
+        <div style="background:#edfbf3;border-left:4px solid #27ae60;border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:#666">装机容量</div>
+          <div style="font-size:22px;font-weight:700;color:#1a5c2a"><span id="dc-result-installed">-</span> kW</div>
+        </div>
+        <div style="background:#fff8e1;border-left:4px solid #f39c12;border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:#666">故障后可用容量</div>
+          <div style="font-size:22px;font-weight:700;color:#b26a00"><span id="dc-result-usable">-</span> kW</div>
+        </div>
+        <div style="background:#f8f9fa;border-left:4px solid #6c757d;border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:#666">运行负载率</div>
+          <div style="font-size:22px;font-weight:700;color:#333"><span id="dc-result-load-rate">-</span>%</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="border:1px solid #d0e8ff;border-radius:10px;padding:16px;background:#f8fbff">
+          <div style="font-weight:600;color:#2d6a9f;margin-bottom:10px">③ 容量与冗余校核</div>
+          <div id="dc-capacity-check" style="font-size:13px;line-height:1.8;color:#444"></div>
+        </div>
+        <div style="border:1px solid #ffe0b2;border-radius:10px;padding:16px;background:#fffaf0">
+          <div style="font-weight:600;color:#e65100;margin-bottom:10px">④ 缺失参数与风险提示</div>
+          <div id="dc-risk-check" style="font-size:13px;line-height:1.8;color:#444"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2111,6 +2252,153 @@ function toggleBatteryCalcV1() {
   } else {
     panel.style.display = "none";
   }
+}
+
+// 数据中心方案校核面板
+function toggleDataCenterCheck() {
+  const panel = document.getElementById("dc-check-panel");
+  if (panel.style.display === "none") {
+    panel.style.display = "block";
+    panel.scrollIntoView({ behavior: "smooth" });
+  } else {
+    panel.style.display = "none";
+  }
+}
+
+function parseUpsCapacityKva(product, model) {
+  const text = [
+    product?.["描述"] || "",
+    product?.["型号"] || "",
+    model || ""
+  ].join(" ");
+  const kvaMatch = text.match(/(\d+(?:\.\d+)?)\s*kVA/i);
+  if (kvaMatch) return parseFloat(kvaMatch[1]);
+  const compactMatch = text.match(/-(\d{3,4})0[STN]/i);
+  if (compactMatch) return parseInt(compactMatch[1], 10);
+  return 0;
+}
+
+function importDcFromCurrentSelection() {
+  const recs = lastResult?.recommended?.length ? lastResult.recommended : (lastResult?.also_consider || []);
+  if (!recs.length) {
+    alert("暂无可导入的UPS选型结果，请先完成AI选型或手动填写UPS参数");
+    return;
+  }
+  const rec = recs[0];
+  const product = findProduct(rec.model);
+  document.getElementById("dc-ups-model").value = rec.model || "";
+  const kva = parseUpsCapacityKva(product, rec.model);
+  if (kva) document.getElementById("dc-ups-kva").value = kva;
+  const pf = parseFloat(product?.["功率因数"] || product?.["输出功率因数"] || "");
+  if (!isNaN(pf) && pf > 0) document.getElementById("dc-ups-pf").value = pf;
+
+  const modular = parseModularUpsModel(rec.model || "", product);
+  if (modular) {
+    const moduleKva = parseUpsCapacityKva(null, modular.module);
+    if (moduleKva) document.getElementById("dc-module-kw").value = moduleKva;
+    if (modular.maxModules) document.getElementById("dc-module-qty").value = modular.maxModules;
+  }
+  alert("已导入当前首选UPS型号，可继续补充IT负载和架构参数");
+}
+
+function resetDataCenterCheck() {
+  document.getElementById("dc-check-result").style.display = "none";
+  document.getElementById("dc-capacity-check").innerHTML = "";
+  document.getElementById("dc-risk-check").innerHTML = "";
+}
+
+function formatKw(value) {
+  return isFinite(value) ? value.toFixed(value >= 100 ? 0 : 1) : "-";
+}
+
+function buildCheckLine(ok, text) {
+  return `<div style="margin-bottom:6px"><span style="display:inline-block;width:20px">${ok ? "✓" : "!"}</span>${text}</div>`;
+}
+
+function calcDataCenterCheck() {
+  const itLoad = parseFloat(document.getElementById("dc-it-load").value);
+  const growth = parseFloat(document.getElementById("dc-growth").value || "0");
+  const targetLoadRate = parseFloat(document.getElementById("dc-target-load").value || "70");
+  const architecture = document.getElementById("dc-architecture").value;
+  const powerPaths = document.getElementById("dc-power-paths").value;
+  const tier = document.getElementById("dc-tier").value;
+  const backupMin = parseFloat(document.getElementById("dc-backup-min").value);
+  const generator = document.getElementById("dc-generator").value;
+  const voltageSystem = document.getElementById("dc-voltage-system").value;
+  const upsModel = document.getElementById("dc-ups-model").value.trim();
+  const upsKva = parseFloat(document.getElementById("dc-ups-kva").value);
+  const upsPf = parseFloat(document.getElementById("dc-ups-pf").value || "1");
+  const upsQty = parseInt(document.getElementById("dc-ups-qty").value || "1", 10);
+  const moduleKw = parseFloat(document.getElementById("dc-module-kw").value || "0");
+  const moduleQty = parseInt(document.getElementById("dc-module-qty").value || "0", 10);
+
+  if (!itLoad || itLoad <= 0) { alert("请填写IT负载功率"); return; }
+  if (!upsKva || upsKva <= 0) { alert("请填写单台UPS容量"); return; }
+  if (!upsPf || upsPf <= 0 || upsPf > 1) { alert("UPS功率因数应在0~1之间"); return; }
+  if (!upsQty || upsQty < 1) { alert("UPS台数不能小于1"); return; }
+
+  const designLoad = itLoad * (1 + Math.max(growth, 0) / 100);
+  const unitKwByKva = upsKva * upsPf;
+  const unitKw = moduleKw > 0 && moduleQty > 0 ? moduleKw * moduleQty : unitKwByKva;
+  const moduleN1Kw = moduleKw > 0 && moduleQty > 1 ? moduleKw * (moduleQty - 1) : 0;
+
+  let installedKw = unitKw * upsQty;
+  let usableKw = installedKw;
+  let loadRateBaseKw = installedKw;
+  let architectureNote = "N架构按全部UPS共同承担负载校核。";
+
+  if (architecture === "N+1") {
+    usableKw = moduleN1Kw > 0 ? moduleN1Kw * upsQty : unitKw * Math.max(upsQty - 1, 0);
+    architectureNote = moduleN1Kw > 0
+      ? "N+1按每台UPS少1个功率模块后的容量校核。"
+      : "N+1按任意1台UPS退出后的剩余容量校核。";
+  } else if (architecture === "2N") {
+    installedKw = unitKw * upsQty * 2;
+    usableKw = unitKw * upsQty;
+    loadRateBaseKw = unitKw * upsQty;
+    architectureNote = "2N按单路母线独立承担全部IT负载校核，UPS台数按每路填写。";
+  } else if (architecture === "DR") {
+    usableKw = unitKw * Math.max(upsQty - 1, 0);
+    architectureNote = "分布式冗余先按N+1近似校核，最终需结合母线拓扑和STS/负载分配复核。";
+  }
+
+  const normalLoadRate = loadRateBaseKw > 0 ? designLoad / loadRateBaseKw * 100 : 0;
+  const failLoadRate = usableKw > 0 ? designLoad / usableKw * 100 : 999;
+  const capacityOk = usableKw >= designLoad;
+  const targetOk = normalLoadRate <= targetLoadRate;
+  const marginKw = usableKw - designLoad;
+
+  const capacityLines = [];
+  capacityLines.push(buildCheckLine(true, `规划负载 = IT负载 ${itLoad}kW × (1 + 扩容余量 ${growth || 0}%) = <b>${formatKw(designLoad)}kW</b>`));
+  capacityLines.push(buildCheckLine(true, `单台可用功率 = ${upsKva}kVA × PF ${upsPf} = <b>${formatKw(unitKwByKva)}kW</b>${moduleKw > 0 && moduleQty > 0 ? `；模块装机 = ${moduleKw}kW × ${moduleQty} = <b>${formatKw(unitKw)}kW</b>` : ""}`));
+  capacityLines.push(buildCheckLine(capacityOk, `${architecture} 故障后可用容量 <b>${formatKw(usableKw)}kW</b>，容量余量 <b style="color:${capacityOk ? "#1a7f37" : "#c0392b"}">${formatKw(marginKw)}kW</b>`));
+  capacityLines.push(buildCheckLine(targetOk, `正常运行负载率 <b>${normalLoadRate.toFixed(1)}%</b>，目标不高于 ${targetLoadRate}%`));
+  capacityLines.push(buildCheckLine(failLoadRate <= 100, `故障/冗余切换后负载率 <b>${failLoadRate.toFixed(1)}%</b>`));
+  capacityLines.push(`<div style="margin-top:8px;padding:8px;background:#fff;border-radius:6px;color:#666">${architectureNote}</div>`);
+
+  const risks = [];
+  if (!upsModel) risks.push("未填写UPS型号，后续需确认产品系列、安装方式、并机能力和认证。");
+  if (!voltageSystem) risks.push("未明确输入/输出制式，需确认380/400/415V及三相三线/四线。");
+  if (!tier) risks.push("未明确Tier或可靠性等级，无法判断是否需要并行维护、双母线或2N。");
+  if (powerPaths === "single" && (tier === "Tier III" || tier === "Tier IV" || architecture === "2N")) risks.push("高可靠或2N场景通常要求双路负载，单路设备需评估STS或双电源改造。");
+  if (architecture === "N" && (tier === "Tier III" || tier === "Tier IV")) risks.push("Tier III/IV项目不建议采用无冗余N架构，建议至少N+1或2N。");
+  if (architecture === "2N" && powerPaths !== "dual") risks.push("2N架构应与双路供电负载匹配，否则无法体现双母线价值。");
+  if (!capacityOk) risks.push("冗余故障后容量不足，需要增加UPS容量、台数或模块数。");
+  if (!targetOk) risks.push("正常运行负载率高于目标值，后期扩容或高温降额时风险较高。");
+  if (failLoadRate > 90 && capacityOk) risks.push("故障后负载率超过90%，建议复核过载能力、环境温度降额和维护余量。");
+  if (!backupMin && backupMin !== 0) risks.push("未明确后备时间，电池容量和开关箱配置无法闭环。");
+  if (generator === "no" && backupMin < 30) risks.push("无柴发且后备时间低于30分钟，需确认客户是否接受市电长时间中断风险。");
+  if (generator === "") risks.push("未明确柴油发电机，后备时间策略无法判断是桥接柴发还是长延时供电。");
+  if (moduleKw > 0 && moduleQty <= 1 && architecture === "N+1") risks.push("模块化N+1至少需要2个模块，当前模块数无法形成模块冗余。");
+  if (!risks.length) risks.push("当前关键参数较完整，容量和冗余初步校核通过；仍需结合电池厂家曲线、上级配电容量、短路电流和现场进出线方式复核。");
+
+  document.getElementById("dc-result-design-load").textContent = formatKw(designLoad);
+  document.getElementById("dc-result-installed").textContent = formatKw(installedKw);
+  document.getElementById("dc-result-usable").textContent = formatKw(usableKw);
+  document.getElementById("dc-result-load-rate").textContent = normalLoadRate.toFixed(1);
+  document.getElementById("dc-capacity-check").innerHTML = capacityLines.join("");
+  document.getElementById("dc-risk-check").innerHTML = risks.map(r => `<div style="margin-bottom:6px"><span style="color:#e65100;font-weight:700">!</span> ${r}</div>`).join("");
+  document.getElementById("dc-check-result").style.display = "block";
 }
 
 // 切换电池计算V1的Tab
