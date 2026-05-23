@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.13";
+const APP_VERSION = "v1.6.14";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -627,7 +627,8 @@ function checkAuth(){
         </div>
         <div class="field">
           <label>UPS台数</label>
-          <input type="number" id="unified-ups-num" value="1" min="1">
+          <input type="number" id="unified-ups-num" value="1" min="1" oninput="markUnifiedUpsNumManual()">
+          <div id="unified-ups-num-hint" style="font-size:11px;color:#888;margin-top:4px">可手动输入，或从上方方案校核自动带入</div>
         </div>
         <div class="field">
           <label>功率因数</label>
@@ -2251,6 +2252,7 @@ function toggleBatteryCalc() {
     panel.scrollIntoView({ behavior: "smooth" });
     // 更新UPS型号下拉选项（从AI选型结果）
     updateUpsModelSelect();
+    syncUnifiedUpsNumFromDc(false);
   } else {
     panel.style.display = "none";
   }
@@ -2346,7 +2348,7 @@ function importDcFromUnifiedConfig() {
   const model = document.getElementById("unified-ups-model")?.value || document.getElementById("custom-ups-model")?.value || "";
   const kva = parseFloat(document.getElementById("unified-ups-cap")?.value || "");
   const pf = parseFloat(document.getElementById("unified-pf")?.value || "");
-  const qty = parseInt(document.getElementById("unified-ups-count")?.value || "", 10);
+  const qty = parseInt(document.getElementById("unified-ups-num")?.value || "", 10);
   const hasConfig = model || kva || pf || qty;
   if (!hasConfig) return false;
 
@@ -2405,6 +2407,30 @@ function formatKw(value) {
 
 function buildCheckLine(ok, text) {
   return `<div style="margin-bottom:6px"><span style="display:inline-block;width:20px">${ok ? "✓" : "!"}</span>${text}</div>`;
+}
+
+let unifiedUpsNumManual = false;
+
+function markUnifiedUpsNumManual() {
+  unifiedUpsNumManual = true;
+  const hint = document.getElementById("unified-ups-num-hint");
+  if (hint) hint.textContent = "已手动输入，后续不会自动覆盖";
+}
+
+function syncUnifiedUpsNumFromDc(force) {
+  const totalEl = document.getElementById("dc-ups-total");
+  const upsNumEl = document.getElementById("unified-ups-num");
+  if (!totalEl || !upsNumEl) return false;
+
+  const total = parseInt(totalEl.value || "", 10);
+  if (!total || total < 1) return false;
+
+  if (!force && unifiedUpsNumManual) return false;
+
+  upsNumEl.value = total;
+  const hint = document.getElementById("unified-ups-num-hint");
+  if (hint) hint.textContent = "已从上方数据中心方案校核带入，可手动修改";
+  return true;
 }
 
 function calcDataCenterCheck() {
@@ -2520,6 +2546,7 @@ function calcDataCenterCheck() {
   document.getElementById("dc-capacity-check").innerHTML = capacityLines.join("");
   document.getElementById("dc-risk-check").innerHTML = risks.map(r => `<div style="margin-bottom:6px"><span style="color:#e65100;font-weight:700">!</span> ${r}</div>`).join("");
   document.getElementById("dc-check-result").style.display = "block";
+  syncUnifiedUpsNumFromDc(false);
 }
 
 // 切换电池计算V1的Tab
