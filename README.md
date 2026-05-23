@@ -15,6 +15,23 @@
 
 ---
 
+## 目录结构
+
+- `index.html`：当前唯一正式页面入口，页面、样式、脚本和内置数据都在这里。
+- `dev_scripts/`：开发校验脚本，常用命令为 `python dev_scripts/test.py --quick` 和 `python dev_scripts/build.py --verify`。
+- `prompts/`：AI 选型提示词资料。
+- `src/css/`：历史拆分样式文件，目前线上页面仍以 `index.html` 内联样式为准。
+- `.github/`、`netlify.toml`：部署相关配置。
+- `.serena/`、`.mcp.json`：本地 AI/Serena 开发辅助配置。
+- `*.xlsx`、`*.xlsm`、`*.txt`、`*_backup.html`：历史数据源、模板、调试文本或备份文件，改动前需确认是否仍被脚本引用。
+
+## 本地临时文件规则
+
+- `.codex/`、Office 锁文件 `~$*`、`liantong_result_*`、`*.docx` 不纳入版本控制。
+- 新增版本时先改 `index.html` 中的 `APP_VERSION`，再运行 `python dev_scripts/test.py --quick` 检查页面和文档版本是否一致。
+
+---
+
 详细开发文档：
 - [UPS选型助手_开发文档.md](UPS选型助手_开发文档.md) — 产品功能、技术架构、计算公式
 - [UPS选型助手_开发说明.md](UPS选型助手_开发说明.md) — 工程化开发环境、经验教训

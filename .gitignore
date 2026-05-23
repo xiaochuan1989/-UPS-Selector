@@ -11,5 +11,9 @@ fix_history/
 dist/
 test_data/
 .claude/
+.codex/
 *.png
 *.xlsx
+*.docx
+~$*
+liantong_result_*
