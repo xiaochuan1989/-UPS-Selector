@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.9";
+const APP_VERSION = "v1.6.10";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -288,7 +288,7 @@ function checkAuth(){
   <div id="dc-check-panel" style="display:none" class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2 data-icon="🏢" style="margin:0">数据中心方案校核</h2>
-      <button onclick="importDcFromCurrentSelection()" style="background:#fff;border:1px solid #2d6a9f;color:#2d6a9f;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">导入当前UPS选型结果</button>
+      <button onclick="importDcFromCurrentSelection()" style="background:#fff;border:1px solid #2d6a9f;color:#2d6a9f;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">导入现有UPS参数</button>
     </div>
 
     <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
@@ -372,7 +372,7 @@ function checkAuth(){
           <input type="number" id="dc-ups-pf" value="1" step="0.01" min="0.1" max="1">
         </div>
         <div class="field">
-          <label>UPS台数（2N按每路）</label>
+          <label>UPS总台数</label>
           <input type="number" id="dc-ups-qty" value="2" min="1">
         </div>
         <div class="field">
@@ -2278,10 +2278,38 @@ function parseUpsCapacityKva(product, model) {
   return 0;
 }
 
+function importDcFromUnifiedConfig() {
+  const model = document.getElementById("unified-ups-model")?.value || document.getElementById("custom-ups-model")?.value || "";
+  const kva = parseFloat(document.getElementById("unified-ups-cap")?.value || "");
+  const pf = parseFloat(document.getElementById("unified-pf")?.value || "");
+  const qty = parseInt(document.getElementById("unified-ups-count")?.value || "", 10);
+  const hasConfig = model || kva || pf || qty;
+  if (!hasConfig) return false;
+
+  if (model) document.getElementById("dc-ups-model").value = model;
+  if (!isNaN(kva) && kva > 0) document.getElementById("dc-ups-kva").value = kva;
+  if (!isNaN(pf) && pf > 0) document.getElementById("dc-ups-pf").value = pf;
+  if (!isNaN(qty) && qty > 0) document.getElementById("dc-ups-qty").value = qty;
+
+  const product = model ? findProduct(model) : null;
+  const modular = parseModularUpsModel(model, product);
+  if (modular) {
+    const moduleKva = parseUpsCapacityKva(null, modular.module);
+    if (moduleKva) document.getElementById("dc-module-kw").value = moduleKva;
+    if (modular.maxModules) document.getElementById("dc-module-qty").value = modular.maxModules;
+  }
+  return true;
+}
+
 function importDcFromCurrentSelection() {
+  if (importDcFromUnifiedConfig()) {
+    alert("已从UPS与电池配置计算面板导入现有UPS参数");
+    return;
+  }
+
   const recs = lastResult?.recommended?.length ? lastResult.recommended : (lastResult?.also_consider || []);
   if (!recs.length) {
-    alert("暂无可导入的UPS选型结果，请先完成AI选型或手动填写UPS参数");
+    alert("暂无可导入的UPS参数，请先完成AI选型、填写UPS与电池配置计算参数，或手动填写本面板");
     return;
   }
   const rec = recs[0];
@@ -2298,7 +2326,7 @@ function importDcFromCurrentSelection() {
     if (moduleKva) document.getElementById("dc-module-kw").value = moduleKva;
     if (modular.maxModules) document.getElementById("dc-module-qty").value = modular.maxModules;
   }
-  alert("已导入当前首选UPS型号，可继续补充IT负载和架构参数");
+  alert("已导入当前AI首选UPS型号，可继续补充IT负载和架构参数");
 }
 
 function resetDataCenterCheck() {
@@ -2341,6 +2369,7 @@ function calcDataCenterCheck() {
   const unitKwByKva = upsKva * upsPf;
   const unitKw = moduleKw > 0 && moduleQty > 0 ? moduleKw * moduleQty : unitKwByKva;
   const moduleN1Kw = moduleKw > 0 && moduleQty > 1 ? moduleKw * (moduleQty - 1) : 0;
+  const twoNPathQty = architecture === "2N" ? Math.floor(upsQty / 2) : upsQty;
 
   let installedKw = unitKw * upsQty;
   let usableKw = installedKw;
@@ -2353,10 +2382,10 @@ function calcDataCenterCheck() {
       ? "N+1按每台UPS少1个功率模块后的容量校核。"
       : "N+1按任意1台UPS退出后的剩余容量校核。";
   } else if (architecture === "2N") {
-    installedKw = unitKw * upsQty * 2;
-    usableKw = unitKw * upsQty;
-    loadRateBaseKw = unitKw * upsQty;
-    architectureNote = "2N按单路母线独立承担全部IT负载校核，UPS台数按每路填写。";
+    installedKw = unitKw * upsQty;
+    usableKw = unitKw * twoNPathQty;
+    loadRateBaseKw = installedKw;
+    architectureNote = `2N按UPS总台数拆分为A/B两路校核，单路UPS台数=${twoNPathQty}，任一路需独立承担全部IT负载。`;
   } else if (architecture === "DR") {
     usableKw = unitKw * Math.max(upsQty - 1, 0);
     architectureNote = "分布式冗余先按N+1近似校核，最终需结合母线拓扑和STS/负载分配复核。";
@@ -2383,6 +2412,8 @@ function calcDataCenterCheck() {
   if (powerPaths === "single" && (tier === "Tier III" || tier === "Tier IV" || architecture === "2N")) risks.push("高可靠或2N场景通常要求双路负载，单路设备需评估STS或双电源改造。");
   if (architecture === "N" && (tier === "Tier III" || tier === "Tier IV")) risks.push("Tier III/IV项目不建议采用无冗余N架构，建议至少N+1或2N。");
   if (architecture === "2N" && powerPaths !== "dual") risks.push("2N架构应与双路供电负载匹配，否则无法体现双母线价值。");
+  if (architecture === "2N" && upsQty % 2 !== 0) risks.push("2N架构的UPS总台数建议为偶数，便于A/B两路对称配置。");
+  if (architecture === "2N" && twoNPathQty < 1) risks.push("2N架构至少需要A/B两路各1台UPS。");
   if (!capacityOk) risks.push("冗余故障后容量不足，需要增加UPS容量、台数或模块数。");
   if (!targetOk) risks.push("正常运行负载率高于目标值，后期扩容或高温降额时风险较高。");
   if (failLoadRate > 90 && capacityOk) risks.push("故障后负载率超过90%，建议复核过载能力、环境温度降额和维护余量。");
