@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.7.0";
+const APP_VERSION = "v1.7.1";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -465,7 +465,7 @@ function checkAuth(){
           <input type="number" id="runtime-ups-num" value="1" min="1">
         </div>
         <div class="field">
-          <label>目标后备时间 (分钟)</label>
+          <label>后备时间 (分钟)</label>
           <input type="number" id="runtime-target-min" value="15" min="0">
         </div>
       </div>
@@ -768,7 +768,7 @@ function checkAuth(){
           </select>
         </div>
         <div class="field">
-          <label>放电时间</label>
+          <label>后备时间 (分钟)</label>
           <select id="unified-discharge-time">
             <option value="15">15分钟</option>
             <option value="30">30分钟</option>
@@ -2473,18 +2473,38 @@ function setDcUpsQtyFromTotal(totalQty) {
   updateDcArchitectureFields();
 }
 
+function setSelectValueWithDynamicOption(selectEl, value, label) {
+  if (!selectEl || value === undefined || value === null || value === '') return false;
+  const numberValue = parseFloat(value);
+  if (isNaN(numberValue)) return false;
+  const strValue = String(numberValue);
+  const exists = Array.from(selectEl.options).some(function(option) {
+    return String(parseFloat(option.value)) === strValue;
+  });
+  if (!exists) {
+    const option = document.createElement('option');
+    option.value = strValue;
+    option.textContent = label || (strValue + '分钟');
+    selectEl.appendChild(option);
+  }
+  selectEl.value = strValue;
+  return true;
+}
+
 function importDcFromUnifiedConfig() {
   const model = document.getElementById("unified-ups-model")?.value || document.getElementById("custom-ups-model")?.value || "";
   const kva = parseFloat(document.getElementById("unified-ups-cap")?.value || "");
   const pf = parseFloat(document.getElementById("unified-pf")?.value || "");
   const qty = parseInt(document.getElementById("unified-ups-num")?.value || "", 10);
-  const hasConfig = model || kva || pf || qty;
+  const backupMin = parseFloat(document.getElementById("unified-discharge-time")?.value || "");
+  const hasConfig = model || kva || pf || qty || backupMin;
   if (!hasConfig) return false;
 
   if (model) document.getElementById("dc-ups-model").value = model;
   if (!isNaN(kva) && kva > 0) document.getElementById("dc-ups-kva").value = kva;
   if (!isNaN(pf) && pf > 0) document.getElementById("dc-ups-pf").value = pf;
   if (!isNaN(qty) && qty > 0) setDcUpsQtyFromTotal(qty);
+  if (!isNaN(backupMin) && backupMin > 0) document.getElementById("dc-backup-min").value = backupMin;
 
   const product = model ? findProduct(model) : null;
   const modular = parseModularUpsModel(model, product);
@@ -2560,6 +2580,13 @@ function syncUnifiedUpsNumFromDc(force) {
   const hint = document.getElementById("unified-ups-num-hint");
   if (hint) hint.textContent = "已从上方数据中心方案校核带入，可手动修改";
   return true;
+}
+
+function syncUnifiedBackupMinFromDc() {
+  const dcBackupEl = document.getElementById("dc-backup-min");
+  const unifiedTimeEl = document.getElementById("unified-discharge-time");
+  if (!dcBackupEl || !unifiedTimeEl || dcBackupEl.value === '') return false;
+  return setSelectValueWithDynamicOption(unifiedTimeEl, dcBackupEl.value, dcBackupEl.value + '分钟');
 }
 
 function calcDataCenterCheck() {
@@ -2676,6 +2703,7 @@ function calcDataCenterCheck() {
   document.getElementById("dc-risk-check").innerHTML = risks.map(r => `<div style="margin-bottom:6px"><span style="color:#e65100;font-weight:700">!</span> ${r}</div>`).join("");
   document.getElementById("dc-check-result").style.display = "block";
   syncUnifiedUpsNumFromDc(false);
+  syncUnifiedBackupMinFromDc();
 }
 
 // 切换电池计算V1的Tab
@@ -3565,11 +3593,16 @@ function importRuntimeFromUnifiedConfig() {
   var runtimeEndV = document.getElementById('runtime-end-v');
   if (endV && runtimeEndV && endV.value) runtimeEndV.value = Number(endV.value).toFixed(2);
 
-  var dcBackup = document.getElementById('dc-backup-min');
   var runtimeTarget = document.getElementById('runtime-target-min');
-  if (dcBackup && runtimeTarget && dcBackup.value !== '') runtimeTarget.value = dcBackup.value;
+  var unifiedBackup = document.getElementById('unified-discharge-time');
+  var dcBackup = document.getElementById('dc-backup-min');
+  if (runtimeTarget && unifiedBackup && unifiedBackup.value !== '') {
+    runtimeTarget.value = unifiedBackup.value;
+  } else if (dcBackup && runtimeTarget && dcBackup.value !== '') {
+    runtimeTarget.value = dcBackup.value;
+  }
 
-  alert('已导入UPS与电池配置参数，可选择电池型号后反算后备时间');
+  alert('已导入UPS与电池配置参数（含后备时间），可选择电池型号后反算后备时间');
 }
 
 function resetRuntimeCalc() {
