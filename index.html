@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.6.17";
+const APP_VERSION = "v1.7.0";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -232,6 +232,9 @@ function checkAuth(){
     <button onclick="toggleBatteryCalc()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
       🔋 UPS与电池配置计算
     </button>
+    <button onclick="toggleRuntimeCalc()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
+      ⏱️ 电池后备时间反算
+    </button>
     <button onclick="toggleBatteryCalcV1()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
       🔋 电池计算(方法一/锂电)
     </button>
@@ -430,6 +433,116 @@ function checkAuth(){
         <div style="border:1px solid #ffe0b2;border-radius:10px;padding:16px;background:#fffaf0">
           <div style="font-weight:600;color:#e65100;margin-bottom:10px">④ 缺失参数与风险提示</div>
           <div id="dc-risk-check" style="font-size:13px;line-height:1.8;color:#444"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 电池后备时间反算面板 -->
+  <div id="runtime-calc-panel" style="display:none" class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 data-icon="⏱️" style="margin:0">电池后备时间反算</h2>
+      <button onclick="importRuntimeFromUnifiedConfig()" style="background:#fff;border:1px solid #2d6a9f;color:#2d6a9f;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">导入UPS与电池参数</button>
+    </div>
+
+    <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">① UPS/负载参数</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+        <div class="field">
+          <label>总负载功率 (kW，可选)</label>
+          <input type="number" id="runtime-load-kw" placeholder="不填则按UPS容量">
+        </div>
+        <div class="field">
+          <label>单台UPS容量 (kVA)</label>
+          <input type="number" id="runtime-ups-kva" value="200" min="0">
+        </div>
+        <div class="field">
+          <label>功率因数</label>
+          <input type="number" id="runtime-pf" value="0.9" step="0.01" min="0.1" max="1">
+        </div>
+        <div class="field">
+          <label>UPS台数</label>
+          <input type="number" id="runtime-ups-num" value="1" min="1">
+        </div>
+        <div class="field">
+          <label>目标后备时间 (分钟)</label>
+          <input type="number" id="runtime-target-min" value="15" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#fff8e1;border:1.5px solid #ffcc80;border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-weight:600;margin-bottom:12px;color:#e65100">② 电池配置</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+        <div class="field">
+          <label>电池类型</label>
+          <select id="runtime-batt-type" onchange="refreshRuntimeBatteryOptions()">
+            <option value="normal">SP12V</option>
+            <option value="highpower">SPG12V高功率</option>
+            <option value="2v">GFMD-2V</option>
+            <option value="dianneng">电能GBT12-20小时率</option>
+            <option value="dianneng10h">电能GBT12-10小时率</option>
+            <option value="custom">自定义/客户指定</option>
+          </select>
+        </div>
+        <div class="field" id="runtime-batt-model-field">
+          <label>电池型号</label>
+          <select id="runtime-batt-model" onchange="refreshRuntimeVoltageOptions()"></select>
+        </div>
+        <div class="field" id="runtime-custom-model-field" style="display:none">
+          <label>客户指定型号</label>
+          <input type="text" id="runtime-custom-model" placeholder="手动输入型号">
+        </div>
+        <div class="field">
+          <label>每组电池节数</label>
+          <input type="number" id="runtime-cells" value="32" min="1">
+        </div>
+        <div class="field">
+          <label>每台UPS电池组数</label>
+          <input type="number" id="runtime-groups" value="2" min="1">
+        </div>
+        <div class="field">
+          <label>截止电压 (V)</label>
+          <select id="runtime-end-v"></select>
+        </div>
+        <div class="field">
+          <label>逆变效率</label>
+          <input type="number" id="runtime-eff" value="0.95" step="0.01" min="0.1" max="1">
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+        <button class="save-btn" onclick="calcBatteryRuntime()" style="padding:10px 24px;background:#1a5c3a">开始反算</button>
+        <button onclick="resetRuntimeCalc()" style="background:#95a5a6;color:white;border:none;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer">清空结果</button>
+      </div>
+    </div>
+
+    <div id="runtime-result" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div style="background:#eef4fb;border-left:4px solid #2d6a9f;border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:#666">单体所需功率</div>
+          <div style="font-size:22px;font-weight:700;color:#1a3a5c"><span id="runtime-result-cell-power">-</span> W</div>
+        </div>
+        <div style="background:#edfbf3;border-left:4px solid #27ae60;border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:#666">预计后备时间</div>
+          <div style="font-size:22px;font-weight:700;color:#1a5c2a"><span id="runtime-result-min">-</span> 分钟</div>
+        </div>
+        <div style="background:#fff8e1;border-left:4px solid #f39c12;border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:#666">目标满足情况</div>
+          <div style="font-size:20px;font-weight:700;color:#b26a00"><span id="runtime-result-status">-</span></div>
+        </div>
+        <div style="background:#f8f9fa;border-left:4px solid #6c757d;border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:#666">电池总数量</div>
+          <div style="font-size:22px;font-weight:700;color:#333"><span id="runtime-result-cells">-</span> 只</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="border:1px solid #d0e8ff;border-radius:10px;padding:16px;background:#f8fbff">
+          <div style="font-weight:600;color:#2d6a9f;margin-bottom:10px">③ 反算过程</div>
+          <div id="runtime-calc-detail" style="font-size:13px;line-height:1.8;color:#444"></div>
+        </div>
+        <div style="border:1px solid #ffe0b2;border-radius:10px;padding:16px;background:#fffaf0">
+          <div style="font-weight:600;color:#e65100;margin-bottom:10px">④ 风险提示</div>
+          <div id="runtime-risk-detail" style="font-size:13px;line-height:1.8;color:#444"></div>
         </div>
       </div>
     </div>
@@ -1056,6 +1169,7 @@ function getCustomPrompt() {
 // 使用 DOMContentLoaded 确保所有函数定义完成后再执行
 document.addEventListener('DOMContentLoaded', function() {
   refreshUnifiedBatteryPowerOptions();
+  refreshRuntimeBatteryOptions();
 
   const cfg = JSON.parse(localStorage.getItem("ups_config") || "{}");
   if (cfg.provider && document.getElementById("provider")) document.getElementById("provider").value = cfg.provider;
@@ -2272,6 +2386,18 @@ function toggleBatteryCalcV1() {
   }
 }
 
+// 电池后备时间反算面板
+function toggleRuntimeCalc() {
+  const panel = document.getElementById("runtime-calc-panel");
+  if (panel.style.display === "none") {
+    panel.style.display = "block";
+    refreshRuntimeBatteryOptions();
+    panel.scrollIntoView({ behavior: "smooth" });
+  } else {
+    panel.style.display = "none";
+  }
+}
+
 // 数据中心方案校核面板
 function toggleDataCenterCheck() {
   const panel = document.getElementById("dc-check-panel");
@@ -3409,6 +3535,160 @@ function updateCustomBattery(field, value) {
     window.projectSummary.batteryRack.batteryModel = value;
   }
   renderProjectSummary();
+}
+
+function importRuntimeFromUnifiedConfig() {
+  var mappings = [
+    ['runtime-load-kw', 'unified-load-kw'],
+    ['runtime-ups-kva', 'unified-ups-cap'],
+    ['runtime-pf', 'unified-pf'],
+    ['runtime-ups-num', 'unified-ups-num'],
+    ['runtime-cells', 'unified-cells'],
+    ['runtime-groups', 'unified-groups'],
+    ['runtime-eff', 'unified-eff']
+  ];
+
+  mappings.forEach(function(pair) {
+    var target = document.getElementById(pair[0]);
+    var source = document.getElementById(pair[1]);
+    if (target && source && source.value !== '') target.value = source.value;
+  });
+
+  var battType = document.getElementById('unified-batt-type');
+  var runtimeType = document.getElementById('runtime-batt-type');
+  if (battType && runtimeType) {
+    runtimeType.value = battType.value;
+    refreshRuntimeBatteryOptions();
+  }
+
+  var endV = document.getElementById('unified-end-v');
+  var runtimeEndV = document.getElementById('runtime-end-v');
+  if (endV && runtimeEndV && endV.value) runtimeEndV.value = Number(endV.value).toFixed(2);
+
+  var dcBackup = document.getElementById('dc-backup-min');
+  var runtimeTarget = document.getElementById('runtime-target-min');
+  if (dcBackup && runtimeTarget && dcBackup.value !== '') runtimeTarget.value = dcBackup.value;
+
+  alert('已导入UPS与电池配置参数，可选择电池型号后反算后备时间');
+}
+
+function resetRuntimeCalc() {
+  var result = document.getElementById('runtime-result');
+  if (result) result.style.display = 'none';
+  ['runtime-calc-detail', 'runtime-risk-detail'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+}
+
+function calcBatteryRuntime() {
+  var loadKw = parseFloat(document.getElementById('runtime-load-kw').value) || 0;
+  var upsKva = parseFloat(document.getElementById('runtime-ups-kva').value) || 0;
+  var pf = parseFloat(document.getElementById('runtime-pf').value) || 0;
+  var upsNum = parseInt(document.getElementById('runtime-ups-num').value) || 1;
+  var targetMin = parseFloat(document.getElementById('runtime-target-min').value) || 0;
+  var battType = document.getElementById('runtime-batt-type').value;
+  var cellsPerGroup = parseInt(document.getElementById('runtime-cells').value) || 0;
+  var groupsPerUps = parseInt(document.getElementById('runtime-groups').value) || 0;
+  var endV = parseFloat(document.getElementById('runtime-end-v').value) || 1.75;
+  var eff = parseFloat(document.getElementById('runtime-eff').value) || 0;
+  var isCustom = battType === 'custom';
+  var cellMultiplier = battType === '2v' ? 1 : 6;
+
+  if (upsNum < 1) { alert('UPS台数不能小于1'); return; }
+  if (cellsPerGroup < 1) { alert('每组电池节数不能小于1'); return; }
+  if (groupsPerUps < 1) { alert('每台UPS电池组数不能小于1'); return; }
+  if (pf <= 0 || pf > 1) { alert('功率因数应在0~1之间'); return; }
+  if (eff <= 0 || eff > 1) { alert('逆变效率应在0~1之间'); return; }
+  if (loadKw <= 0 && upsKva <= 0) { alert('请填写总负载功率或单台UPS容量'); return; }
+
+  var perUpsLoadW = loadKw > 0 ? (loadKw * 1000 / upsNum) : (upsKva * pf * 1000);
+  var totalLoadW = loadKw > 0 ? loadKw * 1000 : perUpsLoadW * upsNum;
+  var requiredCellPower = perUpsLoadW / (cellsPerGroup * cellMultiplier * eff * groupsPerUps);
+  var totalCells = upsNum * groupsPerUps * cellsPerGroup;
+  var model = isCustom
+    ? (document.getElementById('runtime-custom-model').value || '').trim()
+    : document.getElementById('runtime-batt-model').value;
+  var battery = isCustom ? null : findBatteryPowerData(model);
+  var estimate = { status: 'custom', estimatedMinutes: 0, passPoint: null, failPoint: null };
+  var curve = battery ? getBatteryPowerCurve(battery, endV) : [];
+
+  if (!isCustom) {
+    if (!battery) { alert('请选择电池型号'); return; }
+    estimate = estimateRuntimeFromCurve(curve, requiredCellPower);
+  }
+
+  var resultEl = document.getElementById('runtime-result');
+  resultEl.style.display = 'block';
+  document.getElementById('runtime-result-cell-power').textContent = requiredCellPower.toFixed(1);
+  document.getElementById('runtime-result-cells').textContent = totalCells;
+
+  var resultMinText = '-';
+  var statusText = '-';
+  if (isCustom) {
+    resultMinText = '待确认';
+    statusText = '需厂家数据';
+  } else if (estimate.status === 'below-min') {
+    resultMinText = '<' + curve[0].time;
+    statusText = '不满足';
+  } else if (estimate.status === 'above-max') {
+    resultMinText = '≥' + estimate.estimatedMinutes.toFixed(0);
+    statusText = targetMin > 0 && estimate.estimatedMinutes < targetMin ? '需复核' : '满足';
+  } else if (estimate.status === 'interpolated') {
+    resultMinText = estimate.estimatedMinutes.toFixed(0);
+    statusText = targetMin > 0 ? (estimate.estimatedMinutes >= targetMin ? '满足' : '不满足') : '已反算';
+  } else {
+    resultMinText = '-';
+    statusText = '无数据';
+  }
+  document.getElementById('runtime-result-min').textContent = resultMinText;
+  document.getElementById('runtime-result-status').textContent = statusText;
+
+  var categoryLabel = getBatteryCategoryLabel(battType);
+  var detailHtml = '';
+  detailHtml += '<div>✓ 总负载功率 = <b>' + (totalLoadW / 1000).toFixed(1) + 'kW</b>，UPS台数 = <b>' + upsNum + '台</b></div>';
+  detailHtml += '<div>✓ 单台UPS承担负载 = <b>' + (perUpsLoadW / 1000).toFixed(1) + 'kW</b></div>';
+  detailHtml += '<div>✓ 单体所需功率 = ' + (perUpsLoadW / 1000).toFixed(1) + 'kW × 1000 ÷ (' + cellsPerGroup + '节 × ' + cellMultiplier + '格 × ' + eff + ' × ' + groupsPerUps + '组) = <b>' + requiredCellPower.toFixed(1) + 'W</b></div>';
+  detailHtml += '<div>✓ 电池配置 = <b>' + categoryLabel + (model ? ' / ' + model : '') + '</b>，总数量 = <b>' + totalCells + '只</b></div>';
+  if (!isCustom && estimate.passPoint) {
+    detailHtml += '<div>✓ 已满足数据点：<b>' + estimate.passPoint.time + '分钟</b>，恒功率 <b>' + estimate.passPoint.power + 'W</b></div>';
+  }
+  if (!isCustom && estimate.failPoint) {
+    detailHtml += '<div>✓ 下一数据点：<b>' + estimate.failPoint.time + '分钟</b>，恒功率 <b>' + estimate.failPoint.power + 'W</b></div>';
+  }
+  if (!isCustom && estimate.status === 'interpolated') {
+    detailHtml += '<div style="margin-top:8px;padding:8px;background:white;border-radius:6px">按相邻恒功率数据点线性估算，预计后备时间约 <b>' + estimate.estimatedMinutes.toFixed(1) + '分钟</b>。</div>';
+  }
+  document.getElementById('runtime-calc-detail').innerHTML = detailHtml;
+
+  var risks = [];
+  if (isCustom) {
+    risks.push('客户指定电池未接入恒功率数据表，无法自动反算后备时间，需厂家提供对应截止电压下的恒功率放电表。');
+    risks.push('项目汇总清单中可手动填写客户指定电池型号，但后备时间应以厂家数据或第三方计算书复核。');
+  } else if (!curve.length) {
+    risks.push('所选电池在' + endV.toFixed(2) + 'V截止电压下没有可用恒功率数据。');
+  } else {
+    if (estimate.status === 'below-min') {
+      risks.push('最低数据点' + curve[0].time + '分钟恒功率已低于需求，当前电池容量明显不足。');
+    }
+    if (targetMin > 0 && estimate.estimatedMinutes < targetMin) {
+      risks.push('预计后备时间低于目标' + targetMin + '分钟，需增加电池容量、组数或降低负载。');
+    }
+    if (estimate.status === 'above-max') {
+      risks.push('需求功率低于最长数据点，实际后备时间可能超过' + estimate.estimatedMinutes.toFixed(0) + '分钟；更长时间需查厂家完整放电表。');
+    }
+    if (estimate.status === 'interpolated') {
+      risks.push('反算结果基于恒功率表相邻点线性估算，正式投标或设计交付建议用厂家软件/曲线复核。');
+    }
+  }
+  if (loadKw <= 0) risks.push('未填写总负载功率，已按单台UPS容量×功率因数作为每台负载进行反算。');
+  if (targetMin <= 0) risks.push('未填写目标后备时间，仅输出预计后备时间，不判断是否满足项目目标。');
+
+  document.getElementById('runtime-risk-detail').innerHTML = risks.length
+    ? risks.map(function(risk) { return '<div style="color:#e65100">! ' + risk + '</div>'; }).join('')
+    : '<div style="color:#2e7d32">✓ 暂无明显风险，建议结合项目环境温度、电池老化系数和厂家曲线复核。</div>';
+
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // 清空项目汇总
@@ -24515,6 +24795,139 @@ function refreshBatteryDataVoltageOptions() {
     function(value) { return formatEndVoltageValue(value) + 'V'; },
     formatEndVoltageValue
   );
+}
+
+function getBatteryCategoryLabel(category) {
+  var labels = {
+    normal: 'SP12V',
+    highpower: 'SPG12V高功率',
+    '2v': 'GFMD-2V',
+    dianneng: '电能GBT12-20小时率',
+    dianneng10h: '电能GBT12-10小时率',
+    custom: '自定义/客户指定'
+  };
+  return labels[category] || category || '';
+}
+
+function getBatteriesByCategory(category) {
+  if (!category || category === 'all') return BATTERY_POWER_DATA.slice();
+  return BATTERY_POWER_DATA.filter(function(battery) {
+    return battery.category === category;
+  });
+}
+
+function refreshRuntimeBatteryOptions() {
+  var categoryEl = document.getElementById('runtime-batt-type');
+  var modelEl = document.getElementById('runtime-batt-model');
+  var modelField = document.getElementById('runtime-batt-model-field');
+  var customField = document.getElementById('runtime-custom-model-field');
+  if (!categoryEl || !modelEl) return;
+
+  var category = categoryEl.value;
+  var isCustom = category === 'custom';
+  if (modelField) modelField.style.display = isCustom ? 'none' : '';
+  if (customField) customField.style.display = isCustom ? '' : 'none';
+
+  if (isCustom) {
+    modelEl.innerHTML = '';
+    refreshRuntimeVoltageOptions();
+    return;
+  }
+
+  var previous = modelEl.value;
+  var batteries = getBatteriesByCategory(category);
+  modelEl.innerHTML = batteries.map(function(battery) {
+    var selected = battery.model === previous ? ' selected' : '';
+    return '<option value="' + battery.model + '"' + selected + '>' + battery.model + '</option>';
+  }).join('');
+  if (previous && !batteries.some(function(battery) { return battery.model === previous; }) && batteries.length > 0) {
+    modelEl.value = batteries[0].model;
+  }
+  refreshRuntimeVoltageOptions();
+}
+
+function findBatteryPowerData(model) {
+  return BATTERY_POWER_DATA.find(function(battery) {
+    return battery.model === model;
+  }) || null;
+}
+
+function refreshRuntimeVoltageOptions() {
+  var categoryEl = document.getElementById('runtime-batt-type');
+  var modelEl = document.getElementById('runtime-batt-model');
+  var voltageEl = document.getElementById('runtime-end-v');
+  if (!categoryEl || !voltageEl) return;
+
+  if (categoryEl.value === 'custom') {
+    var meta = getBatteryPowerMeta('all');
+    setSelectOptions(
+      voltageEl,
+      meta.voltages,
+      voltageEl.value,
+      '1.75',
+      function(value) { return formatEndVoltageValue(value) + 'V'; },
+      formatEndVoltageValue
+    );
+    return;
+  }
+
+  var battery = modelEl ? findBatteryPowerData(modelEl.value) : null;
+  var voltages = battery
+    ? battery.voltages.filter(function(voltageData) {
+        return voltageData.powers.some(function(point) { return point.power !== null && point.power !== undefined; });
+      }).map(function(voltageData) { return Number(voltageData.endVoltage.toFixed(2)); }).sort(function(a, b) { return a - b; })
+    : getBatteryPowerMeta(categoryEl.value).voltages;
+
+  setSelectOptions(
+    voltageEl,
+    voltages,
+    voltageEl.value,
+    '1.75',
+    function(value) { return formatEndVoltageValue(value) + 'V'; },
+    formatEndVoltageValue
+  );
+}
+
+function getBatteryPowerCurve(battery, endV) {
+  if (!battery) return [];
+  var voltageData = battery.voltages.find(function(voltage) {
+    return Math.abs(voltage.endVoltage - endV) < 0.01;
+  });
+  if (!voltageData) return [];
+  return voltageData.powers
+    .filter(function(point) { return point.power !== null && point.power !== undefined; })
+    .map(function(point) { return { time: point.time, power: point.power }; })
+    .sort(function(a, b) { return a.time - b.time; });
+}
+
+function estimateRuntimeFromCurve(curve, requiredPower) {
+  if (!curve.length || requiredPower <= 0) {
+    return { status: 'no-data', estimatedMinutes: 0, passPoint: null, failPoint: null };
+  }
+
+  var passPoints = curve.filter(function(point) { return point.power >= requiredPower; });
+  if (!passPoints.length) {
+    return { status: 'below-min', estimatedMinutes: 0, passPoint: null, failPoint: curve[0] };
+  }
+
+  var passPoint = passPoints[passPoints.length - 1];
+  var failPoint = curve.find(function(point) {
+    return point.time > passPoint.time && point.power < requiredPower;
+  }) || null;
+
+  if (!failPoint) {
+    return { status: 'above-max', estimatedMinutes: passPoint.time, passPoint: passPoint, failPoint: null };
+  }
+
+  var powerRange = passPoint.power - failPoint.power;
+  var ratio = powerRange > 0 ? (passPoint.power - requiredPower) / powerRange : 0;
+  var estimated = passPoint.time + ratio * (failPoint.time - passPoint.time);
+  return {
+    status: 'interpolated',
+    estimatedMinutes: estimated,
+    passPoint: passPoint,
+    failPoint: failPoint
+  };
 }
 
 function switchLeadMethodTab(method) {
