@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.7.1";
+const APP_VERSION = "v1.7.2";
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -898,6 +898,7 @@ function checkAuth(){
             <input type="checkbox" id="summary-show-price" onchange="toggleSummaryPrice()"> 显示价格
           </label>
           <button onclick="exportProjectSummary()" style="background:#27ae60;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">📥 导出Excel</button>
+          <button onclick="exportTechnicalBrief()" style="background:#2d6a9f;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">📄 导出技术说明</button>
           <button onclick="clearProjectSummary()" style="background:#95a5a6;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">清空</button>
         </div>
       </div>
@@ -1917,6 +1918,209 @@ h1{color:#1a3a5c}h2{color:#2d6a9f;border-bottom:2px solid #e8e8e8;padding-bottom
   const a = Object.assign(document.createElement("a"), {
     href: URL.createObjectURL(new Blob([doc], {type:"text/html;charset=utf-8"})),
     download: `UPS选型方案_${date.replace(/\//g,"-")}.html`
+  });
+  a.click();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, function(ch) {
+    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+  });
+}
+
+function getFieldValue(id) {
+  var el = document.getElementById(id);
+  return el ? (el.value || '') : '';
+}
+
+function getPlainText(id) {
+  var el = document.getElementById(id);
+  return el ? (el.innerText || el.textContent || '').trim() : '';
+}
+
+function isPanelVisible(id) {
+  var el = document.getElementById(id);
+  return !!(el && el.style.display !== 'none');
+}
+
+function buildInfoTable(rows) {
+  var filtered = rows.filter(function(row) { return row[1] !== undefined && row[1] !== null && row[1] !== ''; });
+  if (!filtered.length) return '<p class="muted">暂无数据</p>';
+  return '<table class="info-table">' + filtered.map(function(row) {
+    return '<tr><th>' + escapeHtml(row[0]) + '</th><td>' + escapeHtml(row[1]) + '</td></tr>';
+  }).join('') + '</table>';
+}
+
+function buildSummaryRowsHtml() {
+  var summary = window.projectSummary || {};
+  var rows = [];
+  var ups = summary.ups || {};
+  if (ups.model || ups.frame || ups.module) {
+    if (ups.isModular && ups.frame && ups.module) {
+      rows.push(['UPS机框', ups.frame, ups.capacity || '', '台', ups.qty || 1, ups.note || '']);
+      rows.push(['功率模块', ups.module, '每台' + (ups.moduleQty || 0) + '个模块', '个', (ups.moduleQty || 0) * (ups.qty || 1), (ups.qty || 1) + '台 × ' + (ups.moduleQty || 0) + '个/台']);
+    } else {
+      rows.push([ups.isCustom ? 'UPS（非标）' : 'UPS', ups.model || '', ups.customDesc || ups.capacity || '', '台', ups.qty || 1, ups.note || '']);
+    }
+  }
+
+  var bat = summary.battery || {};
+  if (bat.model || bat.customModel || bat.totalCells) {
+    var batModel = bat.customModel || bat.model || '';
+    var batDesc = bat.customDesc || ((bat.upsNum || 1) + '台 × (' + (bat.groupsPerUps || bat.totalGroups || 1) + '组/台 × ' + (bat.cellsPerGroup || 0) + '只/组) = ' + (bat.totalCells || 0) + '只');
+    rows.push(['电池', batModel, batDesc, '只', bat.totalCells || 0, bat.note || '']);
+  }
+
+  var sw = summary.switchBox || {};
+  if (sw.model) {
+    var switchTypeText = sw.switchType === 'domestic' ? '国产开关' : '合资开关';
+    var swDesc = switchTypeText + ' | 总开关:' + (sw.mainSwitch || '-') + (sw.subSwitchQty ? ' 分开关:' + (sw.subSwitch || '-') + ' × ' + sw.subSwitchQty + '路' : ' 单组无分开关');
+    rows.push(['电池开关箱/柜', sw.model, swDesc, '套', sw.qty || 0, sw.note || '']);
+  }
+
+  var rack = summary.batteryRack || {};
+  if (rack.qty > 0) {
+    rows.push(['电池架', rack.model || '电池架', '安装' + (rack.cellsPerRack || 0) + '节/架' + (rack.includeCable ? '，含' + (rack.cableAmp || '') + '连接铜排或电缆' : ''), '架', rack.qty, rack.note || '']);
+  }
+
+  var mon = summary.monitor || {};
+  if (mon.config && mon.config.length) {
+    mon.config.forEach(function(item) {
+      rows.push(['电池监控', item.name || '', item.desc || '', item.unit || '', item.qty || 0, item.note || '']);
+    });
+  }
+
+  if (!rows.length) return '<p class="muted">暂无项目汇总清单，请先完成UPS与电池配置计算。</p>';
+  return '<table class="summary-table"><thead><tr><th>类别</th><th>型号/名称</th><th>描述</th><th>单位</th><th>数量</th><th>备注</th></tr></thead><tbody>' +
+    rows.map(function(row) {
+      return '<tr>' + row.map(function(cell) { return '<td>' + escapeHtml(cell) + '</td>'; }).join('') + '</tr>';
+    }).join('') + '</tbody></table>';
+}
+
+function exportTechnicalBrief() {
+  var hasDc = isPanelVisible('dc-check-result');
+  var hasRuntime = isPanelVisible('runtime-result');
+  var hasUnified = getPlainText('unified-battery-result') && !getPlainText('unified-battery-result').includes('点击"一键计算全部"');
+  var hasSummary = window.projectSummary && (
+    window.projectSummary.ups?.model ||
+    window.projectSummary.battery?.model ||
+    window.projectSummary.battery?.customModel ||
+    window.projectSummary.battery?.totalCells ||
+    window.projectSummary.switchBox?.model ||
+    (window.projectSummary.monitor?.config || []).length
+  );
+
+  if (!hasDc && !hasRuntime && !hasUnified && !hasSummary && !lastResult) {
+    alert('暂无可导出的技术说明，请先完成方案校核、后备时间反算或UPS与电池配置计算');
+    return;
+  }
+
+  var date = new Date().toLocaleDateString('zh-CN');
+  var dcHtml = hasDc ? `
+    <section>
+      <h2>一、数据中心方案校核</h2>
+      ${buildInfoTable([
+        ['IT负载功率', getFieldValue('dc-it-load') + ' kW'],
+        ['未来扩容余量', getFieldValue('dc-growth') + '%'],
+        ['目标运行负载率', getFieldValue('dc-target-load') + '%'],
+        ['冗余架构', getFieldValue('dc-architecture')],
+        ['后备时间', getFieldValue('dc-backup-min') + ' 分钟'],
+        ['柴油发电机', document.getElementById('dc-generator')?.selectedOptions?.[0]?.text || ''],
+        ['UPS型号', getFieldValue('dc-ups-model')],
+        ['单台UPS容量', getFieldValue('dc-ups-kva') + ' kVA'],
+        ['UPS功率因数', getFieldValue('dc-ups-pf')],
+        ['UPS总台数', getFieldValue('dc-ups-total') + ' 台']
+      ])}
+      <div class="kpi-grid">
+        <div><span>规划IT负载</span><b>${escapeHtml(getPlainText('dc-result-design-load'))} kW</b></div>
+        <div><span>装机容量</span><b>${escapeHtml(getPlainText('dc-result-installed'))} kW</b></div>
+        <div><span>${escapeHtml(getPlainText('dc-result-usable-label') || '可用容量')}</span><b>${escapeHtml(getPlainText('dc-result-usable'))} kW</b></div>
+        <div><span>运行负载率</span><b>${escapeHtml(getPlainText('dc-result-load-rate'))}%</b></div>
+      </div>
+      <h3>容量与冗余校核</h3><div class="note">${document.getElementById('dc-capacity-check')?.innerHTML || ''}</div>
+      <h3>风险提示</h3><div class="note warn">${document.getElementById('dc-risk-check')?.innerHTML || '<div>暂无明显风险</div>'}</div>
+    </section>` : '';
+
+  var runtimeHtml = hasRuntime ? `
+    <section>
+      <h2>二、电池后备时间反算</h2>
+      ${buildInfoTable([
+        ['总负载功率', getFieldValue('runtime-load-kw') ? getFieldValue('runtime-load-kw') + ' kW' : '按UPS容量计算'],
+        ['单台UPS容量', getFieldValue('runtime-ups-kva') + ' kVA'],
+        ['功率因数', getFieldValue('runtime-pf')],
+        ['UPS台数', getFieldValue('runtime-ups-num') + ' 台'],
+        ['后备时间目标', getFieldValue('runtime-target-min') + ' 分钟'],
+        ['电池类型', document.getElementById('runtime-batt-type')?.selectedOptions?.[0]?.text || ''],
+        ['电池型号', getFieldValue('runtime-custom-model') || getFieldValue('runtime-batt-model')],
+        ['每组电池节数', getFieldValue('runtime-cells')],
+        ['每台UPS电池组数', getFieldValue('runtime-groups')],
+        ['截止电压', getFieldValue('runtime-end-v') + ' V']
+      ])}
+      <div class="kpi-grid">
+        <div><span>单体所需功率</span><b>${escapeHtml(getPlainText('runtime-result-cell-power'))} W</b></div>
+        <div><span>预计后备时间</span><b>${escapeHtml(getPlainText('runtime-result-min'))} 分钟</b></div>
+        <div><span>目标满足情况</span><b>${escapeHtml(getPlainText('runtime-result-status'))}</b></div>
+        <div><span>电池总数量</span><b>${escapeHtml(getPlainText('runtime-result-cells'))} 只</b></div>
+      </div>
+      <h3>反算过程</h3><div class="note">${document.getElementById('runtime-calc-detail')?.innerHTML || ''}</div>
+      <h3>风险提示</h3><div class="note warn">${document.getElementById('runtime-risk-detail')?.innerHTML || ''}</div>
+    </section>` : '';
+
+  var batteryHtml = hasUnified ? `
+    <section>
+      <h2>三、UPS与电池配置计算</h2>
+      ${buildInfoTable([
+        ['UPS容量', getFieldValue('unified-ups-cap') + ' kVA'],
+        ['UPS台数', getFieldValue('unified-ups-num') + ' 台'],
+        ['功率因数', getFieldValue('unified-pf')],
+        ['后备时间', getFieldValue('unified-discharge-time') + ' 分钟'],
+        ['电池节数/组', getFieldValue('unified-cells')],
+        ['电池组数/台', getFieldValue('unified-groups')],
+        ['截止电压', getFieldValue('unified-end-v') + ' V'],
+        ['电池类型', document.getElementById('unified-batt-type')?.selectedOptions?.[0]?.text || '']
+      ])}
+      <div class="three-col">
+        <div><h3>电池推荐</h3><div class="note">${document.getElementById('unified-battery-result')?.innerHTML || ''}</div></div>
+        <div><h3>电池开关箱/柜</h3><div class="note">${document.getElementById('unified-switch-result')?.innerHTML || ''}</div></div>
+        <div><h3>电池监控</h3><div class="note">${document.getElementById('unified-monitor-result')?.innerHTML || ''}</div></div>
+      </div>
+    </section>` : '';
+
+  var summaryHtml = hasSummary ? `
+    <section>
+      <h2>四、项目配置汇总清单</h2>
+      ${buildSummaryRowsHtml()}
+    </section>` : '';
+
+  var aiHtml = lastResult ? `
+    <section>
+      <h2>五、AI选型需求与推荐</h2>
+      <h3>客户需求</h3><div class="note pre">${escapeHtml(lastRequirement || '')}</div>
+      <h3>需求分析</h3><div class="note pre">${escapeHtml(lastResult.analysis || '')}</div>
+    </section>` : '';
+
+  var doc = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>UPS项目技术说明</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1080px;margin:32px auto;padding:0 24px;color:#1f2933;line-height:1.65}
+h1{color:#1a3a5c;margin-bottom:4px}h2{color:#2d6a9f;border-bottom:2px solid #e5eef7;padding-bottom:8px;margin-top:30px}h3{color:#1a3a5c;margin:16px 0 8px}
+.meta{color:#7b8794;font-size:13px;margin-bottom:24px}.muted{color:#888}
+.info-table,.summary-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}.info-table th{width:180px;text-align:left;background:#f5f7fa;color:#52606d}
+th,td{border:1px solid #d9e2ec;padding:8px 10px;vertical-align:top}.summary-table th{background:#2d6a9f;color:white}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}.kpi-grid div{background:#f8fbff;border-left:4px solid #2d6a9f;border-radius:6px;padding:12px}.kpi-grid span{display:block;color:#66788a;font-size:12px}.kpi-grid b{font-size:20px;color:#1a3a5c}
+.note{background:#fbfdff;border:1px solid #d9e2ec;border-radius:8px;padding:12px;font-size:13px}.warn{background:#fffaf0;border-color:#ffd08a}.pre{white-space:pre-wrap}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.three-col .note{min-height:120px}
+@media print{body{margin:16px;max-width:none}.kpi-grid,.three-col{break-inside:avoid}}
+</style></head><body>
+<h1>UPS项目技术说明</h1>
+<div class="meta">生成日期：${escapeHtml(date)} | 工具版本：${escapeHtml(APP_VERSION)} | 数据来源：常用UPS速查表V7.5</div>
+${dcHtml}${runtimeHtml}${batteryHtml}${summaryHtml}${aiHtml}
+<div class="meta" style="margin-top:32px;border-top:1px solid #e5eef7;padding-top:12px">本说明由UPS智能选型助手自动生成，正式投标或设计交付前请结合现场条件、厂家曲线和项目规范复核。</div>
+</body></html>`;
+
+  var fileDate = new Date().toISOString().slice(0, 10);
+  var a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([doc], { type: 'text/html;charset=utf-8' })),
+    download: 'UPS项目技术说明_' + fileDate + '.html'
   });
   a.click();
 }
