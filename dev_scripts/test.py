@@ -92,7 +92,6 @@ def check_environment():
     dirs = [
         ("src/", "源代码目录"),
         ("dev_scripts/", "开发脚本目录"),
-        ("test_data/", "测试数据目录"),
     ]
 
     for dirname, desc in dirs:
