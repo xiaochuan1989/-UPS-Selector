@@ -12,10 +12,16 @@
 
 ## 开发流程
 1. 直接编辑 `index.html`
-2. `git add index.html`
-3. `git commit -m "描述"`
-4. `git push origin master`
+2. 核心公式优先提炼为纯函数并补 `test_business_rules.js`
+3. 运行 `python dev_scripts/test.py --all`
+4. 运行 `python dev_scripts/build.py --verify`
+5. 使用真实浏览器回归主要面板
+6. 检查文档和Serena记忆
+7. 提交并推送
 
 ## 重要教训
 - 本地能用但GitHub不能用 → 首先 `diff` 比较文件是否同步
 - 不要创建多个功能相同的HTML文件
+- JavaScript语法通过不代表HTML层级正确，必须运行 `audit_html.py`
+- UI问题必须浏览器实测
+- 不保留失去UI入口的旧函数

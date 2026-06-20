@@ -1,36 +1,48 @@
-import sys, re
+#!/usr/bin/env python3
+"""Validate every inline JavaScript block with Node.js."""
+
+import shutil
+import subprocess
+import sys
 from pathlib import Path
-sys.stdout.reconfigure(encoding='utf-8')
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+HTML_PATH = PROJECT_ROOT / "index.html"
 
-with open(PROJECT_ROOT / 'index.html', encoding='utf-8') as f:
-    html = f.read()
 
-# 提取所有内联 script 内容
-scripts = re.findall(r'<script(?![^>]*src)[^>]*>([\s\S]*?)</script>', html)
-js = '\n'.join(scripts)
+def main() -> int:
+    node = shutil.which("node")
+    if not node:
+        print("❌ 未找到 Node.js")
+        return 1
 
-# 跳过产品数据，取后半段JS
-after = js[js.find('const PROVIDER_MODELS'):]
-lines = after.split('\n')
-print(f'共 {len(lines)} 行')
-
-suspicious_lines = []
-for i, line in enumerate(lines, 1):
-    # 标记含有 ") 或 "( 的行（可能是引号问题）
-    stripped = line.strip()
-    suspicious = (
-        '")' in line or
-        '"(' in line or
-        "missing" in line.lower() or
-        ('"' in line and line.count('"') % 2 != 0)
+    checker = r"""
+const fs = require("fs");
+const html = fs.readFileSync(process.argv[1], "utf8");
+const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+for (const [index, match] of scripts.entries()) {
+  try {
+    new Function(match[1]);
+    console.log(`✅ script ${index + 1}`);
+  } catch (error) {
+    console.error(`❌ script ${index + 1}: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+console.log(`共检查 ${scripts.length} 个内联 script`);
+"""
+    result = subprocess.run(
+        [node, "-e", checker, str(HTML_PATH)],
+        cwd=PROJECT_ROOT,
+        text=True,
+        encoding="utf-8",
     )
-    if suspicious:
-        suspicious_lines.append((i, line[:120]))
+    return result.returncode
 
-print(f'可疑行数量: {len(suspicious_lines)}')
-for i, line in suspicious_lines[:50]:
-    print(f'{i:5d}: {line} <<< SUSPICIOUS')
-if len(suspicious_lines) > 50:
-    print(f'... 其余 {len(suspicious_lines) - 50} 行已省略')
+
+if __name__ == "__main__":
+    raise SystemExit(main())

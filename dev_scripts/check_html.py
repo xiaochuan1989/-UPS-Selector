@@ -1,6 +1,7 @@
 import sys, re, json
 from pathlib import Path
 sys.stdout.reconfigure(encoding='utf-8')
+all_ok = True
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -11,11 +12,14 @@ with open(PROJECT_ROOT / 'index.html', encoding='utf-8') as f:
 prod_start = html.find('const PRODUCTS')
 prod_end = html.find('const PROVIDER_MODELS')
 prod_section = html[prod_start:prod_end]
-print('检查1 - 产品数据含</script>:', 'BAD!' if '</script>' in prod_section else 'OK')
+bad_script_end = '</script>' in prod_section
+print('检查1 - 产品数据含</script>:', 'BAD!' if bad_script_end else 'OK')
+all_ok = all_ok and not bad_script_end
 
 # 检查2: 产品数据里有没有反引号
 has_backtick = '`' in prod_section
 print('检查2 - 产品数据含反引号:', 'BAD! 会破坏模板字符串' if has_backtick else 'OK')
+all_ok = all_ok and not has_backtick
 if has_backtick:
     idx = prod_section.index('`')
     print('  位置附近:', repr(prod_section[max(0,idx-50):idx+50]))
@@ -26,10 +30,13 @@ script_end = html.rfind('</script>')
 js = html[script_start:script_end]
 bt = js.count('`')
 print(f'检查3 - 反引号数量: {bt} ({"OK" if bt%2==0 else "ERROR-奇数"})')
+all_ok = all_ok and bt % 2 == 0
 
 # 检查4: 关键函数存在
 for fn in ['function saveConfig', 'function testApi', 'async function analyze', 'function onProviderChange', 'function renderResult', 'function exportDoc']:
-    print(f'检查 {fn}:', 'OK' if fn in html else 'MISSING')
+    found = fn in html
+    print(f'检查 {fn}:', 'OK' if found else 'MISSING')
+    all_ok = all_ok and found
 
 # 检查5: 产品JSON有效性（用分号定位结尾）
 # 找产品数组的起止位置
@@ -50,6 +57,7 @@ try:
     products = json.loads(prod_json)
     print(f'检查5 - 产品JSON解析: OK ({len(products)}条)')
 except Exception as e:
+    all_ok = False
     print(f'检查5 - 产品JSON解析ERROR: {e}')
     # 找出错误附近的内容
     err_str = str(e)
@@ -59,3 +67,4 @@ except Exception as e:
         print(f'  错误位置附近: {repr(prod_json[max(0,pos-100):pos+100])}')
 
 print('\n完成')
+raise SystemExit(0 if all_ok else 1)

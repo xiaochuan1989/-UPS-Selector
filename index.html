@@ -6,7 +6,13 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.7.2";
+const APP_VERSION = "v1.7.3";
+const DEBUG_MODE = false;
+const CLIENT_SIDE_ACCESS_CODE = '173205';
+const PRICE_VIEW_CODE = '314159';
+function debugLog(...args) {
+  if (DEBUG_MODE) console.debug(...args);
+}
 document.title = "UPS 智能选型助手 " + APP_VERSION;
 document.addEventListener("DOMContentLoaded", function() {
   const versionEl = document.getElementById("app-version");
@@ -17,7 +23,9 @@ document.addEventListener("DOMContentLoaded", function() {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; }
 
-  .header { background: linear-gradient(135deg, #1a3a5c, #2d6a9f); color: white; padding: 20px 32px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .header { background: linear-gradient(135deg, #1a3a5c, #2d6a9f); color: white; padding: 20px 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .header-title { flex: 1 1 250px; min-width: 230px; }
+  .header-actions { flex: 1 1 760px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
   .header h1 { font-size: 22px; font-weight: 600; }
   .header .version { font-size: 12px; opacity: 0.7; margin-top: 2px; }
   .header .logo { font-size: 32px; }
@@ -173,6 +181,15 @@ document.addEventListener("DOMContentLoaded", function() {
 .battery-item .power { margin-top:6px;font-size:12px; }
 .battery-item .power.suitable { color:#27ae60; }
 .battery-item .power.insufficient { color:#e74c3c; }
+@media (max-width: 900px) {
+  .header { padding:16px; align-items:flex-start; }
+  .header-title { min-width:0; }
+  .header-actions { flex-basis:100%; justify-content:flex-start; }
+  .container { padding:16px 10px; }
+  .api-grid, .api-grid2 { grid-template-columns:1fr; }
+  .req-bottom { align-items:stretch; flex-direction:column; }
+  .analyze-btn { justify-content:center; }
+}
 </style>
 <script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
@@ -183,18 +200,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
 <!-- 密码保护遮罩 -->
 <div id="auth-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a3a5c,#2d6a9f);display:flex;align-items:center;justify-content:center;z-index:99999;">
-  <div style="background:white;border-radius:16px;padding:48px 40px;width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+  <form onsubmit="checkAuth();return false" style="background:white;border-radius:16px;padding:48px 40px;width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
     <div style="font-size:48px;margin-bottom:16px;">⚡</div>
     <h2 style="font-size:20px;font-weight:700;color:#1a3a5c;margin-bottom:6px;">UPS 智能选型助手</h2>
     <p style="font-size:13px;color:#888;margin-bottom:28px;">请输入访问密码</p>
-    <input id="auth-input" type="password" placeholder="请输入密码" onkeydown="if(event.key==='Enter')checkAuth()"
+    <input id="auth-input" type="password" placeholder="请输入密码"
       style="width:100%;border:2px solid #e0e0e0;border-radius:10px;padding:12px 16px;font-size:16px;text-align:center;letter-spacing:4px;outline:none;transition:border-color 0.2s;"
       onfocus="this.style.borderColor='#2d6a9f'" onblur="this.style.borderColor='#e0e0e0'">
     <div id="auth-error" style="color:#e74c3c;font-size:13px;margin-top:10px;min-height:18px;"></div>
-    <button onclick="checkAuth()"
+    <button type="submit"
       style="width:100%;background:linear-gradient(135deg,#1a3a5c,#2d6a9f);color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity 0.2s;"
       onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">进 入</button>
-  </div>
+  </form>
 </div>
 <script>
 (function(){
@@ -204,7 +221,7 @@ document.addEventListener("DOMContentLoaded", function() {
 })();
 function checkAuth(){
   var v=document.getElementById('auth-input').value;
-  if(v==='173205'){
+  if(v === CLIENT_SIDE_ACCESS_CODE){
     sessionStorage.setItem('ups_auth','ok');
     document.getElementById('auth-overlay').style.display='none';
   } else {
@@ -220,11 +237,11 @@ function checkAuth(){
 
 <div class="header">
   <span class="logo">⚡</span>
-  <div style="flex:1">
+  <div class="header-title">
     <h1>UPS 智能选型助手</h1>
     <div class="version" id="data-source-label">内置数据 V7.5 | 太行UR / 昆仑UE / 祁连UM / 泰山UT | 共179款产品</div>
   </div>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+  <div class="header-actions">
     <label style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap" title="导入Excel后将替换内置数据">
       📂 导入Excel
       <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
@@ -931,6 +948,7 @@ function checkAuth(){
       </div>
     </div>
   </div>
+  </div>
 
 
   <div class="card">
@@ -1184,11 +1202,11 @@ document.addEventListener('DOMContentLoaded', function() {
   if (document.getElementById("provider")) onProviderChange();
 
   // 从 IndexedDB 加载持久化的产品数据
-  console.log('开始加载持久化数据...');
+  debugLog('开始加载持久化数据...');
   loadProductsFromDB().then(data => {
-    console.log('加载数据结果:', data);
+    debugLog('加载数据结果:', data);
     if (data && data.products && data.products.length > 0) {
-      console.log('找到持久化数据:', data.products.length, '条');
+      debugLog('找到持久化数据:', data.products.length, '条');
       PRODUCTS.length = 0;
       data.products.forEach(p => PRODUCTS.push(p));
       const label = document.getElementById('data-source-label');
@@ -1201,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const panel = document.getElementById('data-table-panel');
       if (panel && panel.style.display !== 'none') buildDataTable();
     } else {
-      console.log('没有找到持久化数据，使用内置数据');
+      debugLog('没有找到持久化数据，使用内置数据');
     }
   }).catch(e => {
     console.error('加载持久化数据失败:', e);
@@ -2430,12 +2448,12 @@ async function importExcel(input) {
     showImportToast('已成功导入 ' + PRODUCTS.length + ' 款产品（' + summary + '）');
 
     // 保存到 IndexedDB（持久化）
-    console.log('开始保存数据到IndexedDB...');
+    debugLog('开始保存数据到IndexedDB...');
     saveProductsToDB(newProducts, file.name).then(() => {
-      console.log('数据已保存到本地存储');
+      debugLog('数据已保存到本地存储');
       // 验证保存
       loadProductsFromDB().then(data => {
-        console.log('验证保存结果:', data);
+        debugLog('验证保存结果:', data);
       }).catch(e => console.error('验证保存失败:', e));
     }).catch(e => console.error('保存数据失败:', e));
 
@@ -2512,17 +2530,17 @@ async function saveProductsToDB(products, source) {
 }
 
 async function loadProductsFromDB() {
-  console.log('loadProductsFromDB 被调用');
+  debugLog('loadProductsFromDB 被调用');
   try {
     const database = await openDatabase();
-    console.log('数据库打开成功', database);
+    debugLog('数据库打开成功', database);
     return new Promise((resolve, reject) => {
       const tx = database.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
       const request = store.get(1);
       request.onsuccess = () => {
         const data = request.result;
-        console.log('查询结果:', data);
+        debugLog('查询结果:', data);
         if (data && data.version === DATA_VERSION) {
           resolve(data);
         } else if (data) {
@@ -2931,33 +2949,6 @@ function switchBattV1Tab(tab) {
   document.getElementById('batt-lithium-panel').style.display = tab === 'lithium' ? 'block' : 'none';
 }
 
-// 切换电池计算Tab
-function switchBatteryTab(tab) {
-  // 更新按钮状态
-  ['lead', 'lithium', 'switch', 'monitor', 'summary'].forEach(t => {
-    const btn = document.getElementById('batt-tab-' + t);
-    if (t === tab) {
-      btn.classList.add('settings-tab-active');
-      btn.style.color = '#2d6a9f';
-      btn.style.borderBottomColor = '#2d6a9f';
-      btn.style.background = '#fff';
-    } else {
-      btn.classList.remove('settings-tab-active');
-      btn.style.color = '#888';
-      btn.style.borderBottomColor = 'transparent';
-      btn.style.background = 'transparent';
-    }
-  });
-
-  // 显示对应面板
-  document.getElementById('batt-lead-panel').style.display = tab === 'lead' ? 'block' : 'none';
-  document.getElementById('batt-lithium-panel').style.display = tab === 'lithium' ? 'block' : 'none';
-  document.getElementById('batt-switch-panel').style.display = tab === 'switch' ? 'block' : 'none';
-  document.getElementById('batt-monitor-panel').style.display = tab === 'monitor' ? 'block' : 'none';
-  document.getElementById('batt-summary-panel').style.display = tab === 'summary' ? 'block' : 'none';
-}
-
-// 电池监控配置产品数据（描述与Excel数据页保持一致）
 const MONITOR_PRODUCTS = [
   { code: '88091156', name: 'SBMS-PBMS6000', desc: '电池监控-蓄电池组监控主机-标准1U机蓄电池组监控装置.额定220VAC工作电源, 配置2个RS485串口 + 1个以太网端口, 支持Modbus-RTU,Modbus-TCP协议.最多支持接入6组电池组, 2路AI模拟量输入,3路DI开关量输入,4路DO继电器输出-不含显示屏-iTeaQ', unit: '套', unitPrice: 898.70, required: true },
   { code: '88091157', name: 'SBMS-HMI-6000', desc: '电池监控-本地数据显示屏-7寸触摸屏HMI, 嵌入式屏,配24V电源模块-iTeaQ', unit: '个', unitPrice: 710.60, required: true },
@@ -2975,416 +2966,6 @@ const MONITOR_PRODUCTS = [
   { code: '88091149', name: 'SBMS-PBAT-C1-0-M10-30', desc: '电池监控-监控模块测试线-O型端， 孔径:10mm，长度:30cm-iTeaQ', unit: '根', unitPrice: 8.36, required: false },
   { code: '88091150', name: 'SBMS-PBMS-VM', desc: '电池监控-蓄电池组电压监控模块（1组蓄电池可选配1个）-iTeaQ', unit: '个', unitPrice: 102.41, required: false }
 ];
-
-// 电池监控配置计算
-function calcMonitorConfig() {
-  const loadPower = parseFloat(document.getElementById('mon-load-kw').value) || 0;
-  const upsNum = parseInt(document.getElementById('mon-ups-num').value) || 1;
-  const upsCap = parseFloat(document.getElementById('mon-ups-cap').value) || 0;
-  const pf = parseFloat(document.getElementById('mon-pf').value) || 0.9;
-  const battGroups = parseInt(document.getElementById('mon-batt-groups').value) || 0;
-  const cellPerGroup = parseInt(document.getElementById('mon-cell-per-group').value) || 0;
-  const battType = document.getElementById('mon-batt-type').value;
-  const eff = parseFloat(document.getElementById('mon-eff').value) || 0.95;
-  const endV = parseFloat(document.getElementById('mon-end-v').value) || 1.75;
-  const terminalType = document.getElementById('mon-terminal-type').value;
-
-  if (!upsCap || !battGroups || !cellPerGroup) {
-    alert('请填写UPS容量、电池组数和单体数');
-    return;
-  }
-
-  // 计算负载功率：优先使用负载功率，否则用UPS容量×功率因数×台数
-  const totalUpsCap = upsCap * upsNum;
-  let powerKw = loadPower > 0 ? loadPower : totalUpsCap * pf;
-
-  // 计算电池总组数 = 电池组数 × UPS台数
-  const totalBattGroups = battGroups * upsNum;
-
-  // 计算最大电流(A)
-  // 12V电池：每节含6个2V单体，电压 = 节数 × 6 × 截止电压
-  // 2V电池：每节就是1个单体，电压 = 节数 × 1 × 截止电压
-  const cellMultiplier = battType === '2v' ? 1 : 6;
-  const maxCurrent = (powerKw * 1000) / (cellPerGroup * endV * cellMultiplier * eff);
-
-  // 计算分组放电电流(A)
-  // 分开关电流 = 总电流 / (组数-1)，即一组故障时剩余组承担的电流
-  // 当 battGroups=1 时，使用总电流；当 battGroups>=2 时，使用分开关电流
-  let groupCurrent = maxCurrent;
-  if (battGroups >= 2) {
-    groupCurrent = maxCurrent / (battGroups - 1);
-  }
-
-  // 显示输出参数
-  document.getElementById('mon-total-groups').textContent = totalBattGroups;
-  document.getElementById('mon-group-current').textContent = groupCurrent.toFixed(1);
-
-  // 获取选配项
-  const optHmi = document.getElementById('mon-opt-hmi').checked;
-  const optVm = document.getElementById('mon-opt-vm').checked;
-
-  // 总电池数量
-  const totalCells = totalBattGroups * cellPerGroup;
-
-  // 主机数量 = 电池总组数/6 向上取整
-  const hostQty = Math.ceil(totalBattGroups / 6);
-
-  // 构建配置清单
-  const config = [];
-
-  // 1. 主机（必选）
-  const host = MONITOR_PRODUCTS.find(p => p.code === '88091156');
-  config.push({
-    ...host,
-    qty: hostQty,
-    total: hostQty * host.unitPrice,
-    note: '必选'
-  });
-
-  // 2. HMI显示（选配，默认勾选）- 数量与主机相同
-  if (optHmi) {
-    const hmi = MONITOR_PRODUCTS.find(p => p.code === '88091157');
-    config.push({
-      ...hmi,
-      qty: hostQty,
-      total: hostQty * hmi.unitPrice,
-      note: '选配'
-    });
-  }
-
-  // 3. 组电压监控模块（选配）- 数量 = 电池总组数
-  if (optVm) {
-    const vm = MONITOR_PRODUCTS.find(p => p.code === '88091150');
-    config.push({
-      ...vm,
-      qty: totalBattGroups,
-      total: totalBattGroups * vm.unitPrice,
-      note: '选配'
-    });
-  }
-
-  // 4. 单体测量模块数量计算
-  let slaveQty = 0;
-  let cableQty = 0;
-  let slaveCode = '';
-  let cableCode = '';
-
-  // 端子类型对应的线缆型号
-  const terminalMap = {
-    'M6': '88091147',
-    'M8': '88091148',
-    'M10': '88091149'
-  };
-  cableCode = terminalMap[terminalType] || '88091148';
-
-  if (battType === 'normal' || battType === 'highpower') {
-    // 12V铅酸：单体测量模块数量 = 每组节数 × 电池总组数（每只电池1个）
-    slaveQty = totalCells;
-    slaveCode = battType === 'highpower' ? '88091145' : '88091145';
-    cableQty = totalCells; // 每只电池1根线
-  } else if (battType === '2v') {
-    // 2V铅酸：单体测量模块数量 = 每组节数 × 电池总组数
-    slaveQty = totalCells;
-    cableQty = totalCells;
-    slaveCode = '88091146';
-  }
-
-  // 添加单体测量模块
-  if (slaveQty > 0) {
-    const slave = MONITOR_PRODUCTS.find(p => p.code === slaveCode);
-    if (slave) {
-      config.push({
-        ...slave,
-        qty: slaveQty,
-        total: slaveQty * slave.unitPrice,
-        note: '每只电池配1个'
-      });
-    }
-  }
-
-  // 添加电流监控模块（88091138）- 每个电池组1个
-  const currentModule = MONITOR_PRODUCTS.find(p => p.code === '88091138');
-  if (currentModule) {
-    config.push({
-      ...currentModule,
-      qty: totalBattGroups,
-      total: totalBattGroups * currentModule.unitPrice,
-      note: '蓄电池组电流监控'
-    });
-  }
-
-  // 添加电流传感器（根据分开关电流选择，即一组故障时剩余组承担的电流）
-  let currentSensorCode = '88091140'; // 默认200A
-  let currentSensorRange = '0~200A';
-  const current = groupCurrent;  // 使用分开关电流
-  if (current <= 100) {
-    currentSensorCode = '88091139';
-    currentSensorRange = '0~100A';
-  } else if (current <= 200) {
-    currentSensorCode = '88091140';
-    currentSensorRange = '0~200A';
-  } else if (current <= 400) {
-    currentSensorCode = '88091141';
-    currentSensorRange = '0~400A';
-  } else if (current <= 600) {
-    currentSensorCode = '88091142';
-    currentSensorRange = '0~600A';
-  } else if (current <= 800) {
-    currentSensorCode = '88091143';
-    currentSensorRange = '0~800A';
-  } else {
-    currentSensorCode = '88091144';
-    currentSensorRange = '0~1000A';
-  }
-
-  const currentSensor = MONITOR_PRODUCTS.find(p => p.code === currentSensorCode);
-  if (currentSensor) {
-    // 更新描述中的量程信息（原始描述是固定的"0~±200A"，需要替换为实际量程）
-    const sensorDesc = currentSensor.desc.replace(/测量范围：0~±\d+A/, `测量范围：0~±${currentSensorRange.replace('0~', '')}`);
-    config.push({
-      ...currentSensor,
-      desc: sensorDesc,
-      qty: totalBattGroups,
-      total: totalBattGroups * currentSensor.unitPrice,
-      note: `量程${currentSensorRange}`
-    });
-  }
-
-  // 添加采集线缆
-  if (cableQty > 0) {
-    const cable = MONITOR_PRODUCTS.find(p => p.code === cableCode);
-    if (cable) {
-      config.push({
-        ...cable,
-        qty: cableQty,
-        total: cableQty * cable.unitPrice,
-        note: '每只电池1根'
-      });
-    }
-  }
-
-  // 渲染配置表格
-  renderMonitorConfigTable(config);
-
-  // 保存当前配置供导出使用
-  window.currentMonitorConfig = {
-    loadPower,
-    upsNum,
-    upsCap,
-    pf,
-    battGroups,
-    cellPerGroup,
-    battType,
-    eff,
-    endV,
-    terminalType,
-    totalBattGroups,
-    maxCurrent,
-    groupCurrent,
-    optHmi,
-    optVm,
-    config
-  };
-}
-
-// 切换价格显示（密码验证）
-function toggleMonitorPrice() {
-  const checkbox = document.getElementById('mon-show-price');
-  if (checkbox.checked) {
-    const password = prompt('请输入密码查看价格:');
-    if (password !== '314159') {
-      checkbox.checked = false;
-      alert('密码错误！');
-      return;
-    }
-    // 显示价格列
-    document.querySelectorAll('.mon-price-col').forEach(el => el.style.display = '');
-    document.querySelectorAll('.mon-price-row').forEach(el => el.style.display = '');
-  } else {
-    // 隐藏价格列
-    document.querySelectorAll('.mon-price-col').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.mon-price-row').forEach(el => el.style.display = 'none');
-  }
-}
-
-// 渲染监控配置表格
-function renderMonitorConfigTable(config) {
-  const tbody = document.getElementById('monitor-tbody');
-  let html = '';
-  let total = 0;
-
-  config.forEach((item, index) => {
-    total += item.total;
-    html += `
-      <tr style="${item.required ? 'background:#fffde7' : ''}">
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">${index + 1}</td>
-        <td style="padding:8px;border:1px solid #ddd">${item.code}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-weight:500">${item.name}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666;white-space:normal;word-break:break-word">${item.desc || '-'}</td>
-        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#888">${item.note || '-'}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">${item.unit}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:500">${item.qty}</td>
-        <td class="mon-price-col" style="padding:8px;border:1px solid #ddd;text-align:right;display:none">${item.unitPrice.toFixed(2)}</td>
-        <td class="mon-price-col" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:500;display:none">${item.total.toFixed(2)}</td>
-      </tr>
-    `;
-  });
-
-  tbody.innerHTML = html;
-  document.getElementById('monitor-total').textContent = '¥' + total.toFixed(2);
-  document.getElementById('monitor-result').style.display = 'block';
-
-  // 如果复选框已选中，保持价格显示
-  const checkbox = document.getElementById('mon-show-price');
-  if (checkbox.checked) {
-    document.querySelectorAll('.mon-price-col').forEach(el => el.style.display = '');
-    document.querySelectorAll('.mon-price-row').forEach(el => el.style.display = '');
-  }
-}
-
-// 导出监控配置表（Excel格式，含样式）
-function exportMonitorConfig() {
-  if (!window.currentMonitorConfig) {
-    alert('请先生成配置');
-    return;
-  }
-
-  const { battGroups, cellPerGroup, battType, terminalType, maxCurrent, config } = window.currentMonitorConfig;
-  const total = config.reduce((sum, item) => sum + item.total, 0);
-  const battTypeMap = { 'normal': 'SP12V电池', 'highpower': 'SPG12V高功率电池', '2v': 'GFMD-2V电池', 'dianneng': '电能GBT12-20小时率电池', 'dianneng10h': '电能GBT12-10小时率电池', 'custom': '客户指定电池' };
-  const showPrice = document.getElementById('mon-show-price').checked;
-
-  // 样式定义
-  const border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
-  const titleStyle = { font:{bold:true, sz:16, color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'2D6A9F'}}, alignment:{horizontal:'center', vertical:'center'}, border };
-  const headerStyle = { font:{bold:true, sz:11, color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1A3A5C'}}, alignment:{horizontal:'center', vertical:'center'}, border };
-  const paramLabelStyle = { font:{bold:true, sz:11}, fill:{fgColor:{rgb:'F5F7FA'}}, border };
-  const paramValueStyle = { font:{sz:11}, fill:{fgColor:{rgb:'F5F7FA'}}, border };
-  const cellStyle = { font:{sz:11}, border, alignment:{vertical:'center'} };
-  const cellCenter = { font:{sz:11}, border, alignment:{horizontal:'center', vertical:'center'} };
-  const cellRight = { font:{sz:11}, border, alignment:{horizontal:'right', vertical:'center'}, numFmt:'#,##0.00' };
-  const cellBold = { font:{bold:true, sz:11}, border, alignment:{horizontal:'center', vertical:'center'} };
-  const totalLabelStyle = { font:{bold:true, sz:12}, border, alignment:{horizontal:'right', vertical:'center'} };
-  const totalValueStyle = { font:{bold:true, sz:14, color:{rgb:'E74C3C'}}, border, alignment:{horizontal:'right', vertical:'center'}, numFmt:'¥#,##0.00' };
-  const footerStyle = { font:{sz:10, color:{rgb:'888888'}}, alignment:{horizontal:'left'} };
-
-  // 表头列（根据是否显示价格动态调整）
-  const headers = showPrice
-    ? ['序号', '产品型号', '产品名称', '产品描述', '备注', '单位', '数量', '单价(元)', '小计(元)']
-    : ['序号', '产品型号', '产品名称', '产品描述', '备注', '单位', '数量'];
-  const colCount = headers.length;
-  const lastCol = colCount - 1;
-
-  // 构建数据
-  const wsData = [
-    ['电池监控配置表'],
-    [],
-    ['配置参数'],
-    ['电池组数', battGroups + ' 组'],
-    ['每组单体数', cellPerGroup + ' 只'],
-    ['电池类型', battTypeMap[battType]],
-    ['端子类型', terminalType],
-    ['最大电流', maxCurrent + ' A'],
-    [],
-    headers
-  ];
-
-  config.forEach((item, i) => {
-    const row = [i + 1, item.code, item.name, item.desc || '-', item.note || '-', item.unit, item.qty];
-    if (showPrice) { row.push(item.unitPrice, item.total); }
-    wsData.push(row);
-  });
-
-  if (showPrice) {
-    const emptyRow = new Array(colCount).fill('');
-    emptyRow[lastCol - 1] = '合计金额：';
-    emptyRow[lastCol] = total;
-    wsData.push(emptyRow);
-  }
-
-  wsData.push([]);
-  wsData.push(['生成日期：' + new Date().toLocaleString('zh-CN')]);
-  wsData.push(['备注：以上配置仅供参考，实际采购请咨询供应商']);
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // 设置列宽
-  ws['!cols'] = showPrice
-    ? [{wch:6},{wch:16},{wch:22},{wch:40},{wch:16},{wch:6},{wch:8},{wch:12},{wch:12}]
-    : [{wch:6},{wch:16},{wch:22},{wch:40},{wch:16},{wch:6},{wch:8}];
-
-  // 合并单元格
-  ws['!merges'] = [
-    { s:{r:0,c:0}, e:{r:0,c:lastCol} },
-    { s:{r:2,c:0}, e:{r:2,c:lastCol} }
-  ];
-
-  // 应用样式 — 标题行
-  for (let c = 0; c <= lastCol; c++) {
-    const addr = XLSX.utils.encode_cell({r:0, c});
-    if (ws[addr]) ws[addr].s = titleStyle;
-  }
-
-  // 配置参数区标题
-  const paramTitleAddr = XLSX.utils.encode_cell({r:2, c:0});
-  if (ws[paramTitleAddr]) ws[paramTitleAddr].s = { font:{bold:true, sz:12, color:{rgb:'2D6A9F'}}, fill:{fgColor:{rgb:'E8F4FC'}}, alignment:{horizontal:'center'}, border };
-
-  // 配置参数行
-  for (let r = 3; r <= 7; r++) {
-    const a0 = XLSX.utils.encode_cell({r, c:0});
-    const a1 = XLSX.utils.encode_cell({r, c:1});
-    if (ws[a0]) ws[a0].s = paramLabelStyle;
-    if (ws[a1]) ws[a1].s = paramValueStyle;
-  }
-
-  // 表头行（第9行，index=9）
-  const headerRow = 9;
-  for (let c = 0; c <= lastCol; c++) {
-    const addr = XLSX.utils.encode_cell({r:headerRow, c});
-    if (ws[addr]) ws[addr].s = headerStyle;
-  }
-
-  // 数据行
-  const dataStart = 10;
-  const dataEnd = dataStart + config.length - 1;
-  for (let r = dataStart; r <= dataEnd; r++) {
-    for (let c = 0; c <= lastCol; c++) {
-      const addr = XLSX.utils.encode_cell({r, c});
-      if (!ws[addr]) continue;
-      if (c === 0) ws[addr].s = cellCenter;           // 序号
-      else if (c === 5) ws[addr].s = cellCenter;       // 单位
-      else if (c === 6) ws[addr].s = cellBold;         // 数量
-      else if (showPrice && c >= 7) ws[addr].s = cellRight; // 单价/小计
-      else ws[addr].s = cellStyle;
-    }
-  }
-
-  // 合计行
-  if (showPrice) {
-    const totalRow = dataEnd + 1;
-    for (let c = 0; c <= lastCol; c++) {
-      const addr = XLSX.utils.encode_cell({r:totalRow, c});
-      if (!ws[addr]) { ws[addr] = {v:'', t:'s'}; }
-      if (c === lastCol - 1) ws[addr].s = totalLabelStyle;
-      else if (c === lastCol) ws[addr].s = totalValueStyle;
-      else ws[addr].s = { border };
-    }
-  }
-
-  // 页脚
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let r = range.e.r - 1; r <= range.e.r; r++) {
-    const addr = XLSX.utils.encode_cell({r, c:0});
-    if (ws[addr]) ws[addr].s = footerStyle;
-  }
-
-  // 行高
-  ws['!rows'] = [{hpt:30}];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '电池监控配置');
-  XLSX.writeFile(wb, `电池监控配置表_${new Date().toISOString().slice(0,10)}.xlsx`);
-}
 
 // ==================== 项目配置汇总功能 ====================
 
@@ -3405,7 +2986,7 @@ function toggleSummaryPrice() {
   const checkbox = document.getElementById('summary-show-price');
   if (checkbox.checked) {
     const password = prompt('请输入密码查看价格:');
-    if (password !== '314159') {
+    if (password !== PRICE_VIEW_CODE) {
       checkbox.checked = false;
       alert('密码错误！');
       return;
@@ -3413,104 +2994,6 @@ function toggleSummaryPrice() {
     window.summaryShowPrice = true;
   } else {
     window.summaryShowPrice = false;
-  }
-  renderProjectSummary();
-}
-
-// 从UPS选型结果导入
-function importUpsFromResult() {
-  if (!lastResult) {
-    alert('没有可用的UPS选型结果，请先进行AI选型');
-    return;
-  }
-  // 优先取首选推荐，其次取备选方案
-  const recs = lastResult.recommended?.length ? lastResult.recommended : (lastResult.also_consider || []);
-  if (recs.length > 0) {
-    const rec = recs[0];
-    window.projectSummary.ups.model = rec.model || '';
-    window.projectSummary.ups.capacity = rec.capacity || '';
-    alert('已从UPS选型结果导入: ' + (rec.model || '未知型号'));
-  } else {
-    alert('没有可用的UPS选型结果，请手动填写');
-  }
-  renderProjectSummary();
-}
-
-// 从电池计算结果导入（方法二，取第一个满足要求的推荐）
-function importBatteryFromCalc() {
-  // 从统一结果区获取
-  const batteryResultDiv = document.getElementById('unified-battery-result');
-  if (!batteryResultDiv || !batteryResultDiv.innerHTML) return;
-
-  const text = batteryResultDiv.innerText;
-  const lines = text.split('\n');
-  let batteryModel = '';
-  for (const line of lines) {
-    const match = line.match(/^(\d+V\s*\d+AH|12V\s*\d+AH)/i);
-    if (match) {
-      batteryModel = match[1].trim();
-      break;
-    }
-  }
-
-  if (batteryModel) {
-    const cellsPerGroup = parseInt(document.getElementById('unified-cells').value) || 0;
-    const groups = parseInt(document.getElementById('unified-groups').value) || 0;
-    const battType = document.getElementById('unified-batt-type').value;
-
-    window.projectSummary.battery.model = batteryModel;
-    window.projectSummary.battery.cellsPerGroup = cellsPerGroup;
-    window.projectSummary.battery.groups = groups;
-    window.projectSummary.battery.totalCells = cellsPerGroup * groups;
-    const battTypeMap = { 'normal': 'SP12V电池', 'highpower': 'SPG12V高功率电池', '2v': 'GFMD-2V电池', 'dianneng': '电能GBT12-20小时率电池', 'dianneng10h': '电能GBT12-10小时率电池', 'custom': '客户指定电池' };
-    window.projectSummary.battery.note = battTypeMap[battType] || '电池';
-
-    // 同步更新电池架信息（保持现有配置）
-    window.projectSummary.batteryRack.batteryModel = batteryModel;
-    // 如果电池架数量为0，设置默认值
-    if (!window.projectSummary.batteryRack.qty) {
-      window.projectSummary.batteryRack.qty = groups;
-      window.projectSummary.batteryRack.cellsPerRack = cellsPerGroup;
-    }
-
-    alert('已从电池计算导入: ' + batteryModel + ' × ' + window.projectSummary.battery.totalCells + '只');
-  } else {
-    alert('没有可用的电池计算结果，请先进行电池计算');
-  }
-  renderProjectSummary();
-}
-
-// 从电池开关箱/柜计算结果导入
-function importSwitchBoxFromCalc() {
-  const voltLevel = document.getElementById('sw-volts-level')?.textContent || '';
-  const mainSwitch = document.getElementById('sw-main-switch')?.textContent || '';
-  const subSwitch = document.getElementById('sw-sub-switch')?.textContent || '';
-  const subSwitchQty = document.getElementById('sw-groups-result')?.textContent || '';
-  const upsNum = window.projectSummary.ups.qty || 1;  // 电池开关箱/柜数量=UPS台数
-
-  if (voltLevel || mainSwitch) {
-    window.projectSummary.switchBox.voltLevel = voltLevel;
-    window.projectSummary.switchBox.mainSwitch = mainSwitch;
-    window.projectSummary.switchBox.subSwitch = subSwitch;
-    window.projectSummary.switchBox.subSwitchQty = subSwitchQty;
-    window.projectSummary.switchBox.qty = upsNum;  // 1台UPS配1个电池开关箱/柜
-    window.projectSummary.switchBox.model = voltLevel + ' 电池开关箱/柜';
-    window.projectSummary.switchBox.note = '总开关:' + mainSwitch + ' 分开关:' + subSwitch + ' × ' + subSwitchQty + '路';
-
-    alert('已从电池开关箱/柜计算导入 ' + upsNum + ' 套');
-  } else {
-    alert('没有可用的电池开关箱/柜计算结果，请先进行电池开关箱/柜计算');
-  }
-  renderProjectSummary();
-}
-
-// 从监控配置结果导入
-function importMonitorFromCalc() {
-  if (window.currentMonitorConfig && window.currentMonitorConfig.config) {
-    window.projectSummary.monitor.config = [...window.currentMonitorConfig.config];
-    alert('已从监控配置导入 ' + window.projectSummary.monitor.config.length + ' 项产品');
-  } else {
-    alert('没有可用的监控配置结果，请先进行监控配置');
   }
   renderProjectSummary();
 }
@@ -3545,7 +3028,6 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.note || ''}</td>
         </tr>
       `;
-      rowNum++;
 
       // 第二行：功率模块
       const moduleTotal = (ups.moduleQty || 1) * (ups.qty || 1);
@@ -3573,7 +3055,6 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.qty || 1}台 × ${ups.moduleQty}个/台</td>
         </tr>
       `;
-      rowNum++;
     } else {
       // 非模块化UPS，单行显示
       const subtotal = (ups.qty || 1) * (ups.price || 0);
@@ -3606,7 +3087,6 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${noteCell}</td>
         </tr>
       `;
-      rowNum++;
     }
   }
 
@@ -3636,7 +3116,6 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${bat.note || ''}</td>
       </tr>
     `;
-    rowNum++;
   }
 
   // 电池开关箱/柜
@@ -3667,7 +3146,6 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${swNote}</td>
       </tr>
     `;
-    rowNum++;
   }
 
   // 电池架
@@ -3697,7 +3175,6 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${rack.note || ''}</td>
       </tr>
     `;
-    rowNum++;
   }
 
   // 电池监控
@@ -3720,11 +3197,10 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${item.note || ''}</td>
         </tr>
       `;
-      rowNum++;
     });
   }
 
-  if (rowNum === 0) {
+  if (!html) {
     tbody.innerHTML = '<tr><td colspan="9" style="padding:40px;text-align:center;color:#888">点击上方按钮导入配置数据</td></tr>';
     document.getElementById('summary-tfoot').style.display = 'none';
   } else {
@@ -3830,7 +3306,7 @@ function calcBatteryRuntime() {
   var endV = parseFloat(document.getElementById('runtime-end-v').value) || 1.75;
   var eff = parseFloat(document.getElementById('runtime-eff').value) || 0;
   var isCustom = battType === 'custom';
-  var cellMultiplier = battType === '2v' ? 1 : 6;
+  var cellMultiplier = getBatteryCellMultiplier(battType);
 
   if (upsNum < 1) { alert('UPS台数不能小于1'); return; }
   if (cellsPerGroup < 1) { alert('每组电池节数不能小于1'); return; }
@@ -3943,6 +3419,14 @@ function clearProjectSummary() {
 
 // 标准断路器规格数组（安培）- 按升序排列
 const STANDARD_BREAKER_SIZES = [63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 400, 500, 630, 800, 1000, 1250, 1600];
+const CURRENT_SENSOR_OPTIONS = Object.freeze([
+  { maxCurrent: 100, code: '88091139', range: '0~100A' },
+  { maxCurrent: 200, code: '88091140', range: '0~200A' },
+  { maxCurrent: 400, code: '88091141', range: '0~400A' },
+  { maxCurrent: 600, code: '88091142', range: '0~600A' },
+  { maxCurrent: 800, code: '88091143', range: '0~800A' },
+  { maxCurrent: Infinity, code: '88091144', range: '0~1000A' }
+]);
 
 /**
  * 获取大一号的断路器规格（向上取整到标准规格）
@@ -3954,6 +3438,9 @@ const STANDARD_BREAKER_SIZES = [63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 
  * @returns {number} 标准断路器规格（A）
  */
 function getNextBreakerSize(calcCurrent) {
+  if (!Number.isFinite(calcCurrent) || calcCurrent < 0) {
+    throw new RangeError('断路器计算电流必须是非负有限数值');
+  }
   for (let size of STANDARD_BREAKER_SIZES) {
     if (size > calcCurrent) {
       return size;
@@ -3961,6 +3448,37 @@ function getNextBreakerSize(calcCurrent) {
   }
   // 超出最大规格时返回最大值
   return STANDARD_BREAKER_SIZES[STANDARD_BREAKER_SIZES.length - 1];
+}
+
+function getBatteryCellMultiplier(battType) {
+  return battType === '2v' ? 1 : 6;
+}
+
+function calculateBatteryElectricals({ loadW, switchW, cellsPerGroup, groups, battType, endV, eff }) {
+  const positiveInputs = { loadW, cellsPerGroup, groups, endV, eff };
+  for (const [name, value] of Object.entries(positiveInputs)) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError(`${name} 必须是正数`);
+    }
+  }
+  if (!Number.isFinite(switchW) || switchW < 0) {
+    throw new RangeError('switchW 必须是非负数');
+  }
+
+  const cellMultiplier = getBatteryCellMultiplier(battType);
+  const reqPower = loadW / (cellsPerGroup * cellMultiplier * eff * groups);
+  const maxCurrent = switchW / (cellsPerGroup * endV * cellMultiplier * eff);
+  const groupCurrent = groups >= 2 ? maxCurrent / (groups - 1) : 0;
+  const sensorCurrent = groups >= 2 ? groupCurrent : maxCurrent;
+
+  return { cellMultiplier, reqPower, maxCurrent, groupCurrent, sensorCurrent };
+}
+
+function selectCurrentSensor(current) {
+  if (!Number.isFinite(current) || current < 0) {
+    throw new RangeError('传感器计算电流必须是非负有限数值');
+  }
+  return CURRENT_SENSOR_OPTIONS.find(option => current <= option.maxCurrent);
 }
 
 // ==================== 标准/非标UPS切换 ====================
@@ -4195,11 +3713,13 @@ function calcAllBatteryConfig() {
   const totalCells = cellsPerGroup * totalGroups;
   const loadW = loadKw > 0 ? loadKw * 1000 : upsCap * pf * 1000;
   const switchW = upsCap * pf * 1000;  // 开关箱始终用UPS额定功率
-  const cellMultiplier = battType === '2v' ? 1 : 6;
+  const electricals = calculateBatteryElectricals({
+    loadW, switchW, cellsPerGroup, groups, battType, endV, eff
+  });
+  const { reqPower, maxCurrent, groupCurrent, sensorCurrent } = electricals;
   const isCustomBatteryType = battType === 'custom';
 
   // ===== 1. 电池计算 =====
-  const reqPower = loadW / (cellsPerGroup * cellMultiplier * eff * groups);
   const recommendations = isCustomBatteryType ? null : getBatteryRecommendationsByPower(reqPower, endV, dischargeTime);
   let batteryHtml = '';
 
@@ -4250,26 +3770,11 @@ function calcAllBatteryConfig() {
   document.getElementById('unified-battery-result').innerHTML = batteryHtml;
 
   // ===== 2. 电池开关箱/柜计算（始终用UPS额定功率） =====
-  const maxCurrent = switchW / (cellsPerGroup * endV * cellMultiplier * eff);
-  // 分组开关电流 = 总电流 / (N-1)，N为电池组数（仅当N≥2时）
-  let groupCurrent = 0;
-  if (groups >= 2) {
-    groupCurrent = maxCurrent / (groups - 1);
-  }
   const voltResult = getVoltLevel(cellsPerGroup, battType);
   const voltLevel = voltResult.level;  // 电压等级字符串（如 '250VDC'）
 
-  // 获取开关规格（添加备用逻辑）
-  let mainSwitchSize = 100;
-  let subSwitchSize = 63;
-  try {
-    if (typeof getNextBreakerSize === 'function') {
-      mainSwitchSize = getNextBreakerSize(maxCurrent) || 100;
-      subSwitchSize = getNextBreakerSize(groupCurrent) || 63;
-    }
-  } catch(e) {
-    console.log('获取开关规格失败，使用默认值', e);
-  }
+  const mainSwitchSize = getNextBreakerSize(maxCurrent);
+  const subSwitchSize = getNextBreakerSize(groupCurrent);
 
   // 中性线描述
   const neutralDesc = hasNeutral === 'yes' ? 'UPS带中性线' : 'UPS无中性线';
@@ -4309,17 +3814,8 @@ function calcAllBatteryConfig() {
   monitorConfig.push({ ...cm, qty: totalGroups, total: totalGroups * cm.unitPrice, note: '蓄电池组电流监控' });
 
   // 电流传感器
-  // 传感器量程基于【分开关电流】= 总电流 / (组数-1)，即一组故障时剩余组承担的电流
-  // 当 groups=1 时，使用总电流；当 groups>=2 时，使用分开关电流
-  const sensorCurrent = groups >= 2 ? groupCurrent : maxCurrent;
-  let sensorCode = '88091140';
-  let sensorRange = '0~200A';
-  if (sensorCurrent <= 100) { sensorCode = '88091139'; sensorRange = '0~100A'; }
-  else if (sensorCurrent <= 200) { sensorCode = '88091140'; sensorRange = '0~200A'; }
-  else if (sensorCurrent <= 400) { sensorCode = '88091141'; sensorRange = '0~400A'; }
-  else if (sensorCurrent <= 600) { sensorCode = '88091142'; sensorRange = '0~600A'; }
-  else if (sensorCurrent <= 800) { sensorCode = '88091143'; sensorRange = '0~800A'; }
-  else { sensorCode = '88091144'; sensorRange = '0~1000A'; }
+  // 传感器量程基于一组故障时剩余组承担的电流；单组时使用总电流。
+  const { code: sensorCode, range: sensorRange } = selectCurrentSensor(sensorCurrent);
   const sensor = MONITOR_PRODUCTS.find(p => p.code === sensorCode);
   // 更新描述中的量程信息（原始描述是固定的"0~±200A"，需要替换为实际量程）
   const sensorDesc = sensor.desc.replace(/测量范围：0~±\d+A/, `测量范围：0~±${sensorRange.replace('0~', '')}`);
@@ -4440,7 +3936,7 @@ function calcAllBatteryConfig() {
 function getVoltLevel(cells, battType) {
   // 计算单格最大充电电压
   const cellChargeV = 2.35; // 单格充电电压
-  const cellMultiplier = battType === '2v' ? 1 : 6; // 2V电池=1格，12V电池=6格
+  const cellMultiplier = getBatteryCellMultiplier(battType);
 
   // 最大充电电压 = 单格充电电压 × 格数 × 电池节数
   const maxChargeVoltage = cellChargeV * cellMultiplier * cells;
@@ -25470,161 +24966,6 @@ function getLeadBatteryRecommendations(cellPower, groups, battNum) {
 
   return html;
 }
-
-// 电池开关箱/柜配置计算
-// 计算公式说明：
-// - 最大放电电流 I = 负载功率 / (电池节数 × 终止电压 × 6 × 逆变效率)
-// - 电池组数 N ≥ 2
-// - 总开关电流 = I（不考虑安全系数）
-// - 分开关电流 = I / (N-1)
-// - 断路器选择：计算值向上一档标准规格（大一号）
-// 标准断路器规格：63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 400, 500, 630, 800, 1000
-
-function calcSwitchBox() {
-  console.log('电池开关箱/柜计算函数被调用');
-  const loadPowerInput = parseFloat(document.getElementById('sw-load-power').value) || 0;
-  const upsCap = parseFloat(document.getElementById('sw-ups-cap').value) || 0;
-  const pf = parseFloat(document.getElementById('sw-pf').value) || 0.9;
-  const battNum = parseFloat(document.getElementById('sw-batt-num').value) || 30;
-  const battGroups = parseInt(document.getElementById('sw-batt-groups').value) || 2;
-  const endV = parseFloat(document.getElementById('sw-end-v').value) || 1.75;
-  const eff = parseFloat(document.getElementById('sw-eff').value) || 0.95;
-
-  if (!upsCap || !battNum) {
-    alert('请填写UPS容量和电池节数');
-    return;
-  }
-
-  if (battGroups < 1) {
-    alert('电池组数不能小于1');
-    return;
-  }
-
-  // 计算负载功率 (W)：优先使用负载功率输入，否则用UPS容量×功率因数
-  let loadPower = 0;
-  let powerSource = '';
-  if (loadPowerInput > 0) {
-    loadPower = loadPowerInput * 1000; // kW转W
-    powerSource = '负载功率 ' + loadPowerInput + 'kW';
-  } else {
-    loadPower = upsCap * pf * 1000; // kVA×PF×1000 = W
-    powerSource = 'UPS ' + upsCap + 'kVA × ' + pf + ' = ' + (upsCap * pf).toFixed(1) + 'kW';
-  }
-
-  // 计算最大放电电流: I = PL / (N × 1.75 × 6 × η)
-  const maxCurrent = loadPower / (battNum * endV * 6 * eff);
-
-  // 分组开关电流 = 总电流 / (N-1)，N为电池组数（仅当N≥2时）
-  let subSwitchCurrent = 0;
-  if (battGroups >= 2) {
-    subSwitchCurrent = maxCurrent / (battGroups - 1);
-  }
-
-  // 确定电压等级（使用新公式：基于最大充电电压）
-  // 默认使用12V电池计算（单格数=6）
-  // 最大充电电压 = 2.35V × 6 × 电池节数
-  // ≤250V→250VDC，251~500V→500VDC，>500V→750VDC
-  const voltResult = getVoltLevel(battNum, '12v');
-  const voltsLevel = voltResult.level;
-  const voltsLevelNum = voltResult.voltage;
-
-  // 获取大一号断路器规格
-  const mainSwitchRec = getNextBreakerSize(maxCurrent);
-  const subSwitchRec = getNextBreakerSize(subSwitchCurrent);
-
-  // 控制分开关显示/隐藏
-  const subContainer = document.getElementById('sw-sub-container');
-  const subCurrentRow = document.getElementById('sw-group-current').parentElement.parentElement;
-  if (battGroups >= 2) {
-    subContainer.style.display = 'block';
-    subCurrentRow.style.display = 'block';
-  } else {
-    subContainer.style.display = 'none';
-    subCurrentRow.style.display = 'none';
-  }
-
-  // 更新界面
-  document.getElementById('sw-current').textContent = maxCurrent.toFixed(2);
-  document.getElementById('sw-group-current').textContent = battGroups >= 2 ? subSwitchCurrent.toFixed(2) : '-';
-  document.getElementById('sw-volts-level').textContent = voltsLevel;
-  document.getElementById('sw-groups-result').textContent = battGroups;
-
-  // 总开关推荐（大一号）
-  document.getElementById('sw-main-switch').textContent = mainSwitchRec + 'A';
-  document.getElementById('sw-main-switch-note').textContent = voltsLevel;
-  document.getElementById('sw-main-calc').textContent = maxCurrent.toFixed(1) + 'A';
-
-  // 分开关推荐（大一号）
-  if (battGroups >= 2) {
-    document.getElementById('sw-sub-switch').textContent = subSwitchRec + 'A';
-    document.getElementById('sw-sub-switch-note').textContent = voltsLevel;
-    document.getElementById('sw-sub-calc').textContent = subSwitchCurrent.toFixed(1) + 'A × ' + battGroups + '组';
-  }
-
-  // 生成详细说明
-  let notes = `
-    <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-top:8px">
-      <div style="font-weight:600;margin-bottom:10px;color:#1a3a5c">📝 配置说明</div>
-      <table style="width:100%;font-size:13px;border-collapse:collapse">
-        <tr style="border-bottom:1px solid #f0f0f0">
-          <td style="padding:8px 0;color:#888">负载功率来源</td>
-          <td style="padding:8px 0;text-align:right;font-weight:600">${powerSource}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0f0f0">
-          <td style="padding:8px 0;color:#888">最大放电电流 I</td>
-          <td style="padding:8px 0;text-align:right;font-weight:600">${maxCurrent.toFixed(2)} A</td>
-        </tr>`;
-
-  if (battGroups >= 2) {
-    notes += `
-        <tr style="border-bottom:1px solid #f0f0f0">
-          <td style="padding:8px 0;color:#888">分组开关电流 (I/(N-1))</td>
-          <td style="padding:8px 0;text-align:right;font-weight:600">${subSwitchCurrent.toFixed(2)} A (N=${battGroups})</td>
-        </tr>`;
-  }
-
-  notes += `
-        <tr style="border-bottom:1px solid #f0f0f0">
-          <td style="padding:8px 0;color:#888">电池开关箱/柜电压等级</td>
-          <td style="padding:8px 0;text-align:right;font-weight:600">${voltsLevel}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#888">推荐总开关</td>
-          <td style="padding:8px 0;text-align:right;font-weight:600;color:#856404">${mainSwitchRec}A / ${voltsLevel}</td>
-        </tr>
-      </table>`;
-
-  if (battGroups >= 2) {
-    notes += `
-      <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e0e0e0;font-size:12px;color:#888">
-        <strong>⚠️ 选型提示：</strong>
-        <ul style="margin:6px 0 0 16px;padding:0;line-height:1.8">
-          <li>电池总开关：<strong>${mainSwitchRec}A</strong> 直流断路器，电压等级 ${voltsLevel}（计算值${maxCurrent.toFixed(1)}A，选大一号）</li>
-          <li>电池分开关：<strong>${subSwitchRec}A</strong> × ${battGroups} 个，电压等级 ${voltsLevel}（计算值${subSwitchCurrent.toFixed(1)}A，选大一号）</li>
-          <li>开关额定电压必须 ≥ ${voltsLevelNum}V DC</li>
-          <li>断路器应具备直流灭弧能力，推荐使用专用直流断路器</li>
-          <li>以上为估算推荐，实际选型请参考电池厂家放电曲线及开关厂家规格书</li>
-        </ul>
-      </div>
-    </div>`;
-  } else {
-    notes += `
-      <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e0e0e0;font-size:12px;color:#888">
-        <strong>⚠️ 选型提示：</strong>
-        <ul style="margin:6px 0 0 16px;padding:0;line-height:1.8">
-          <li>电池总开关：<strong>${mainSwitchRec}A</strong> 直流断路器，电压等级 ${voltsLevel}（计算值${maxCurrent.toFixed(1)}A，选大一号）</li>
-          <li>开关额定电压必须 ≥ ${voltsLevelNum}V DC</li>
-          <li>断路器应具备直流灭弧能力，推荐使用专用直流断路器</li>
-          <li>以上为估算推荐，实际选型请参考电池厂家放电曲线及开关厂家规格书</li>
-        </ul>
-      </div>
-    </div>`;
-  }
-
-  document.getElementById('switch-notes').innerHTML = notes;
-  document.getElementById('switch-result').style.display = 'block';
-}
-
 
 function toggleDataTable() {
   const panel = document.getElementById("data-table-panel");

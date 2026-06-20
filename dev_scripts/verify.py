@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 sys.stdout.reconfigure(encoding='utf-8')
+all_ok = True
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -23,3 +24,6 @@ for name, key in checks:
     found = key in html
     mark = 'OK' if found else 'XX'
     print(f'  [{mark}] {name}')
+    all_ok = all_ok and found
+
+raise SystemExit(0 if all_ok else 1)

@@ -1,2 +1,7 @@
 /cache
 /project.local.yml
+/runtime
+/venv
+/start-server.ps1
+/server.stdout.log
+/server.stderr.log

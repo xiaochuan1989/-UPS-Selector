@@ -1,6 +1,6 @@
 [build]
-  publish = "."
-  command = ""
+  publish = "public"
+  command = "python3 dev_scripts/test.py --quick && mkdir -p public && cp index.html public/index.html"
 
 [[redirects]]
   from = "/"

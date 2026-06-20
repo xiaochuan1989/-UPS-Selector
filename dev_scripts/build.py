@@ -134,6 +134,8 @@ def verify_scripts():
 
     scripts = [
         ("check_version.py", "版本一致性检查"),
+        ("audit_html.py", "HTML/JavaScript结构审计"),
+        ("test_business_rules.js", "核心业务规则测试"),
         ("check_prompt_feature.py", "提示词功能验证"),
         ("verify.py", "双表数据库视图"),
         ("check_html.py", "HTML 基础结构"),
@@ -299,11 +301,11 @@ def main():
     if args.verify:
         scripts_ok = verify_scripts()
         quality_ok = run_quality_check()
-        version_ok = subprocess.run(
-            [sys.executable, str(DEV_SCRIPTS_DIR / "check_version.py")],
+        tests_ok = subprocess.run(
+            [sys.executable, str(DEV_SCRIPTS_DIR / "test.py"), "--all"],
             cwd=PROJECT_ROOT
         ).returncode == 0
-        sys.exit(0 if scripts_ok and quality_ok and version_ok else 1)
+        sys.exit(0 if scripts_ok and quality_ok and tests_ok else 1)
 
     # 生成开发说明
     if args.readme:

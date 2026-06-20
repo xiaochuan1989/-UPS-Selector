@@ -12,12 +12,14 @@ UPS 智能选型助手 - 测试入口
   python dev_scripts/test.py --excel      # Excel 验证
   python dev_scripts/test.py --html       # HTML 验证
   python dev_scripts/test.py --js         # JS 代码扫描
+  python dev_scripts/test.py --audit      # HTML/JS 结构审计
 """
 
 import os
 import sys
 import subprocess
 import argparse
+import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -42,8 +44,17 @@ def run_script(script_path: Path, description: str) -> bool:
         return False
 
     try:
+        if script_path.suffix == ".js":
+            executable = shutil.which("node")
+            if not executable:
+                print("❌ 未找到 Node.js")
+                return False
+            command = [executable, str(script_path)]
+        else:
+            command = [sys.executable, str(script_path)]
+
         result = subprocess.run(
-            [sys.executable, str(script_path)],
+            command,
             capture_output=False,
             text=True,
             cwd=PROJECT_ROOT
@@ -136,6 +147,24 @@ def check_html_structure():
     return all_pass
 
 
+def check_server_entry():
+    """确保未安装可选watchdog时，开发服务器入口仍可加载。"""
+    result = subprocess.run(
+        [sys.executable, str(DEV_SCRIPTS_DIR / "serve.py"), "--help"],
+        cwd=PROJECT_ROOT,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+    )
+    if result.returncode == 0 and "--no-open" in result.stdout:
+        print("  ✅ 开发服务器入口")
+        return True
+    print("  ❌ 开发服务器入口")
+    if result.stderr:
+        print(result.stderr.strip())
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="UPS 测试入口")
     parser.add_argument("--all", action="store_true", help="运行所有测试")
@@ -145,6 +174,7 @@ def main():
     parser.add_argument("--excel", action="store_true", help="Excel 验证")
     parser.add_argument("--html", action="store_true", help="HTML 验证")
     parser.add_argument("--js", action="store_true", help="JS 代码扫描")
+    parser.add_argument("--audit", action="store_true", help="HTML/JS 结构审计")
     parser.add_argument("--version", action="store_true", help="版本一致性检查")
     parser.add_argument("--quick", action="store_true", help="快速检查（环境 + HTML）")
 
@@ -158,7 +188,7 @@ def main():
     print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # 默认运行快速检查
-    if not any([args.all, args.env, args.check, args.prompt, args.excel, args.html, args.js, args.version, args.quick]):
+    if not any([args.all, args.env, args.check, args.prompt, args.excel, args.html, args.js, args.audit, args.version, args.quick]):
         args.quick = True
 
     results = {}
@@ -166,6 +196,7 @@ def main():
     # 环境检查
     if args.env or args.check or args.quick or args.all:
         results['环境'] = check_environment()
+        results['开发服务器'] = check_server_entry()
 
     # HTML 检查
     if args.html or args.check or args.quick or args.all:
@@ -188,6 +219,28 @@ def main():
         results['JS'] = run_script(
             DEV_SCRIPTS_DIR / "scan_js.py",
             "JavaScript 代码扫描"
+        )
+
+    if args.audit or args.quick or args.all:
+        results['结构审计'] = run_script(
+            DEV_SCRIPTS_DIR / "audit_html.py",
+            "HTML/JavaScript 结构审计"
+        )
+
+    if args.quick or args.all:
+        results['业务规则'] = run_script(
+            DEV_SCRIPTS_DIR / "test_business_rules.js",
+            "核心业务规则测试"
+        )
+
+    if args.all:
+        results['HTML深度检查'] = run_script(
+            DEV_SCRIPTS_DIR / "check_html.py",
+            "HTML 数据与关键函数检查"
+        )
+        results['数据库视图'] = run_script(
+            DEV_SCRIPTS_DIR / "verify.py",
+            "双表数据库视图检查"
         )
 
     if args.version or args.quick or args.all:
@@ -218,10 +271,12 @@ def main():
         print("  python dev_scripts/test.py --excel     Excel 验证")
         print("  python dev_scripts/test.py --html      HTML 验证")
         print("  python dev_scripts/test.py --js        JS 代码扫描")
+        print("  python dev_scripts/test.py --audit     HTML/JS 结构审计")
         print("  python dev_scripts/test.py --version   版本一致性检查")
 
     print("="*50)
+    return 0 if results and all(results.values()) else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -36,6 +36,7 @@ try:
     WATCHDOG_AVAILABLE = True
 except ImportError:
     WATCHDOG_AVAILABLE = False
+    FileSystemEventHandler = object
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
