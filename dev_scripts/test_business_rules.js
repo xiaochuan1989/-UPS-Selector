@@ -92,7 +92,12 @@ const rules = context.rules;
 assert.equal(rules.getNextBreakerSize(62), 63);
 assert.equal(rules.getNextBreakerSize(63), 80);
 assert.equal(rules.getNextBreakerSize(100), 125);
-assert.equal(rules.getNextBreakerSize(2000), 1600);
+assert.equal(rules.getNextBreakerSize(1600), 2000);
+assert.equal(rules.getNextBreakerSize(1904.8), 2000);
+assert.equal(rules.getNextBreakerSize(2000), 2500);
+assert.equal(rules.getNextBreakerSize(2499.9), 2500);
+assert.equal(rules.getNextBreakerSize(3199.9), 3200);
+assert.equal(rules.getNextBreakerSize(3999.9), 4000);
 assert.throws(() => rules.getNextBreakerSize(-1), /非负/);
 
 assert.equal(rules.getBatteryCellMultiplier("2v"), 1);

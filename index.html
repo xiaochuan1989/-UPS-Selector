@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.7.3";
+const APP_VERSION = "v1.7.4";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -3418,7 +3418,7 @@ function clearProjectSummary() {
 }
 
 // 标准断路器规格数组（安培）- 按升序排列
-const STANDARD_BREAKER_SIZES = [63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 400, 500, 630, 800, 1000, 1250, 1600];
+const STANDARD_BREAKER_SIZES = [63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000];
 const CURRENT_SENSOR_OPTIONS = Object.freeze([
   { maxCurrent: 100, code: '88091139', range: '0~100A' },
   { maxCurrent: 200, code: '88091140', range: '0~200A' },
