@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.7.7";
+const APP_VERSION = "v1.7.8";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -922,7 +922,7 @@ function checkAuth(){
         </div>
       </div>
       <div style="overflow-x:auto">
-        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
+        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:960px">
           <thead>
             <tr style="background:#2d6a9f;color:white">
               <th style="padding:8px;border:1px solid #ddd;width:40px">序号</th>
@@ -935,14 +935,15 @@ function checkAuth(){
               <th style="padding:8px;border:1px solid #ddd;width:70px">单价</th>
               <th style="padding:8px;border:1px solid #ddd;width:70px">小计</th>
               <th style="padding:8px;border:1px solid #ddd;width:100px">备注</th>
+              <th style="padding:8px;border:1px solid #ddd;width:54px">操作</th>
             </tr>
           </thead>
           <tbody id="summary-tbody">
-            <tr><td colspan="10" style="padding:30px;text-align:center;color:#888">点击"一键计算全部"生成配置清单</td></tr>
+            <tr><td colspan="11" style="padding:30px;text-align:center;color:#888">点击"一键计算全部"生成配置清单</td></tr>
           </tbody>
           <tfoot id="summary-tfoot" style="display:none;background:#f5f7fa;font-weight:600">
             <tr>
-              <td colspan="7" style="padding:10px;border:1px solid #ddd;text-align:right">合计：</td>
+              <td colspan="8" style="padding:10px;border:1px solid #ddd;text-align:right">合计：</td>
               <td id="summary-total" colspan="3" style="padding:10px;border:1px solid #ddd;color:#e74c3c;font-size:14px"></td>
             </tr>
           </tfoot>
@@ -2946,7 +2947,8 @@ window.projectSummary = {
   batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
   monitor: { config: [] },
   customRows: [],
-  rowOrder: []
+  rowOrder: [],
+  hiddenRowKeys: []
 };
 
 // 汇总表价格显示控制
@@ -2973,6 +2975,16 @@ function getSummaryRowOrder() {
   if (!window.projectSummary) window.projectSummary = {};
   if (!Array.isArray(window.projectSummary.rowOrder)) window.projectSummary.rowOrder = [];
   return window.projectSummary.rowOrder;
+}
+
+function getHiddenSummaryRowKeys() {
+  if (!window.projectSummary) window.projectSummary = {};
+  if (!Array.isArray(window.projectSummary.hiddenRowKeys)) window.projectSummary.hiddenRowKeys = [];
+  return window.projectSummary.hiddenRowKeys;
+}
+
+function isSummaryRowHidden(key) {
+  return getHiddenSummaryRowKeys().includes(key);
 }
 
 function normalizeSummaryRow(row) {
@@ -3127,14 +3139,15 @@ function collectProjectSummaryRows() {
 }
 
 function getOrderedSummaryRows(rows) {
-  const activeKeys = rows.map(row => row.key);
+  const visibleRows = rows.filter(row => !isSummaryRowHidden(row.key));
+  const activeKeys = visibleRows.map(row => row.key);
   const activeKeySet = new Set(activeKeys);
   const order = getSummaryRowOrder().filter(key => activeKeySet.has(key));
   activeKeys.forEach(key => {
     if (!order.includes(key)) order.push(key);
   });
   window.projectSummary.rowOrder = order;
-  const rowMap = new Map(rows.map(row => [row.key, row]));
+  const rowMap = new Map(visibleRows.map(row => [row.key, row]));
   return order.map(key => rowMap.get(key)).filter(Boolean);
 }
 
@@ -3159,6 +3172,23 @@ function renderSummaryRowNumberCell(key, rowNum) {
       <button onclick="moveSummaryRow(decodeURIComponent('${encodedKey}'), 1)" title="下移" style="width:18px;height:16px;line-height:12px;padding:0;border:1px solid #b7c8d8;border-radius:3px;background:#f8fbff;color:#2d6a9f;font-size:10px;cursor:pointer">▼</button>
     </span>
   </div>`;
+}
+
+function removeSummaryRow(key) {
+  if (!key) return;
+  if (key.startsWith('custom-')) {
+    removeCustomSummaryRow(key.slice('custom-'.length));
+    return;
+  }
+  if (!confirm('确定从当前汇总清单中删除这行？重新计算后可恢复。')) return;
+  const hiddenKeys = getHiddenSummaryRowKeys();
+  if (!hiddenKeys.includes(key)) hiddenKeys.push(key);
+  renderProjectSummary();
+}
+
+function renderSummaryActionCell(key) {
+  const encodedKey = encodeURIComponent(key);
+  return `<button onclick="removeSummaryRow(decodeURIComponent('${encodedKey}'))" title="删除该行" style="background:#e74c3c;color:white;border:none;border-radius:4px;padding:4px 7px;font-size:12px;cursor:pointer">删</button>`;
 }
 
 function getSummaryRowStateTarget(key) {
@@ -3214,6 +3244,11 @@ function renderProjectSummary() {
   let total = 0;
   const rowNumberToken = '__SUMMARY_ROW_NUMBER__';
   const rowBlocks = [];
+  const addSummaryRowBlock = (key, subtotal, rowHtml) => {
+    if (isSummaryRowHidden(key)) return;
+    total += subtotal || 0;
+    rowBlocks.push({ key, html: rowHtml });
+  };
 
   // UPS主机
   const ups = window.projectSummary.ups;
@@ -3222,8 +3257,7 @@ function renderProjectSummary() {
     if (ups.isModular && ups.frame && ups.module) {
       // 第一行：机框
       const frameSubtotal = (ups.qty || 1) * (ups.framePrice || 0);
-      total += frameSubtotal;
-      rowBlocks.push({ key: 'ups-frame', html: `
+      addSummaryRowBlock('ups-frame', frameSubtotal, `
         <tr style="background:#e3f2fd">
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">UPS机框</td>
@@ -3235,19 +3269,19 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('ups-frame', ups.framePrice, showPrice)}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && frameSubtotal ? frameSubtotal.toFixed(2) : '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.note || ''}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('ups-frame')}</td>
         </tr>
-      ` });
+      `);
 
       // 第二行：功率模块
       const moduleTotal = (ups.moduleQty || 1) * (ups.qty || 1);
       const moduleSubtotal = moduleTotal * (ups.modulePrice || 0);
-      total += moduleSubtotal;
       // 生成模块数量下拉框
       let moduleQtyOptions = '';
       for (let i = 1; i <= (ups.maxModules || 10); i++) {
         moduleQtyOptions += `<option value="${i}"${i === ups.moduleQty ? ' selected' : ''}>${i}</option>`;
       }
-      rowBlocks.push({ key: 'ups-module', html: `
+      addSummaryRowBlock('ups-module', moduleSubtotal, `
         <tr style="background:#e3f2fd">
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">功率模块</td>
@@ -3262,12 +3296,12 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('ups-module', ups.modulePrice, showPrice)}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && moduleSubtotal ? moduleSubtotal.toFixed(2) : '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.qty || 1}台 × ${ups.moduleQty}个/台</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('ups-module')}</td>
         </tr>
-      ` });
+      `);
     } else {
       // 非模块化UPS，单行显示
       const subtotal = (ups.qty || 1) * (ups.price || 0);
-      total += subtotal;
       
       // 非标UPS：型号和描述可编辑
       const categoryLabel = ups.isCustom ? 'UPS（非标）' : 'UPS';
@@ -3282,7 +3316,7 @@ function renderProjectSummary() {
         ? '⚠️ 非标型号，请确认参数'
         : (ups.note || '');
       
-      rowBlocks.push({ key: 'ups', html: `
+      addSummaryRowBlock('ups', subtotal, `
         <tr style="background:#e3f2fd">
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center"><span style="${categoryStyle};padding:2px 6px;border-radius:4px;font-size:11px">${categoryLabel}</span></td>
@@ -3294,8 +3328,9 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('ups', ups.price, showPrice)}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${noteCell}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('ups')}</td>
         </tr>
-      ` });
+      `);
     }
   }
 
@@ -3303,7 +3338,6 @@ function renderProjectSummary() {
   const bat = window.projectSummary.battery;
   if (bat.model || bat.customModel || bat.totalCells > 0) {
     const subtotal = bat.totalCells * (bat.price || 0);
-    total += subtotal;
     // 电池型号：可编辑
     const batModel = bat.customModel || bat.model || '';
     const modelCell = `<input type="text" value="${batModel}" onchange="updateCustomBattery('customModel', this.value)" placeholder="输入电池型号" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`;
@@ -3311,7 +3345,7 @@ function renderProjectSummary() {
     const defaultDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
     const batDesc = bat.customDesc || defaultDesc;
     const descCell = `<input type="text" value="${batDesc}" onchange="updateCustomBattery('customDesc', this.value)" placeholder="输入描述" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`;
-    rowBlocks.push({ key: 'battery', html: `
+    addSummaryRowBlock('battery', subtotal, `
       <tr style="background:#e8f5e9">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">电池</td>
@@ -3323,15 +3357,15 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('battery', bat.price, showPrice)}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${bat.note || ''}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('battery')}</td>
       </tr>
-    ` });
+    `);
   }
 
   // 电池开关箱/柜
   const sw = window.projectSummary.switchBox;
   if (sw.model) {
     const subtotal = sw.qty * (sw.price || 0);
-    total += subtotal;
     // 开关类型文字
     const switchTypeText = sw.switchType === 'domestic' ? '国产开关' : '合资开关';
     // 根据分开关数量决定描述格式
@@ -3341,7 +3375,7 @@ function renderProjectSummary() {
       : `${switchTypeText} | 总开关:${sw.mainSwitch || '-'} (单组无分开关)${neutralText ? '; ' + neutralText : ''}`;
     // 备注中添加重要提示
     const swNote = (sw.note || '') + (sw.neutralLine ? ' ⚠️请确认UPS中性线' : '');
-    rowBlocks.push({ key: 'switchBox', html: `
+    addSummaryRowBlock('switchBox', subtotal, `
       <tr style="background:#fff3e0">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">电池开关箱/柜</td>
@@ -3353,15 +3387,15 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('switchBox', sw.price, showPrice)}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${swNote}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('switchBox')}</td>
       </tr>
-    ` });
+    `);
   }
 
   // 电池架
   const rack = window.projectSummary.batteryRack;
   if (rack && rack.qty > 0) {
     const subtotal = rack.qty * (rack.price || 0);
-    total += subtotal;
     const batModel = window.projectSummary.battery.customModel || window.projectSummary.battery.model || '';
     let rackDesc = '安装' + rack.cellsPerRack + '节/架';
     if (batModel) {
@@ -3370,7 +3404,7 @@ function renderProjectSummary() {
     if (rack.includeCable && rack.cableAmp) {
       rackDesc += '，含' + rack.cableAmp + '连接铜排或电缆';
     }
-    rowBlocks.push({ key: 'batteryRack', html: `
+    addSummaryRowBlock('batteryRack', subtotal, `
       <tr style="background:#fce4ec">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">电池架</td>
@@ -3382,8 +3416,9 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('batteryRack', rack.price, showPrice)}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${rack.note || ''}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('batteryRack')}</td>
       </tr>
-    ` });
+    `);
   }
 
   // 电池监控
@@ -3391,8 +3426,8 @@ function renderProjectSummary() {
   if (mon.config && mon.config.length > 0) {
     mon.config.forEach((item, index) => {
       const subtotal = item.qty * (item.unitPrice || 0);
-      total += subtotal;
-      rowBlocks.push({ key: `monitor-${item.code || item.name || index}`, html: `
+      const rowKey = `monitor-${item.code || item.name || index}`;
+      addSummaryRowBlock(rowKey, subtotal, `
         <tr style="background:#f3e5f5">
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">电池监控</td>
@@ -3404,8 +3439,9 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell(`monitor-${item.code || item.name || index}`, item.unitPrice, showPrice)}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? subtotal.toFixed(2) : ''}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${item.note || ''}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell(rowKey)}</td>
         </tr>
-      ` });
+      `);
     });
   }
 
@@ -3415,8 +3451,8 @@ function renderProjectSummary() {
     const qty = parseFloat(row.qty) || 0;
     const unitPrice = parseFloat(row.unitPrice) || 0;
     const subtotal = qty * unitPrice;
-    total += subtotal;
-    rowBlocks.push({ key: `custom-${row.id}`, html: `
+    const rowKey = `custom-${row.id}`;
+    addSummaryRowBlock(rowKey, subtotal, `
       <tr style="background:#fffde7">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.category || '')}" oninput="updateCustomSummaryRow('${row.id}', 'category', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'category', this.value)" placeholder="类别" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
@@ -3427,9 +3463,10 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd"><input type="number" value="${escapeHtml(row.qty || '')}" oninput="updateCustomSummaryRow('${row.id}', 'qty', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'qty', this.value)" min="0" step="0.01" style="width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? `<input type="number" value="${escapeHtml(row.unitPrice || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value)" min="0" step="0.01" style="width:78px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:right">` : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? subtotal.toFixed(2) : '-'}</td>
-        <td style="padding:8px;border:1px solid #ddd"><div style="display:flex;gap:6px;align-items:center"><input type="text" value="${escapeHtml(row.note || '')}" oninput="updateCustomSummaryRow('${row.id}', 'note', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'note', this.value)" placeholder="备注" style="flex:1;min-width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"><button onclick="removeCustomSummaryRow('${row.id}')" title="删除该行" style="background:#e74c3c;color:white;border:none;border-radius:4px;padding:4px 7px;font-size:12px;cursor:pointer">删</button></div></td>
+        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.note || '')}" oninput="updateCustomSummaryRow('${row.id}', 'note', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'note', this.value)" placeholder="备注" style="width:100%;min-width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell(rowKey)}</td>
       </tr>
-    ` });
+    `);
   });
 
   html = getOrderedSummaryRows(rowBlocks)
@@ -3437,7 +3474,7 @@ function renderProjectSummary() {
     .join('');
 
   if (!html) {
-    tbody.innerHTML = '<tr><td colspan="10" style="padding:40px;text-align:center;color:#888">点击上方按钮导入配置数据</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="padding:40px;text-align:center;color:#888">当前汇总清单为空，可重新计算恢复已删除的标准行，或点击"增加行"补充自定义项</td></tr>';
     document.getElementById('summary-tfoot').style.display = 'none';
   } else {
     tbody.innerHTML = html;
@@ -3689,7 +3726,8 @@ function clearProjectSummary() {
     batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
     monitor: { config: [] },
     customRows: [],
-    rowOrder: []
+    rowOrder: [],
+    hiddenRowKeys: []
   };
   renderProjectSummary();
   alert('已清空汇总数据');
@@ -4209,7 +4247,8 @@ function calcAllBatteryConfig() {
     },
     monitor: { config: monitorConfig },
     customRows,
-    rowOrder
+    rowOrder,
+    hiddenRowKeys: []
   };
   renderProjectSummary();
 }
@@ -4296,6 +4335,10 @@ function exportProjectSummary() {
   }
 
   const orderedRows = getOrderedSummaryRows(collectProjectSummaryRows());
+  if (!orderedRows.length) {
+    alert('当前汇总清单为空，请重新计算恢复已删除的标准行，或增加自定义行后再导出');
+    return;
+  }
   let rowIndex = 1;
   let exportTotal = 0;
 
