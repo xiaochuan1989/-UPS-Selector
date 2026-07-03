@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.7.8";
+const APP_VERSION = "v1.7.9";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -922,29 +922,31 @@ function checkAuth(){
         </div>
       </div>
       <div style="overflow-x:auto">
-        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:960px">
+        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1080px">
           <thead>
             <tr style="background:#2d6a9f;color:white">
               <th style="padding:8px;border:1px solid #ddd;width:40px">序号</th>
-              <th style="padding:8px;border:1px solid #ddd;width:60px">类别</th>
+              <th style="padding:8px;border:1px solid #ddd;width:80px">产品名称</th>
               <th style="padding:8px;border:1px solid #ddd;width:90px">编码</th>
               <th style="padding:8px;border:1px solid #ddd">型号</th>
               <th style="padding:8px;border:1px solid #ddd">描述</th>
-              <th style="padding:8px;border:1px solid #ddd;width:40px">单位</th>
               <th style="padding:8px;border:1px solid #ddd;width:50px">数量</th>
+              <th style="padding:8px;border:1px solid #ddd;width:40px">单位</th>
               <th style="padding:8px;border:1px solid #ddd;width:70px">单价</th>
               <th style="padding:8px;border:1px solid #ddd;width:70px">小计</th>
               <th style="padding:8px;border:1px solid #ddd;width:100px">备注</th>
+              <th style="padding:8px;border:1px solid #ddd;width:120px">非标描述</th>
               <th style="padding:8px;border:1px solid #ddd;width:54px">操作</th>
             </tr>
           </thead>
           <tbody id="summary-tbody">
-            <tr><td colspan="11" style="padding:30px;text-align:center;color:#888">点击"一键计算全部"生成配置清单</td></tr>
+            <tr><td colspan="12" style="padding:30px;text-align:center;color:#888">点击"一键计算全部"生成配置清单</td></tr>
           </tbody>
           <tfoot id="summary-tfoot" style="display:none;background:#f5f7fa;font-weight:600">
             <tr>
               <td colspan="8" style="padding:10px;border:1px solid #ddd;text-align:right">合计：</td>
               <td id="summary-total" colspan="3" style="padding:10px;border:1px solid #ddd;color:#e74c3c;font-size:14px"></td>
+              <td style="padding:10px;border:1px solid #ddd"></td>
             </tr>
           </tfoot>
         </table>
@@ -1974,11 +1976,11 @@ function buildInfoTable(rows) {
 
 function buildSummaryRowsHtml() {
   var rows = getOrderedSummaryRows(collectProjectSummaryRows()).map(function(row) {
-    return [row.category, row.model, row.desc, row.unit, row.qty, row.note];
+    return [row.category, row.code, row.model, row.desc, row.qty, row.unit, row.note, row.nonStandardDesc];
   });
 
   if (!rows.length) return '<p class="muted">暂无项目汇总清单，请先完成UPS与电池配置计算。</p>';
-  return '<table class="summary-table"><thead><tr><th>类别</th><th>型号/名称</th><th>描述</th><th>单位</th><th>数量</th><th>备注</th></tr></thead><tbody>' +
+  return '<table class="summary-table"><thead><tr><th>产品名称</th><th>产品编码</th><th>产品型号</th><th>产品描述及备注</th><th>数量</th><th>单位</th><th>备注</th><th>非标描述</th></tr></thead><tbody>' +
     rows.map(function(row) {
       return '<tr>' + row.map(function(cell) { return '<td>' + escapeHtml(cell) + '</td>'; }).join('') + '</tr>';
     }).join('') + '</tbody></table>';
@@ -2941,10 +2943,10 @@ const MONITOR_PRODUCTS = [
 
 // 项目汇总数据存储
 window.projectSummary = {
-  ups: { code: '', frameCode: '', moduleCode: '', model: '', capacity: '', qty: 1, price: 0, framePrice: 0, modulePrice: 0, note: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
-  battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', customModel: '', customDesc: '' },
-  switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', note: '' },
-  batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
+  ups: { code: '', frameCode: '', moduleCode: '', model: '', capacity: '', qty: 1, price: 0, framePrice: 0, modulePrice: 0, note: '', nonStandardDesc: '', frameNonStandardDesc: '', moduleNonStandardDesc: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
+  battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', nonStandardDesc: '', customModel: '', customDesc: '' },
+  switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', note: '', nonStandardDesc: '' },
+  batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '', nonStandardDesc: '' },
   monitor: { config: [] },
   customRows: [],
   rowOrder: [],
@@ -3000,7 +3002,8 @@ function normalizeSummaryRow(row) {
     qty,
     unitPrice,
     subtotal: qty * unitPrice,
-    note: row.note || ''
+    note: row.note || '',
+    nonStandardDesc: row.nonStandardDesc || ''
   };
 }
 
@@ -3020,7 +3023,8 @@ function collectProjectSummaryRows() {
         unit: '台',
         qty: ups.qty || 1,
         unitPrice: ups.framePrice || 0,
-        note: ups.note || ''
+        note: ups.note || '',
+        nonStandardDesc: ups.frameNonStandardDesc || ''
       }));
       rows.push(normalizeSummaryRow({
         key: 'ups-module',
@@ -3031,7 +3035,8 @@ function collectProjectSummaryRows() {
         unit: '个',
         qty: (ups.moduleQty || 1) * (ups.qty || 1),
         unitPrice: ups.modulePrice || 0,
-        note: `${ups.qty || 1}台 × ${ups.moduleQty}个/台`
+        note: `${ups.qty || 1}台 × ${ups.moduleQty}个/台`,
+        nonStandardDesc: ups.moduleNonStandardDesc || ''
       }));
     } else {
       rows.push(normalizeSummaryRow({
@@ -3043,7 +3048,8 @@ function collectProjectSummaryRows() {
         unit: '台',
         qty: ups.qty || 1,
         unitPrice: ups.price || 0,
-        note: ups.isCustom ? '非标型号，请确认参数' : (ups.note || '')
+        note: ups.isCustom ? '非标型号，请确认参数' : (ups.note || ''),
+        nonStandardDesc: ups.nonStandardDesc || (ups.isCustom ? (ups.customDesc || '') : '')
       }));
     }
   }
@@ -3061,7 +3067,8 @@ function collectProjectSummaryRows() {
       unit: '只',
       qty: bat.totalCells || 0,
       unitPrice: bat.price || 0,
-      note: bat.note || ''
+      note: bat.note || '',
+      nonStandardDesc: bat.nonStandardDesc || ''
     }));
   }
 
@@ -3081,7 +3088,8 @@ function collectProjectSummaryRows() {
       unit: '套',
       qty: sw.qty || 0,
       unitPrice: sw.price || 0,
-      note: (sw.note || '') + (sw.neutralLine ? ' ⚠️请确认UPS中性线' : '')
+      note: (sw.note || '') + (sw.neutralLine ? ' ⚠️请确认UPS中性线' : ''),
+      nonStandardDesc: sw.nonStandardDesc || ''
     }));
   }
 
@@ -3100,7 +3108,8 @@ function collectProjectSummaryRows() {
       unit: '架',
       qty: rack.qty || 0,
       unitPrice: rack.price || 0,
-      note: rack.note || ''
+      note: rack.note || '',
+      nonStandardDesc: rack.nonStandardDesc || ''
     }));
   }
 
@@ -3116,7 +3125,8 @@ function collectProjectSummaryRows() {
         unit: item.unit || '',
         qty: item.qty || 0,
         unitPrice: item.unitPrice || 0,
-        note: item.note || ''
+        note: item.note || '',
+        nonStandardDesc: item.nonStandardDesc || ''
       }));
     });
   }
@@ -3131,7 +3141,8 @@ function collectProjectSummaryRows() {
       unit: row.unit || '',
       qty: row.qty,
       unitPrice: row.unitPrice,
-      note: row.note || ''
+      note: row.note || '',
+      nonStandardDesc: row.nonStandardDesc || ''
     }));
   });
 
@@ -3217,6 +3228,10 @@ function updateSummaryRowField(key, field, value, shouldRender = true) {
     if (key === 'ups-frame') actualField = 'frameCode';
     else if (key === 'ups-module') actualField = 'moduleCode';
   }
+  if (field === 'nonStandardDesc') {
+    if (key === 'ups-frame') actualField = 'frameNonStandardDesc';
+    else if (key === 'ups-module') actualField = 'moduleNonStandardDesc';
+  }
   if (field === 'unitPrice') {
     target[actualField] = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
   } else {
@@ -3234,6 +3249,11 @@ function renderSummaryPriceCell(key, value, showPrice) {
   if (!showPrice) return '-';
   const encodedKey = encodeURIComponent(key);
   return `<input type="number" value="${escapeHtml(value || '')}" oninput="updateSummaryRowField(decodeURIComponent('${encodedKey}'), 'unitPrice', this.value, false)" onchange="updateSummaryRowField(decodeURIComponent('${encodedKey}'), 'unitPrice', this.value)" min="0" step="0.01" style="width:78px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:right">`;
+}
+
+function renderSummaryNonStandardCell(key, value) {
+  const encodedKey = encodeURIComponent(key);
+  return `<input type="text" value="${escapeHtml(value || '')}" oninput="updateSummaryRowField(decodeURIComponent('${encodedKey}'), 'nonStandardDesc', this.value, false)" onchange="updateSummaryRowField(decodeURIComponent('${encodedKey}'), 'nonStandardDesc', this.value)" placeholder="非标描述" style="width:100%;min-width:90px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px">`;
 }
 
 // 渲染项目汇总表格
@@ -3264,11 +3284,12 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd">${renderSummaryCodeCell('ups-frame', ups.frameCode || ups.code || '')}</td>
           <td style="padding:8px;border:1px solid #ddd;font-weight:500">${ups.frame}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${ups.capacity || ''}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center">台</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${ups.qty || 1}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">台</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('ups-frame', ups.framePrice, showPrice)}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && frameSubtotal ? frameSubtotal.toFixed(2) : '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.note || ''}</td>
+          <td style="padding:8px;border:1px solid #ddd">${renderSummaryNonStandardCell('ups-frame', ups.frameNonStandardDesc || '')}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('ups-frame')}</td>
         </tr>
       `);
@@ -3291,11 +3312,12 @@ function renderProjectSummary() {
             每台模块数：<select onchange="updateModuleQty(this.value)" style="padding:2px 6px;border-radius:4px;border:1px solid #ccc;font-size:12px">${moduleQtyOptions}</select>
             <span style="color:#999">（最多${ups.maxModules}个）</span>
           </td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center">个</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${moduleTotal}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">个</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('ups-module', ups.modulePrice, showPrice)}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && moduleSubtotal ? moduleSubtotal.toFixed(2) : '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${ups.qty || 1}台 × ${ups.moduleQty}个/台</td>
+          <td style="padding:8px;border:1px solid #ddd">${renderSummaryNonStandardCell('ups-module', ups.moduleNonStandardDesc || '')}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('ups-module')}</td>
         </tr>
       `);
@@ -3323,11 +3345,12 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd">${renderSummaryCodeCell('ups', ups.code || '')}</td>
           <td style="padding:8px;border:1px solid #ddd;font-weight:500">${modelCell}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${capacityCell}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center">台</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${ups.qty || 1}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">台</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('ups', ups.price, showPrice)}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${noteCell}</td>
+          <td style="padding:8px;border:1px solid #ddd">${renderSummaryNonStandardCell('ups', ups.nonStandardDesc || (ups.isCustom ? (ups.customDesc || '') : ''))}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('ups')}</td>
         </tr>
       `);
@@ -3352,11 +3375,12 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd">${renderSummaryCodeCell('battery', bat.code || '')}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${modelCell}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${descCell}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">只</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${bat.totalCells}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">只</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('battery', bat.price, showPrice)}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${bat.note || ''}</td>
+        <td style="padding:8px;border:1px solid #ddd">${renderSummaryNonStandardCell('battery', bat.nonStandardDesc || '')}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('battery')}</td>
       </tr>
     `);
@@ -3382,11 +3406,12 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd">${renderSummaryCodeCell('switchBox', sw.code || '')}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${sw.model}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${swDesc}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">套</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${sw.qty}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">套</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('switchBox', sw.price, showPrice)}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${swNote}</td>
+        <td style="padding:8px;border:1px solid #ddd">${renderSummaryNonStandardCell('switchBox', sw.nonStandardDesc || '')}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('switchBox')}</td>
       </tr>
     `);
@@ -3411,11 +3436,12 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd">${renderSummaryCodeCell('batteryRack', rack.code || '')}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${rack.model || '电池架'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666">${rackDesc}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">架</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rack.qty}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">架</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell('batteryRack', rack.price, showPrice)}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice && subtotal ? subtotal.toFixed(2) : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px">${rack.note || ''}</td>
+        <td style="padding:8px;border:1px solid #ddd">${renderSummaryNonStandardCell('batteryRack', rack.nonStandardDesc || '')}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell('batteryRack')}</td>
       </tr>
     `);
@@ -3434,11 +3460,12 @@ function renderProjectSummary() {
           <td style="padding:8px;border:1px solid #ddd">${item.code || ''}</td>
           <td style="padding:8px;border:1px solid #ddd;font-weight:500">${item.name || ''}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666;white-space:normal;word-break:break-word">${item.desc || ''}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center">${item.unit || ''}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${item.qty || 0}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${item.unit || ''}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${renderSummaryPriceCell(`monitor-${item.code || item.name || index}`, item.unitPrice, showPrice)}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? subtotal.toFixed(2) : ''}</td>
           <td style="padding:8px;border:1px solid #ddd;font-size:12px">${item.note || ''}</td>
+          <td style="padding:8px;border:1px solid #ddd">${renderSummaryNonStandardCell(rowKey, item.nonStandardDesc || '')}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell(rowKey)}</td>
         </tr>
       `);
@@ -3459,11 +3486,12 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.code || '')}" oninput="updateCustomSummaryRow('${row.id}', 'code', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'code', this.value)" placeholder="编码" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.model || '')}" oninput="updateCustomSummaryRow('${row.id}', 'model', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'model', this.value)" placeholder="型号/名称" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.desc || '')}" oninput="updateCustomSummaryRow('${row.id}', 'desc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'desc', this.value)" placeholder="描述" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.unit || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unit', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unit', this.value)" placeholder="单位" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
         <td style="padding:8px;border:1px solid #ddd"><input type="number" value="${escapeHtml(row.qty || '')}" oninput="updateCustomSummaryRow('${row.id}', 'qty', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'qty', this.value)" min="0" step="0.01" style="width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
+        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.unit || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unit', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unit', this.value)" placeholder="单位" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? `<input type="number" value="${escapeHtml(row.unitPrice || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value)" min="0" step="0.01" style="width:78px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:right">` : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? subtotal.toFixed(2) : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.note || '')}" oninput="updateCustomSummaryRow('${row.id}', 'note', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'note', this.value)" placeholder="备注" style="width:100%;min-width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
+        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.nonStandardDesc || '')}" oninput="updateCustomSummaryRow('${row.id}', 'nonStandardDesc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'nonStandardDesc', this.value)" placeholder="非标描述" style="width:100%;min-width:90px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell(rowKey)}</td>
       </tr>
     `);
@@ -3474,7 +3502,7 @@ function renderProjectSummary() {
     .join('');
 
   if (!html) {
-    tbody.innerHTML = '<tr><td colspan="11" style="padding:40px;text-align:center;color:#888">当前汇总清单为空，可重新计算恢复已删除的标准行，或点击"增加行"补充自定义项</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="padding:40px;text-align:center;color:#888">当前汇总清单为空，可重新计算恢复已删除的标准行，或点击"增加行"补充自定义项</td></tr>';
     document.getElementById('summary-tfoot').style.display = 'none';
   } else {
     tbody.innerHTML = html;
@@ -3504,7 +3532,8 @@ function addCustomSummaryRow() {
     unit: '项',
     qty: 1,
     unitPrice: 0,
-    note: ''
+    note: '',
+    nonStandardDesc: ''
   });
   renderProjectSummary();
 }
@@ -3720,10 +3749,10 @@ function calcBatteryRuntime() {
 // 清空项目汇总
 function clearProjectSummary() {
   window.projectSummary = {
-    ups: { code: '', frameCode: '', moduleCode: '', model: '', capacity: '', qty: 1, price: 0, framePrice: 0, modulePrice: 0, note: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
-    battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', customModel: '', customDesc: '' },
-    switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', note: '' },
-    batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '' },
+    ups: { code: '', frameCode: '', moduleCode: '', model: '', capacity: '', qty: 1, price: 0, framePrice: 0, modulePrice: 0, note: '', nonStandardDesc: '', frameNonStandardDesc: '', moduleNonStandardDesc: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
+    battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', nonStandardDesc: '', customModel: '', customDesc: '' },
+    switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', note: '', nonStandardDesc: '' },
+    batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '', nonStandardDesc: '' },
     monitor: { config: [] },
     customRows: [],
     rowOrder: [],
@@ -4184,9 +4213,11 @@ function calcAllBatteryConfig() {
   const customRows = getCustomSummaryRows();
   const rowOrder = getSummaryRowOrder();
   const previousMonitorPrice = new Map((previousSummary.monitor?.config || []).map((item, index) => [item.code || item.name || index, item.unitPrice]));
+  const previousMonitorNonStandardDesc = new Map((previousSummary.monitor?.config || []).map((item, index) => [item.code || item.name || index, item.nonStandardDesc]));
   monitorConfig.forEach((item, index) => {
     const key = item.code || item.name || index;
     if (previousMonitorPrice.has(key)) item.unitPrice = previousMonitorPrice.get(key);
+    if (previousMonitorNonStandardDesc.has(key)) item.nonStandardDesc = previousMonitorNonStandardDesc.get(key);
   });
 
   window.projectSummary = {
@@ -4201,6 +4232,9 @@ function calcAllBatteryConfig() {
       framePrice: previousSummary.ups?.framePrice || 0,
       modulePrice: previousSummary.ups?.modulePrice || 0,
       note: upsModel ? '' : '请输入UPS型号',
+      nonStandardDesc: previousSummary.ups?.nonStandardDesc || '',
+      frameNonStandardDesc: previousSummary.ups?.frameNonStandardDesc || '',
+      moduleNonStandardDesc: previousSummary.ups?.moduleNonStandardDesc || '',
       // 非标标志
       isCustom: upsType === 'custom',
       customDesc: customUpsDesc, // 非标描述（可编辑）
@@ -4220,7 +4254,8 @@ function calcAllBatteryConfig() {
       upsNum,                    // UPS台数
       totalCells,
       price: previousSummary.battery?.price || 0,
-      note: isCustomBatteryType ? '客户指定电池，手动填写型号' : catLabelMap[battType] + '电池'
+      note: isCustomBatteryType ? '客户指定电池，手动填写型号' : catLabelMap[battType] + '电池',
+      nonStandardDesc: previousSummary.battery?.nonStandardDesc || ''
     },
     switchBox: {
       code: previousSummary.switchBox?.code || '',
@@ -4233,7 +4268,8 @@ function calcAllBatteryConfig() {
       price: previousSummary.switchBox?.price || 0,
       neutralLine: hasNeutral,  // 保存中性线选项
       switchType: switchType,    // 电池开关类型: 'imported' 合资 或 'domestic' 国产
-      note: (groups >= 2 ? '' : '单组电池无需分开关; ') + neutralDesc
+      note: (groups >= 2 ? '' : '单组电池无需分开关; ') + neutralDesc,
+      nonStandardDesc: previousSummary.switchBox?.nonStandardDesc || ''
     },
     batteryRack: {
       code: previousSummary.batteryRack?.code || '',
@@ -4243,7 +4279,8 @@ function calcAllBatteryConfig() {
       cableAmp: rackCable === 'yes' ? (groups >= 2 ? subSwitchSize : mainSwitchSize) + 'A' : '',
       qty: totalGroups,
       price: previousSummary.batteryRack?.price || 0,
-      note: ''
+      note: '',
+      nonStandardDesc: previousSummary.batteryRack?.nonStandardDesc || ''
     },
     monitor: { config: monitorConfig },
     customRows,
@@ -4324,14 +4361,14 @@ function exportProjectSummary() {
   wsData.push([]);
 
   // 根据是否显示价格决定列结构
-  const colCount = showPrice ? 10 : 8;
+  const colCount = showPrice ? 11 : 9;
   const lastCol = colCount - 1;
 
   // 表头
   if (showPrice) {
-    wsData.push(['序号', '类别', '产品编码', '产品型号', '产品描述', '单位', '数量', '单价(元)', '小计(元)', '备注']);
+    wsData.push(['序号', '产品名称', '产品编码', '产品型号', '产品描述及备注', '数量', '单位', '单价(元)', '小计(元)', '备注', '非标描述']);
   } else {
-    wsData.push(['序号', '类别', '产品编码', '产品型号', '产品描述', '单位', '数量', '备注']);
+    wsData.push(['序号', '产品名称', '产品编码', '产品型号', '产品描述及备注', '数量', '单位', '备注', '非标描述']);
   }
 
   const orderedRows = getOrderedSummaryRows(collectProjectSummaryRows());
@@ -4351,11 +4388,12 @@ function exportProjectSummary() {
         item.code || '',
         item.model || '',
         item.desc || '',
-        item.unit || '',
         item.qty || 0,
+        item.unit || '',
         item.unitPrice || '',
         item.subtotal || '',
-        item.note || ''
+        item.note || '',
+        item.nonStandardDesc || ''
       ]);
     } else {
       wsData.push([
@@ -4364,9 +4402,10 @@ function exportProjectSummary() {
         item.code || '',
         item.model || '',
         item.desc || '',
-        item.unit || '',
         item.qty || 0,
-        item.note || ''
+        item.unit || '',
+        item.note || '',
+        item.nonStandardDesc || ''
       ]);
     }
   });
@@ -4374,9 +4413,9 @@ function exportProjectSummary() {
   // 合计行
   wsData.push([]);
   if (showPrice) {
-    wsData.push(['', '', '', '', '', '', '', '合计:', '', '¥' + exportTotal.toFixed(2)]);
+    wsData.push(['', '', '', '', '', '', '', '合计:', '¥' + exportTotal.toFixed(2), '', '']);
   } else {
-    wsData.push(['', '', '', '', '', '', '合计:', '-']);
+    wsData.push(['', '', '', '', '', '', '合计:', '-', '']);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -4385,26 +4424,28 @@ function exportProjectSummary() {
   if (showPrice) {
     ws['!cols'] = [
       {wch:5},   // 序号
-      {wch:14},  // 类别
+      {wch:14},  // 产品名称
       {wch:12},  // 编码
       {wch:18},  // 型号
       {wch:45},  // 描述
-      {wch:6},   // 单位
       {wch:8},   // 数量
+      {wch:6},   // 单位
       {wch:12},  // 单价
       {wch:12},  // 小计
-      {wch:20}   // 备注
+      {wch:20},  // 备注
+      {wch:28}   // 非标描述
     ];
   } else {
     ws['!cols'] = [
       {wch:5},   // 序号
-      {wch:14},  // 类别
+      {wch:14},  // 产品名称
       {wch:12},  // 编码
       {wch:18},  // 型号
       {wch:50},  // 描述
-      {wch:6},   // 单位
       {wch:8},   // 数量
-      {wch:25}   // 备注
+      {wch:6},   // 单位
+      {wch:25},  // 备注
+      {wch:28}   // 非标描述
     ];
   }
 
@@ -4432,9 +4473,9 @@ function exportProjectSummary() {
       const addr = XLSX.utils.encode_cell({r, c});
       if (!ws[addr]) continue;
       if (c === 0) ws[addr].s = cellCenter;       // 序号
-      else if (c === 1) ws[addr].s = cellCategory;  // 类别（加粗换行）
-      else if (c === 5) ws[addr].s = cellCenter;     // 单位
-      else if (c === 6) ws[addr].s = cellBold;       // 数量
+      else if (c === 1) ws[addr].s = cellCategory;  // 产品名称（加粗换行）
+      else if (c === 5) ws[addr].s = cellBold;       // 数量
+      else if (c === 6) ws[addr].s = cellCenter;     // 单位
       else if (showPrice && (c === 7 || c === 8)) ws[addr].s = cellRight; // 单价/小计
       else ws[addr].s = cellStyle; // 其他列包括备注
     }
@@ -4446,12 +4487,12 @@ function exportProjectSummary() {
     const addr = XLSX.utils.encode_cell({r:totalRowIndex, c});
     if (!ws[addr]) { ws[addr] = {v:'', t:'s'}; }
     if (showPrice) {
-      if (c === lastCol - 1) ws[addr].s = totalLabelStyle;
-      else if (c === lastCol) ws[addr].s = totalValueStyle;
+      if (c === 7) ws[addr].s = totalLabelStyle;
+      else if (c === 8) ws[addr].s = totalValueStyle;
       else ws[addr].s = { border };
     } else {
-      if (c === lastCol - 1) ws[addr].s = totalLabelStyle;
-      else if (c === lastCol) ws[addr].s = totalValueStyle;
+      if (c === 6) ws[addr].s = totalLabelStyle;
+      else if (c === 7) ws[addr].s = totalValueStyle;
       else ws[addr].s = { border };
     }
   }
@@ -4481,7 +4522,7 @@ function exportQuickQuote() {
     ['项目名称', '', '客户名称', '', '报价日期', date],
     ['报价版本', APP_VERSION, '币种', '人民币（元）', '保护码', '8888'],
     [],
-    ['序号', '产品编码', '产品名称/型号', '规格描述', '单位', '数量', '含税单价', '含税金额', '备注']
+    ['序号', '产品名称', '产品编码', '产品型号', '产品描述及备注', '数量', '单位', '含税单价', '含税金额', '备注', '非标描述']
   ];
 
   let quoteTotal = 0;
@@ -4491,36 +4532,40 @@ function exportQuickQuote() {
     quoteTotal += subtotal;
     wsData.push([
       index + 1,
+      item.category || '',
       item.code || '',
       item.model || '',
       item.desc || '',
-      item.unit || '',
       item.qty || 0,
+      item.unit || '',
       unitPrice || '',
       subtotal || '',
-      [item.category, item.note].filter(Boolean).join('；')
+      item.note || '',
+      item.nonStandardDesc || ''
     ]);
   });
 
   wsData.push([]);
-  wsData.push(['', '', '', '', '', '', '报价合计', quoteTotal || '', '']);
+  wsData.push(['', '', '', '', '', '', '', '报价合计', quoteTotal || '', '', '']);
   wsData.push(['说明', '本报价单由项目配置汇总清单生成，产品编码、单价和自定义行以页面当前填写内容为准。']);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [
     {wch:6},
     {wch:14},
+    {wch:14},
     {wch:24},
     {wch:48},
-    {wch:8},
     {wch:10},
+    {wch:8},
     {wch:14},
     {wch:14},
+    {wch:28},
     {wch:28}
   ];
   ws['!merges'] = [
-    { s:{r:0,c:0}, e:{r:0,c:8} },
-    { s:{r:wsData.length - 1,c:1}, e:{r:wsData.length - 1,c:8} }
+    { s:{r:0,c:0}, e:{r:0,c:10} },
+    { s:{r:wsData.length - 1,c:1}, e:{r:wsData.length - 1,c:10} }
   ];
   ws['!protect'] = {
     password: '8888',
@@ -4547,7 +4592,7 @@ function exportQuickQuote() {
   const totalValueStyle = { font:{bold:true, sz:12, color:{rgb:'C0392B'}}, fill:{fgColor:{rgb:'F9E79F'}}, border, alignment:{horizontal:'right', vertical:'center'}, numFmt:'#,##0.00' };
   const noteStyle = { font:{sz:10, color:{rgb:'666666'}}, border, alignment:{vertical:'center', wrapText:true} };
 
-  for (let c = 0; c <= 8; c++) {
+  for (let c = 0; c <= 10; c++) {
     const addr = XLSX.utils.encode_cell({r:0, c});
     if (ws[addr]) ws[addr].s = titleStyle;
   }
@@ -4561,7 +4606,7 @@ function exportQuickQuote() {
   });
 
   const headerRow = 5;
-  for (let c = 0; c <= 8; c++) {
+  for (let c = 0; c <= 10; c++) {
     const addr = XLSX.utils.encode_cell({r:headerRow, c});
     if (ws[addr]) ws[addr].s = headerStyle;
   }
@@ -4569,26 +4614,26 @@ function exportQuickQuote() {
   const dataStart = 6;
   const dataEnd = dataStart + orderedRows.length - 1;
   for (let r = dataStart; r <= dataEnd; r++) {
-    for (let c = 0; c <= 8; c++) {
+    for (let c = 0; c <= 10; c++) {
       const addr = XLSX.utils.encode_cell({r, c});
       if (!ws[addr]) continue;
-      if (c === 0 || c === 4 || c === 5) ws[addr].s = cellCenter;
-      else if (c === 6 || c === 7) ws[addr].s = cellRight;
+      if (c === 0 || c === 5 || c === 6) ws[addr].s = cellCenter;
+      else if (c === 7 || c === 8) ws[addr].s = cellRight;
       else ws[addr].s = cellStyle;
     }
   }
 
   const totalRowIndex = wsData.length - 2;
-  for (let c = 0; c <= 8; c++) {
+  for (let c = 0; c <= 10; c++) {
     const addr = XLSX.utils.encode_cell({r:totalRowIndex, c});
     if (!ws[addr]) ws[addr] = {v:'', t:'s'};
-    if (c === 6) ws[addr].s = totalLabelStyle;
-    else if (c === 7) ws[addr].s = totalValueStyle;
+    if (c === 7) ws[addr].s = totalLabelStyle;
+    else if (c === 8) ws[addr].s = totalValueStyle;
     else ws[addr].s = { border, fill:{fgColor:{rgb:'F9E79F'}} };
   }
 
   const noteRowIndex = wsData.length - 1;
-  for (let c = 0; c <= 8; c++) {
+  for (let c = 0; c <= 10; c++) {
     const addr = XLSX.utils.encode_cell({r:noteRowIndex, c});
     if (!ws[addr]) ws[addr] = {v:'', t:'s'};
     ws[addr].s = noteStyle;
