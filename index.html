@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.7.9";
+const APP_VERSION = "v1.8.0";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function() {
   .header .version { font-size: 12px; opacity: 0.7; margin-top: 2px; }
   .header .logo { font-size: 32px; }
 
-  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+  .container { max-width: 1440px; margin: 0 auto; padding: 24px 20px; }
 
   .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
   .card h2 { font-size: 15px; font-weight: 600; color: #555; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -922,7 +922,7 @@ function checkAuth(){
         </div>
       </div>
       <div style="overflow-x:auto">
-        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1080px">
+        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1320px">
           <thead>
             <tr style="background:#2d6a9f;color:white">
               <th style="padding:8px;border:1px solid #ddd;width:40px">序号</th>
