@@ -5,8 +5,8 @@ UPS 智能选型助手 - 构建脚本
 
 使用方法:
   python dev_scripts/build.py          # 显示构建信息
-  python dev_scripts/build.py --dev    # 构建开发版本（带调试信息）
   python dev_scripts/build.py --serve  # 启动开发服务器
+  python dev_scripts/build.py --verify # 运行质量门禁
 """
 
 import os
@@ -186,97 +186,18 @@ def run_quality_check():
 
 
 def create_readme():
-    """创建开发说明文档"""
-    readme_content = """# UPS 智能选型助手 - 工程化开发环境
-
-## 项目结构
-
-```
-UPS选型助手_开发包/
-├── index.html                # 主程序文件（单文件产品）
-├── 常用UPS速查表-V7.5.xlsx   # 产品数据源
-├── UPS选型助手_开发文档.md   # 产品开发文档
-│
-├── src/                      # 源代码目录（工程化用）
-│   ├── css/
-│   │   └── style.css         # 样式表
-│   └── js/
-│       └── app.js            # JavaScript 模块（未来使用）
-│
-├── dist/                     # 构建输出目录
-│
-├── dev_scripts/              # 开发辅助脚本
-│   ├── build.py             # 构建脚本
-│   ├── serve.py             # 开发服务器
-│   └── ...                  # 其他验证脚本
-│
-└── test_data/               # 测试数据
-```
-
-## 快速开始
-
-### 1. 构建命令
-
-```bash
-# 构建生产版本
-python dev_scripts/build.py --info
-
-# 构建开发版本
-python dev_scripts/build.py --dev
-
-# 启动开发服务器（带热重载）
-python dev_scripts/build.py --serve
-```
-
-### 2. 开发脚本
-
-| 脚本 | 用途 |
-|------|------|
-| `check_prompt_feature.py` | 验证提示词功能 |
-| `verify.py` | 验证双表数据库视图 |
-| `check_html.py` | HTML 基础结构检查 |
-| `scan_js.py` | JS 代码扫描 |
-| `inspect_excel.py` | Excel 数据结构检查 |
-
-### 3. 修改代码后测试
-
-1. 直接用浏览器打开 `index.html`
-2. 或使用 `python dev_scripts/serve.py` 启动本地服务器
-
-## 工程化说明
-
-### 当前状态
-- **已实现**: 提取 CSS 到独立文件、构建脚本、质量检查
-- **进行中**: JavaScript 模块化拆分
-- **待实现**: 开发热重载、CSS/JS 独立加载
-
-### 模块化计划
-1. ✅ CSS 独立文件 (`src/css/style.css`)
-2. 🔄 JS 模块拆分（数据层、UI层、服务层）
-3. ⏳ 开发热重载
-4. ⏳ 构建优化（压缩、版本控制）
-
-## 注意事项
-
-- 当前主要代码在 `index.html` 中
-- `src/` 目录的模块化是渐进式的，不会影响现有功能
-- 修改 `index.html` 后可直接在浏览器测试
-
----
-*由 Claude Code 自动生成*
-"""
-
-    readme_path = PROJECT_ROOT / "UPS选型助手_开发说明.md"
-    readme_path.write_text(readme_content, encoding='utf-8')
-    print(f"\n📄 已创建开发说明文档: {readme_path}")
+    """保留旧入口，但禁止覆盖当前人工维护的开发说明。"""
+    print("\n⚠️  --readme 已停用：开发说明现在由人工维护，避免旧模板覆盖当前内容。")
+    print("   请直接编辑 UPS选型助手_开发说明.md，并运行 dev_scripts/test.py --quick。")
+    return False
 
 
 def main():
     parser = argparse.ArgumentParser(description="UPS 智能选型助手 - 构建工具")
-    parser.add_argument("--dev", action="store_true", help="开发模式")
+    parser.add_argument("--dev", action="store_true", help="已停用：单文件产品不再生成开发版")
     parser.add_argument("--verify", action="store_true", help="运行验证")
     parser.add_argument("--info", action="store_true", help="显示构建信息")
-    parser.add_argument("--readme", action="store_true", help="生成开发说明文档")
+    parser.add_argument("--readme", action="store_true", help="已停用：避免旧模板覆盖开发说明")
     parser.add_argument("--serve", action="store_true", help="启动开发服务器")
 
     args = parser.parse_args()
@@ -309,8 +230,12 @@ def main():
 
     # 生成开发说明
     if args.readme:
-        create_readme()
-        sys.exit(0)
+        sys.exit(0 if create_readme() else 1)
+
+    if args.dev:
+        print("\n⚠️  --dev 已停用：当前正式入口是单文件 index.html，不再生成开发版。")
+        print("   本地调试请使用 python dev_scripts/serve.py --no-open。")
+        sys.exit(1)
 
     # 启动开发服务器
     if args.serve:

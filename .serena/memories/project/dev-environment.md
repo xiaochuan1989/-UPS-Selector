@@ -6,11 +6,11 @@ UPS选型助手_开发包/
 ├── index.html            # 主程序文件（单一文件，已合并）
 ├── src/css/style.css     # 样式表（已提取）
 ├── dev_scripts/          # 开发脚本
-│   ├── build.py         # 构建信息/质量检查/生成文档
+│   ├── build.py         # 构建信息/质量检查
 │   ├── serve.py         # HTTP服务/文件监听
 │   ├── test.py          # 统一测试入口
 │   └── inspect_excel.py # Excel数据结构检查
-└── deploy/              # Netlify部署目录
+└── .serena/             # Serena项目配置和项目记忆；runtime/cache/log 不入库
 ```
 
 ## 快速命令
@@ -18,6 +18,8 @@ UPS选型助手_开发包/
 cd dev_scripts
 
 # 质量检查
+python test.py --quick
+python test.py --all
 python build.py --verify
 
 # 启动开发服务器（端口8080）
@@ -34,7 +36,7 @@ python test.py --all     # 全部测试
 
 ## 部署命令
 ```bash
-git add .
+git add index.html README.md UPS选型助手_开发文档.md UPS选型助手_开发说明.md dev_scripts/ .github/ netlify.toml .gitignore .serena/
 git commit -m "更新内容"
 git push origin master
 # 等待1-2分钟自动部署
@@ -43,3 +45,5 @@ git push origin master
 ## 注意事项
 - ⚠️ IndexedDB相关函数必须在DOMContentLoaded之前定义
 - ⚠️ 主文件是 index.html，所有修改都在此文件上进行
+- ⚠️ `.mcp.json` 是本机 Codex/Serena MCP 配置，已从仓库跟踪中移除，只保留本地使用
+- ⚠️ `build.py --readme` 和 `build.py --dev` 已停用，避免旧模板覆盖当前开发说明或产生误导

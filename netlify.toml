@@ -7,9 +7,6 @@
   to = "/index.html"
   status = 200
 
-[context.production]
-  command = ""
-
 # 安全头配置
 [[headers]]
   for = "/*"

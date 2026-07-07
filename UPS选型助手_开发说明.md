@@ -49,19 +49,18 @@ UPS选型助手_开发包/
 ├── dev_scripts/                       # 测试、审计和开发服务器
 ├── prompts/                           # AI 提示词参考
 ├── src/css/                           # 历史样式参考，不是正式加载入口
-└── *.xlsx / *.xlsm                    # 数据源和业务模板
+├── 常用UPS速查表-V7.5.xlsx             # 当前质量检查使用的数据源
+└── 归档/                              # 历史资料和待清理垃圾分区
 ```
 
-以下文件属于历史、生成或调试材料，不应被当作正式入口：
+历史、生成或调试材料已经从根目录归类到 `归档/`：
 
-- `UPS选型助手_backup.html`
-- `battery_power_data.js`
-- `full_doc_content.txt`
-- `temp_spec.txt`
-- `detailed_params*.txt`
-- `gen_word*.py`
+- `归档/历史文档/`：`UPS选型助手_backup.html`、`battery_power_data.js`、`full_doc_content.txt`、`temp_spec.txt`、`detailed_params*.txt`、`gen_word*.py` 等。
+- `归档/历史数据源与模板/`：旧 Excel / xlsm 模板和历史数据源。
+- `归档/历史测试数据/`：早期测试数据和试验脚本。
+- `归档/垃圾待清理/`：旧部署输出、旧会话、旧评估目录和确认可删除前的垃圾暂存区。
 
-删除或归档这些文件前，应先确认是否仍被外部业务流程使用；正式页面本身不引用它们。
+正式页面本身不引用 `归档/` 下文件。删除 `归档/垃圾待清理/` 前，仍建议先看一眼是否有外部流程临时需要。
 
 ## 4. 常用命令
 
@@ -318,7 +317,7 @@ index.html → public/index.html
 ## 12. 安全规则
 
 - 禁止提交真实 API Key、Token 或客户敏感资料。
-- `.mcp.json` 包含本机绝对路径，只用于本地开发，不进入公开部署制品。
+- `.mcp.json` 包含本机绝对路径，只用于本地开发，不进入 Git 和公开部署制品。
 - 客户端访问码和价格码不是安全权限，不应保护真正机密数据。
 - API Key 存在 localStorage，公共电脑使用后应清除浏览器数据。
 - GitHub Pages 和 Netlify 不得发布 Excel 模板、Serena 记忆、聊天记录或调试文件。

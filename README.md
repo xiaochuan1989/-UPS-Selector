@@ -28,12 +28,16 @@
 - `prompts/`：AI 选型提示词资料。
 - `src/css/`：历史拆分样式文件，目前线上页面仍以 `index.html` 内联样式为准。
 - `.github/`、`netlify.toml`：部署相关配置。
-- `.serena/`、`.mcp.json`：本地 AI/Serena 开发辅助配置。
-- `*.xlsx`、`*.xlsm`、`*.txt`、`*_backup.html`：历史数据源、模板、调试文本或备份文件，改动前需确认是否仍被脚本引用。
+- `.serena/`：Serena 项目配置和项目记忆；`.mcp.json` 是本机配置，保留本地但不再纳入版本控制。
+- `归档/历史文档/`：旧备份页面、历史参数文本、早期生成脚本和旧电池数据。
+- `归档/历史数据源与模板/`：旧 Excel / xlsm 模板和历史数据源；当前测试仍依赖的 `常用UPS速查表-V7.5.xlsx` 保留在根目录。
+- `归档/历史测试数据/`：早期测试数据和试验脚本。
+- `归档/垃圾待清理/`：生成物、旧会话、旧部署目录和确认可删除前的垃圾暂存区。
 
 ## 本地临时文件规则
 
 - `.codex/`、Office 锁文件 `~$*`、`liantong_result_*`、`*.docx` 不纳入版本控制。
+- `归档/垃圾待清理/` 的内容只用于本地复核，确认无价值后可整目录删除。
 - 新增版本时先改 `index.html` 中的 `APP_VERSION`，再运行 `python dev_scripts/test.py --quick` 检查页面和文档版本是否一致。
 - `dev_scripts/audit_html.py` 会检查 JS 语法、重复函数、重复 DOM ID 和活动代码中的失效 DOM 引用。
 

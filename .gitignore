@@ -2,6 +2,7 @@
 .DS_Store
 Thumbs.db
 *.log
+.mcp.json
 node_modules/
 .npm-cache/
 output/
@@ -13,6 +14,8 @@ fix_history/
 dist/
 public/
 test_data/
+归档/垃圾待清理/
+归档/历史测试数据/test_data/
 .claude/
 .codex/
 *.png

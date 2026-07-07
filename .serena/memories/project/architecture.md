@@ -1,6 +1,6 @@
 # UPS选型助手技术架构
 
-（已更新：2026-06-20，版本 v1.7.3）
+（已更新：2026-07-07，版本 v1.8.1）
 
 ## 正式入口
 
@@ -26,7 +26,7 @@
    - `selectCurrentSensor`
    - `getVoltLevel`
 6. 后备时间反算：`calcBatteryRuntime`。
-7. 项目输出：`renderProjectSummary`、`exportProjectSummary`、`exportTechnicalBrief`。
+7. 项目输出：`renderProjectSummary`、`collectProjectSummaryRows`、`getOrderedSummaryRows`、`exportProjectSummary`、`exportQuickQuote`、`exportTechnicalBrief`。
 
 ## 状态
 
@@ -35,6 +35,8 @@
 - `localStorage["ups_selection_history"]`：选型历史。
 - `IndexedDB["ups_data_db"]`：用户导入产品。
 - `window.projectSummary`：当前项目汇总。
+- `window.projectSummary.rowOrder`：汇总清单当前排序。
+- `window.projectSummary.hiddenRowKeys`：本次隐藏的标准汇总行；重新计算后恢复。
 
 ## 质量门禁
 
@@ -50,3 +52,4 @@
 - 客户需求主卡片不能嵌套在任何 `display:none` 容器中。
 - 不保留无UI入口的旧业务函数。
 - 文档用函数名定位，不维护易漂移的绝对行号。
+- 汇总清单新增列或字段时，必须同步页面渲染、`collectProjectSummaryRows()`、项目汇总Excel、快速报价单和技术说明HTML。
