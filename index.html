@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.3";
+const APP_VERSION = "v1.8.4";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -20,36 +20,82 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 <style>
+  :root {
+    --primary: #2563eb; --primary-700: #1d4ed8; --primary-50: #eff4ff;
+    --navy: #16324f; --navy-2: #1e4a72;
+    --ink: #1f2a37; --ink-2: #5b6b7a; --ink-3: #93a1b0;
+    --bg: #eef2f6; --surface: #ffffff; --border: #e5eaf0; --border-2: #d8e0e9;
+    --radius: 10px; --radius-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(16,40,70,.06); --shadow: 0 2px 10px rgba(16,40,70,.07);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
 
-  .header { background: linear-gradient(135deg, #1a3a5c, #2d6a9f); color: white; padding: 20px 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  /* ── 顶部品牌栏 ── */
+  .appbar { background: var(--navy); color: #fff; padding: 12px clamp(16px, 2.2vw, 48px); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .appbar-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .appbar-logo { width: 36px; height: 36px; border-radius: 9px; background: #2f6fd0; display: flex; align-items: center; justify-content: center; font-size: 19px; flex: 0 0 auto; }
+  .appbar-name { font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .appbar-sub { font-size: 11.5px; color: #9db4cc; margin-top: 2px; }
+  .appbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .appbar-btn { display: inline-flex; align-items: center; gap: 6px; color: #dce7f2; font-size: 13px; padding: 8px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 9px; background: transparent; cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .appbar-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+  .appbar-btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .appbar-btn.primary:hover { background: var(--primary-700); }
+  .appbar-btn.warn { background: rgba(255,193,94,.18); border-color: rgba(255,193,94,.5); color: #ffe0a6; }
+
+  /* ── 标签页导航 ── */
+  .nav { background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 50; }
+  .nav-inner { margin: 0; display: flex; gap: 2px; padding: 0 clamp(16px, 2.2vw, 48px); overflow-x: auto; }
+  .nav-tab { appearance: none; border: none; background: transparent; padding: 13px 16px; font-size: 14px; color: var(--ink-2); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 7px; transition: color .15s; }
+  .nav-tab:hover { color: var(--primary); }
+  .nav-tab-active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .nav-tab .ic { font-size: 15px; }
+
+  /* 兼容旧 .header 引用 */
+  .header { background: var(--navy); color: white; padding: 16px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
   .header-title { flex: 1 1 250px; min-width: 230px; }
-  .header-actions { flex: 1 1 760px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .header h1 { font-size: 22px; font-weight: 600; }
   .header .version { font-size: 12px; opacity: 0.7; margin-top: 2px; }
   .header .logo { font-size: 32px; }
 
-  .container { max-width: 1440px; margin: 0 auto; padding: 24px 20px; }
+  .container { max-width: none; margin: 0; padding: 24px clamp(16px, 2.2vw, 48px); }
 
-  .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-  .card h2 { font-size: 15px; font-weight: 600; color: #555; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  /* ── 项目配置汇总清单：自适应宽度、紧凑、可换行，避免横向滚动 ── */
+  #project-summary-table { table-layout: fixed; width: 100%; }
+  #project-summary-table th, #project-summary-table td { padding: 5px 7px !important; word-break: break-word; overflow-wrap: anywhere; }
+  #project-summary-table input, #project-summary-table select { width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
+
+  /* ── 计算结果三卡：白卡 + 彩色标题条 ── */
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .result-card-hd { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; padding: 11px 15px; border-bottom: 1px solid var(--border); }
+  .result-card-hd i { font-size: 17px; }
+  .result-card-bd { font-size: 13px; line-height: 1.8; color: var(--ink-2); padding: 14px 15px; }
+  .rc-green .result-card-hd { background: #e8f6ef; color: #0c7a56; }
+  .rc-amber .result-card-hd { background: #fdf1dd; color: #8a5a0b; }
+  .rc-purple .result-card-hd { background: #f0ecfb; color: #5b46a8; }
+  @media (max-width: 1100px) { .result-grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
   .card h2::before { content: attr(data-icon); font-size: 18px; }
 
   .api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
   .api-grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; align-items: end; margin-top: 12px; }
   .field label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 500; }
   .field input, .field select { width: 100%; border: 1.5px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; font-size: 14px; transition: border-color 0.2s; }
-  .field input:focus, .field select:focus { outline: none; border-color: #2d6a9f; }
+  .field input:focus, .field select:focus { outline: none; border-color: #2563eb; }
   .field input[type="password"] { font-family: monospace; }
-  .save-btn { background: #2d6a9f; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
-  .save-btn:hover { background: #1a5080; }
+  .save-btn { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
+  .save-btn:hover { background: #1d4ed8; }
   .api-status { font-size: 12px; margin-top: 8px; }
   .api-status.ok { color: #27ae60; }
   .api-status.err { color: #e74c3c; }
 
   .req-area { width: 100%; height: 160px; border: 1.5px solid #e0e0e0; border-radius: 8px; padding: 14px; font-size: 14px; resize: vertical; font-family: inherit; line-height: 1.6; transition: border-color 0.2s; }
-  .req-area:focus { outline: none; border-color: #2d6a9f; }
+  .req-area:focus { outline: none; border-color: #2563eb; }
   .req-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
   .req-hint { font-size: 12px; color: #aaa; }
   .analyze-btn { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; border-radius: 8px; padding: 12px 32px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s; }
@@ -102,14 +148,14 @@ document.addEventListener("DOMContentLoaded", function() {
   mark { background:#fff3a0;border-radius:2px;padding:0 1px; }
   #db-table-top th { background:#1a3a5c;color:white;padding:8px 12px;text-align:left;cursor:pointer;user-select:none;position:sticky;top:0;z-index:1; }
   #db-table-bot th { background:#1a5c3a;color:white;padding:8px 12px;text-align:left;cursor:pointer;user-select:none;position:sticky;top:0;z-index:1; }
-  #db-table-top th:hover { background:#2d6a9f; }
+  #db-table-top th:hover { background:#2563eb; }
   #db-table-bot th:hover { background:#27ae60; }
   #db-table-top td,#db-table-bot td { padding:7px 12px;border-bottom:1px solid #f0f0f0;max-width:200px;overflow:hidden;text-overflow:ellipsis; }
   .db-row-hover td { background:#e8f4ff !important; }
   /* ── 设置弹窗 ── */
   #settings-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; overflow-y:auto; padding:40px 16px; }
   #settings-panel { max-width:640px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.25); }
-  .settings-hdr { background:linear-gradient(135deg,#1a3a5c,#2d6a9f); color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+  .settings-hdr { background:linear-gradient(135deg,#1a3a5c,#2563eb); color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
   .settings-hdr h3 { font-size:16px; font-weight:600; margin:0; }
   .settings-body { padding:24px; }
   .settings-close { background:none; border:none; color:white; font-size:26px; cursor:pointer; line-height:1; padding:0; opacity:.85; }
@@ -117,7 +163,7 @@ document.addEventListener("DOMContentLoaded", function() {
   /* ── 历史记录弹窗 ── */
   #history-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; overflow-y:auto; padding:40px 16px; }
   #history-panel { max-width:800px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.25); }
-  .history-header { background:linear-gradient(135deg,#1a3a5c,#2d6a9f); color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+  .history-header { background:linear-gradient(135deg,#1a3a5c,#2563eb); color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
   .history-header h3 { font-size:16px; font-weight:600; margin:0; }
   .history-close { background:transparent; border:none; color:white; font-size:24px; cursor:pointer; }
   .history-toolbar { padding:12px 16px; background:#f8f9fa; display:flex; gap:10px; align-items:center; border-bottom:1px solid #e8e8e8; }
@@ -126,17 +172,17 @@ document.addEventListener("DOMContentLoaded", function() {
   .history-item { padding:12px 16px; border-bottom:1px solid #eee; cursor:pointer; transition:background 0.2s; }
   .history-item:hover { background:#f0f7ff; }
   .history-item-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-  .history-item-time { color:#2d6a9f; font-weight:600; font-size:13px; }
+  .history-item-time { color:#2563eb; font-weight:600; font-size:13px; }
   .history-item-models { color:#666; font-size:13px; margin-bottom:4px; }
   .history-item-requirement { color:#888; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:600px; }
   .history-actions { display:flex; gap:8px; }
   .history-actions button { padding:4px 12px; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
-  .btn-restore { background:#2d6a9f; color:#fff; }
+  .btn-restore { background:#2563eb; color:#fff; }
   .btn-delete { background:#e74c3c; color:#fff; }
   .history-empty { text-align:center; padding:40px; color:#888; }
   .history-item-detail { display:none; padding:10px; background:#f9f9f9; border-radius:6px; margin-top:8px; font-size:13px; line-height:1.7; white-space:pre-wrap; }
   /* ── 文档上传 ── */
-  .doc-upload-label { background:#f0f7ff; border:1.5px dashed #2d6a9f; color:#2d6a9f; border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; white-space:nowrap; }
+  .doc-upload-label { background:#f0f7ff; border:1.5px dashed #2563eb; color:#2563eb; border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; white-space:nowrap; }
   .doc-upload-label:hover { background:#e0eeff; border-style:solid; }
   #doc-upload-status { font-size:12px; color:#27ae60; display:none; }
   #followup-card { display:none; }
@@ -150,7 +196,7 @@ document.addEventListener("DOMContentLoaded", function() {
   .chat-bubble.ai   { background:#f0fff4; border:1px solid #c8ecd4; color:#1a3a1c; }
   .followup-row { display:flex; gap:10px; }
   #followup-input { flex:1; border:1.5px solid #e0e0e0; border-radius:8px; padding:10px 14px; font-size:14px; }
-  #followup-input:focus { outline:none; border-color:#2d6a9f; }
+  #followup-input:focus { outline:none; border-color:#2563eb; }
   /* ── 图片粘贴区域 ── */
   .image-preview-container { display:none; margin-top:10px; }
   .image-preview-container.has-images { display:block; }
@@ -162,16 +208,16 @@ document.addEventListener("DOMContentLoaded", function() {
   .image-preview-remove:hover { background:#e74c3c; }
   .paste-hint { font-size:11px; color:#aaa; margin-top:4px; }
   .image-drop-zone { border:2px dashed #ccc; border-radius:8px; padding:16px; text-align:center; color:#888; margin-top:8px; transition:all 0.2s; }
-  .image-drop-zone.dragover { border-color:#2d6a9f; background:#f0f7ff; }
+  .image-drop-zone.dragover { border-color:#2563eb; background:#f0f7ff; }
   /* ── 设置弹窗 Tab ── */
   .settings-tab { flex:1; padding:10px 0; font-size:13px; font-weight:500; border:none; background:transparent; cursor:pointer; color:#888; border-bottom:2px solid transparent; transition:all 0.2s; }
-  .settings-tab:hover { color:#2d6a9f; }
-  .settings-tab-active { color:#2d6a9f !important; border-bottom-color:#2d6a9f !important; background:#fff; }
+  .settings-tab:hover { color:#2563eb; }
+  .settings-tab-active { color:#2563eb !important; border-bottom-color:#2563eb !important; background:#fff; }
 .lead-sub-tab { flex:1;padding:10px 16px;font-size:13px;font-weight:500;border:none;background:#f0f4f8;cursor:pointer;color:#666;border-radius:6px;transition:all 0.2s; }
-.lead-sub-tab:hover { color:#2d6a9f;background:#e8f4fd; }
-.lead-sub-tab-active { color:#fff!important;background:#2d6a9f!important; }
+.lead-sub-tab:hover { color:#2563eb;background:#e8f4fd; }
+.lead-sub-tab-active { color:#fff!important;background:#2563eb!important; }
 .cat-tab { padding:8px 16px;font-size:12px;font-weight:500;border:1px solid #e0e0e0;background:#fff;cursor:pointer;color:#666;border-radius:6px;transition:all 0.2s; }
-.cat-tab:hover { border-color:#2d6a9f;color:#2d6a9f; }
+.cat-tab:hover { border-color:#2563eb;color:#2563eb; }
 .cat-tab-active { color:#fff!important;background:#27ae60!important;border-color:#27ae60!important; }
 .battery-recommend-card { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:8px; }
 .battery-item { background:#f0fff4;padding:12px;border-radius:8px;border-left:3px solid #27ae60;font-size:13px; }
@@ -191,6 +237,7 @@ document.addEventListener("DOMContentLoaded", function() {
   .analyze-btn { justify-content:center; }
 }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
 <script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -199,17 +246,17 @@ document.addEventListener("DOMContentLoaded", function() {
 <body>
 
 <!-- 密码保护遮罩 -->
-<div id="auth-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a3a5c,#2d6a9f);display:flex;align-items:center;justify-content:center;z-index:99999;">
+<div id="auth-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a3a5c,#2563eb);display:flex;align-items:center;justify-content:center;z-index:99999;">
   <form onsubmit="checkAuth();return false" style="background:white;border-radius:16px;padding:48px 40px;width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
     <div style="font-size:48px;margin-bottom:16px;">⚡</div>
     <h2 style="font-size:20px;font-weight:700;color:#1a3a5c;margin-bottom:6px;">UPS 智能选型助手</h2>
     <p style="font-size:13px;color:#888;margin-bottom:28px;">请输入访问密码</p>
     <input id="auth-input" type="password" placeholder="请输入密码"
       style="width:100%;border:2px solid #e0e0e0;border-radius:10px;padding:12px 16px;font-size:16px;text-align:center;letter-spacing:4px;outline:none;transition:border-color 0.2s;"
-      onfocus="this.style.borderColor='#2d6a9f'" onblur="this.style.borderColor='#e0e0e0'">
+      onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e0e0e0'">
     <div id="auth-error" style="color:#e74c3c;font-size:13px;margin-top:10px;min-height:18px;"></div>
     <button type="submit"
-      style="width:100%;background:linear-gradient(135deg,#1a3a5c,#2d6a9f);color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity 0.2s;"
+      style="width:100%;background:linear-gradient(135deg,#1a3a5c,#2563eb);color:white;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity 0.2s;"
       onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">进 入</button>
   </form>
 </div>
@@ -235,43 +282,34 @@ function checkAuth(){
 }
 </script>
 
-<div class="header">
-  <span class="logo">⚡</span>
-  <div class="header-title">
-    <h1>UPS 智能选型助手</h1>
-    <div class="version" id="data-source-label">内置数据 V8.0 | 太行UR / 昆仑UE / 祁连UM / 泰山UT | 共105款产品</div>
+<div class="appbar">
+  <div class="appbar-brand">
+    <div class="appbar-logo">⚡</div>
+    <div>
+      <div class="appbar-name">UPS 智能选型助手</div>
+      <div class="appbar-sub" id="data-source-label">内置数据 V8.0 | 太行UR / 昆仑UE / 祁连UM / 泰山UT | 共105款产品</div>
+    </div>
   </div>
-  <div class="header-actions">
-    <label style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap" title="导入Excel后将替换内置数据">
-      📂 导入Excel
+  <div class="appbar-actions">
+    <label class="appbar-btn" title="导入Excel后将替换内置数据">
+      <i class="ti ti-upload" aria-hidden="true"></i> 导入 Excel
       <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
     </label>
-    <button onclick="toggleBatteryCalc()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
-      🔋 UPS与电池配置计算
-    </button>
-    <button onclick="toggleRuntimeCalc()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
-      ⏱️ 电池后备时间反算
-    </button>
-    <button onclick="toggleBatteryCalcV1()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
-      🔋 电池计算(方法一/锂电)
-    </button>
-    <button onclick="toggleDataCenterCheck()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
-      🏢 数据中心方案校核
-    </button>
-    <button onclick="toggleDataTable()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
-      📊 查看数据库
-    </button>
-    <button onclick="openSettings()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
-      ⚙️ 设置
-    </button>
-    <button onclick="openHistoryModal()" style="background:#8e44ad;color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
-      📋 历史
-    </button>
-    <button id="restore-btn" onclick="restoreBuiltinData()" style="display:none;background:rgba(255,200,100,.3);border:1px solid rgba(255,200,100,.6);color:white;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap">
-      🔄 恢复内置数据
-    </button>
+    <button class="appbar-btn" onclick="openSettings()"><i class="ti ti-settings" aria-hidden="true"></i> 设置</button>
+    <button class="appbar-btn primary" onclick="openHistoryModal()"><i class="ti ti-history" aria-hidden="true"></i> 历史</button>
+    <button id="restore-btn" class="appbar-btn warn" onclick="restoreBuiltinData()" style="display:none"><i class="ti ti-refresh" aria-hidden="true"></i> 恢复内置数据</button>
   </div>
 </div>
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-tab nav-tab-active" id="tab-home" onclick="showMainTab('home')"><i class="ti ti-target ic" aria-hidden="true"></i>智能选型</button>
+    <button class="nav-tab" id="tab-battery" onclick="showMainTab('battery')"><i class="ti ti-battery-3 ic" aria-hidden="true"></i>UPS 与电池配置</button>
+    <button class="nav-tab" id="tab-runtime" onclick="showMainTab('runtime')"><i class="ti ti-clock-hour-4 ic" aria-hidden="true"></i>后备时间反算</button>
+    <button class="nav-tab" id="tab-lead" onclick="showMainTab('lead')"><i class="ti ti-calculator ic" aria-hidden="true"></i>电池计算(方法一/锂电)</button>
+    <button class="nav-tab" id="tab-dc" onclick="showMainTab('dc')"><i class="ti ti-building ic" aria-hidden="true"></i>数据中心校核</button>
+    <button class="nav-tab" id="tab-db" onclick="showMainTab('db')"><i class="ti ti-database ic" aria-hidden="true"></i>产品数据库</button>
+  </div>
+</nav>
 
 <div class="container">
 
@@ -287,7 +325,7 @@ function checkAuth(){
       </div>
     </div>
     <!-- 上栏：产品信息 -->
-    <div style="font-size:12px;font-weight:700;color:#1a3a5c;padding:5px 8px;background:#eef4fb;border-left:3px solid #2d6a9f;margin-bottom:4px;border-radius:0 4px 4px 0">📋 产品信息</div>
+    <div style="font-size:12px;font-weight:700;color:#1a3a5c;padding:5px 8px;background:#eef4fb;border-left:3px solid #2563eb;margin-bottom:4px;border-radius:0 4px 4px 0">📋 产品信息</div>
     <div style="overflow:auto;max-height:240px;margin-bottom:12px">
       <table id="db-table-top" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
         <thead id="db-thead-top"></thead>
@@ -308,11 +346,11 @@ function checkAuth(){
   <div id="dc-check-panel" style="display:none" class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2 data-icon="🏢" style="margin:0">数据中心方案校核</h2>
-      <button onclick="importDcFromCurrentSelection()" style="background:#fff;border:1px solid #2d6a9f;color:#2d6a9f;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">导入现有UPS参数</button>
+      <button onclick="importDcFromCurrentSelection()" style="background:#fff;border:1px solid #2563eb;color:#2563eb;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">导入现有UPS参数</button>
     </div>
 
     <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
-      <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">① 场景参数</div>
+      <div style="font-weight:600;margin-bottom:12px;color:#2563eb">① 场景参数</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
         <div class="field">
           <label>IT负载功率 (kW)</label>
@@ -425,7 +463,7 @@ function checkAuth(){
 
     <div id="dc-check-result" style="display:none">
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-        <div style="background:#eef4fb;border-left:4px solid #2d6a9f;border-radius:8px;padding:14px">
+        <div style="background:#eef4fb;border-left:4px solid #2563eb;border-radius:8px;padding:14px">
           <div style="font-size:12px;color:#666">规划IT负载</div>
           <div style="font-size:22px;font-weight:700;color:#1a3a5c"><span id="dc-result-design-load">-</span> kW</div>
         </div>
@@ -444,7 +482,7 @@ function checkAuth(){
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div style="border:1px solid #d0e8ff;border-radius:10px;padding:16px;background:#f8fbff">
-          <div style="font-weight:600;color:#2d6a9f;margin-bottom:10px">③ 容量与冗余校核</div>
+          <div style="font-weight:600;color:#2563eb;margin-bottom:10px">③ 容量与冗余校核</div>
           <div id="dc-capacity-check" style="font-size:13px;line-height:1.8;color:#444"></div>
         </div>
         <div style="border:1px solid #ffe0b2;border-radius:10px;padding:16px;background:#fffaf0">
@@ -459,11 +497,11 @@ function checkAuth(){
   <div id="runtime-calc-panel" style="display:none" class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2 data-icon="⏱️" style="margin:0">电池后备时间反算</h2>
-      <button onclick="importRuntimeFromUnifiedConfig()" style="background:#fff;border:1px solid #2d6a9f;color:#2d6a9f;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">导入UPS与电池参数</button>
+      <button onclick="importRuntimeFromUnifiedConfig()" style="background:#fff;border:1px solid #2563eb;color:#2563eb;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">导入UPS与电池参数</button>
     </div>
 
     <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
-      <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">① UPS/负载参数</div>
+      <div style="font-weight:600;margin-bottom:12px;color:#2563eb">① UPS/负载参数</div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
         <div class="field">
           <label>总负载功率 (kW，可选)</label>
@@ -536,7 +574,7 @@ function checkAuth(){
 
     <div id="runtime-result" style="display:none">
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-        <div style="background:#eef4fb;border-left:4px solid #2d6a9f;border-radius:8px;padding:14px">
+        <div style="background:#eef4fb;border-left:4px solid #2563eb;border-radius:8px;padding:14px">
           <div style="font-size:12px;color:#666">单体所需功率</div>
           <div style="font-size:22px;font-weight:700;color:#1a3a5c"><span id="runtime-result-cell-power">-</span> W</div>
         </div>
@@ -555,7 +593,7 @@ function checkAuth(){
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div style="border:1px solid #d0e8ff;border-radius:10px;padding:16px;background:#f8fbff">
-          <div style="font-weight:600;color:#2d6a9f;margin-bottom:10px">③ 反算过程</div>
+          <div style="font-weight:600;color:#2563eb;margin-bottom:10px">③ 反算过程</div>
           <div id="runtime-calc-detail" style="font-size:13px;line-height:1.8;color:#444"></div>
         </div>
         <div style="border:1px solid #ffe0b2;border-radius:10px;padding:16px;background:#fffaf0">
@@ -572,7 +610,7 @@ function checkAuth(){
 
     <!-- Tab切换 -->
     <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button id="batt-v1-tab-lead" onclick="switchBattV1Tab('lead')" style="flex:1;padding:10px;border:2px solid #2d6a9f;background:#2d6a9f;color:white;border-radius:8px;cursor:pointer;font-weight:500">铅酸电池(方法一)</button>
+      <button id="batt-v1-tab-lead" onclick="switchBattV1Tab('lead')" style="flex:1;padding:10px;border:2px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;font-weight:500">铅酸电池(方法一)</button>
       <button id="batt-v1-tab-lithium" onclick="switchBattV1Tab('lithium')" style="flex:1;padding:10px;border:2px solid #ddd;background:white;color:#666;border-radius:8px;cursor:pointer">锂电池</button>
     </div>
 
@@ -708,12 +746,12 @@ function checkAuth(){
   <div id="battery-calc-panel" style="display:none" class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2 data-icon="🔋" style="margin:0">UPS与电池配置计算</h2>
-      <button onclick="openBatteryDataTable()" style="background:#fff;border:1px solid #2d6a9f;color:#2d6a9f;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">📊 电池恒功率数据表</button>
+      <button onclick="openBatteryDataTable()" style="background:#fff;border:1px solid #2563eb;color:#2563eb;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">📊 电池恒功率数据表</button>
     </div>
 
     <!-- 统一参数输入区 -->
     <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
-      <div style="font-weight:600;margin-bottom:12px;color:#2d6a9f">📥 参数输入</div>
+      <div style="font-weight:600;margin-bottom:12px;color:#2563eb">📥 参数输入</div>
       <!-- UPS型号选择（支持标准/非标切换） -->
       <div style="margin-bottom:12px;padding:10px;background:#fff8e1;border:1px solid #ffcc80;border-radius:8px">
         <!-- 标准/非标切换 -->
@@ -731,7 +769,7 @@ function checkAuth(){
           <select id="unified-ups-model" onchange="fillUpsFromSelection()" style="flex:1;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 12px;font-size:13px;background:white;min-width:0">
             <option value="">请选择UPS型号</option>
           </select>
-          <button onclick="fillUpsFromSelection()" style="background:#2d6a9f;color:white;border:none;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap">填入参数</button>
+          <button onclick="fillUpsFromSelection()" style="background:#2563eb;color:white;border:none;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap">填入参数</button>
           <span id="ups-model-hint" style="font-size:12px;color:#888;min-width:140px"></span>
         </div>
         <!-- 非标模式：手动输入 -->
@@ -874,42 +912,44 @@ function checkAuth(){
     </details>
 
     <!-- 计算结果区：三列布局 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="result-grid">
       <!-- 电池推荐 -->
-      <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#2e7d32">🔋 电池推荐</div>
-        <div id="unified-battery-result" style="font-size:13px;line-height:1.8;color:#555">
+      <div class="result-card rc-green">
+        <div class="result-card-hd"><i class="ti ti-battery-3" aria-hidden="true"></i>电池推荐</div>
+        <div class="result-card-bd" id="unified-battery-result">
           <span style="color:#888">点击"一键计算全部"查看结果</span>
         </div>
       </div>
 
       <!-- 电池开关箱/柜 -->
-      <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#ef6c00">⚡ 电池开关箱/柜配置</div>
-        <div id="unified-switch-result" style="font-size:13px;line-height:1.8;color:#555">
+      <div class="result-card rc-amber">
+        <div class="result-card-hd"><i class="ti ti-plug" aria-hidden="true"></i>电池开关箱/柜配置</div>
+        <div class="result-card-bd" id="unified-switch-result">
           <span style="color:#888">点击"一键计算全部"查看结果</span>
         </div>
       </div>
 
       <!-- 监控 -->
-      <div style="background:#f3e5f5;border:1px solid #ce93d8;border-radius:10px;padding:16px">
-        <div style="font-weight:600;margin-bottom:12px;color:#7b1fa2">📡 电池监控</div>
-        <div style="margin-bottom:10px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
-            <input type="checkbox" id="unified-opt-hmi" checked> 显示屏
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin-top:4px">
-            <input type="checkbox" id="unified-opt-vm"> 组电压
-          </label>
-        </div>
-        <div id="unified-monitor-result" style="font-size:13px;line-height:1.8;color:#555">
-          <span style="color:#888">点击"一键计算全部"查看结果</span>
+      <div class="result-card rc-purple">
+        <div class="result-card-hd"><i class="ti ti-device-desktop-analytics" aria-hidden="true"></i>电池监控</div>
+        <div class="result-card-bd">
+          <div style="margin-bottom:10px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="unified-opt-hmi" checked> 显示屏
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin-top:4px">
+              <input type="checkbox" id="unified-opt-vm"> 组电压
+            </label>
+          </div>
+          <div id="unified-monitor-result">
+            <span style="color:#888">点击"一键计算全部"查看结果</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- 项目汇总清单 -->
-    <div style="border:2px solid #2d6a9f;border-radius:10px;padding:16px">
+    <div style="border:2px solid #2563eb;border-radius:10px;padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div style="font-weight:600;color:#1a3a5c;font-size:16px">📋 项目配置汇总清单</div>
         <div style="display:flex;gap:12px;align-items:center">
@@ -919,14 +959,14 @@ function checkAuth(){
           <button onclick="addCustomSummaryRow()" style="background:#f39c12;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">➕ 增加行</button>
           <button onclick="exportProjectSummary()" style="background:#27ae60;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">📥 导出Excel</button>
           <button onclick="exportQuickQuote()" style="background:#8e44ad;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">💰 导出报价单</button>
-          <button onclick="exportTechnicalBrief()" style="background:#2d6a9f;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">📄 导出技术说明</button>
+          <button onclick="exportTechnicalBrief()" style="background:#2563eb;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">📄 导出技术说明</button>
           <button onclick="clearProjectSummary()" style="background:#95a5a6;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">清空</button>
         </div>
       </div>
       <div style="overflow-x:auto">
-        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1320px">
+        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
-            <tr style="background:#2d6a9f;color:white">
+            <tr style="background:#2563eb;color:white">
               <th style="padding:8px;border:1px solid #ddd;width:40px">序号</th>
               <th style="padding:8px;border:1px solid #ddd;width:80px">产品名称</th>
               <th style="padding:8px;border:1px solid #ddd;width:90px">编码</th>
@@ -958,7 +998,7 @@ function checkAuth(){
   </div>
 
 
-  <div class="card">
+  <div class="card" id="home-input-card">
     <h2 data-icon="📋">客户需求</h2>
     <textarea class="req-area" id="requirement" placeholder="请粘贴客户技术要求，例如：
 
@@ -1031,7 +1071,7 @@ function checkAuth(){
 
       <!-- 备选方案 -->
       <div id="alt-section" style="display:none">
-        <div style="font-size:12px;font-weight:700;color:#1a3a5c;padding:5px 10px;background:#eef4fb;border-left:3px solid #2d6a9f;border-radius:0 4px 4px 0;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+        <div style="font-size:12px;font-weight:700;color:#1a3a5c;padding:5px 10px;background:#eef4fb;border-left:3px solid #2563eb;border-radius:0 4px 4px 0;margin-bottom:6px;display:flex;align-items:center;gap:8px">
           ○ 备选方案 <span id="alt-count" style="font-weight:400;color:#666;font-size:11px"></span>
         </div>
         <div style="overflow-x:auto">
@@ -1068,7 +1108,7 @@ function checkAuth(){
 <!-- 产品详情模态框 -->
 <div id="detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;overflow-y:auto;padding:40px 16px">
   <div style="max-width:760px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.2)">
-    <div style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
+    <div style="background:linear-gradient(135deg,#1a3a5c,#2563eb);color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
       <div>
         <div id="modal-model" style="font-size:18px;font-weight:700"></div>
         <div id="modal-series" style="font-size:12px;opacity:.8;margin-top:2px"></div>
@@ -1097,7 +1137,7 @@ function checkAuth(){
 <div class="footer">UPS智能选型助手 <span id="app-version"></span> · 数据来源：常用UPS速查表V8.0</div>
 <div id="battery-data-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;overflow-y:auto;padding:20px">
   <div style="max-width:1200px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden">
-    <div style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);color:white;padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <div style="background:linear-gradient(135deg,#1a3a5c,#2563eb);color:white;padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
       <h3 style="font-size:16px;font-weight:600;margin:0">📊 电池恒功率数据表</h3>
       <button onclick="closeBatteryDataTable()" style="background:none;border:none;color:white;font-size:26px;cursor:pointer">×</button>
     </div>
@@ -1490,7 +1530,7 @@ function buildProductRow(rec, idx) {
       +'<td>'+(p?.["并机数量"]||"无")+'</td>'
       +'<td style="font-size:12px">'+(p?.["通讯"]||"")+'</td>'
       +'<td><button class="detail-btn" data-idx="'+idx+'" '
-        +'style="background:#2d6a9f;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">详情</button></td>';
+        +'style="background:#2563eb;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">详情</button></td>';
     fragment.appendChild(trFrame);
 
     // 第二行：功率模块
@@ -1543,7 +1583,7 @@ function buildProductRow(rec, idx) {
     +'<td>'+(p?.["并机数量"]||"无")+'</td>'
     +'<td style="font-size:12px">'+(p?.["通讯"]||"")+'</td>'
     +'<td><button class="detail-btn" data-idx="'+idx+'" '
-      +'style="background:#2d6a9f;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">详情</button></td>';
+      +'style="background:#2563eb;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">详情</button></td>';
   return tr;
 }
 
@@ -1927,8 +1967,8 @@ function exportDoc() {
 
   const doc = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>UPS选型推荐方案</title>
 <style>body{font-family:-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#1a1a1a}
-h1{color:#1a3a5c}h2{color:#2d6a9f;border-bottom:2px solid #e8e8e8;padding-bottom:8px;margin-top:32px}
-.meta{color:#888;font-size:13px;margin:8px 0 24px}.req{background:#f8fbff;border-left:4px solid #2d6a9f;padding:16px;border-radius:0 8px 8px 0;white-space:pre-wrap;font-size:13px;line-height:1.8}
+h1{color:#1a3a5c}h2{color:#2563eb;border-bottom:2px solid #e8e8e8;padding-bottom:8px;margin-top:32px}
+.meta{color:#888;font-size:13px;margin:8px 0 24px}.req{background:#f8fbff;border-left:4px solid #2563eb;padding:16px;border-radius:0 8px 8px 0;white-space:pre-wrap;font-size:13px;line-height:1.8}
 .analysis{background:#f0fff4;border:1px solid #a8e6c4;border-radius:8px;padding:16px;white-space:pre-wrap;font-size:13px;line-height:1.8}
 @media print{body{margin:20px}}</style></head><body>
 <h1>⚡ UPS 选型推荐方案</h1>
@@ -2094,11 +2134,11 @@ function exportTechnicalBrief() {
   var doc = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>UPS项目技术说明</title>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1080px;margin:32px auto;padding:0 24px;color:#1f2933;line-height:1.65}
-h1{color:#1a3a5c;margin-bottom:4px}h2{color:#2d6a9f;border-bottom:2px solid #e5eef7;padding-bottom:8px;margin-top:30px}h3{color:#1a3a5c;margin:16px 0 8px}
+h1{color:#1a3a5c;margin-bottom:4px}h2{color:#2563eb;border-bottom:2px solid #e5eef7;padding-bottom:8px;margin-top:30px}h3{color:#1a3a5c;margin:16px 0 8px}
 .meta{color:#7b8794;font-size:13px;margin-bottom:24px}.muted{color:#888}
 .info-table,.summary-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}.info-table th{width:180px;text-align:left;background:#f5f7fa;color:#52606d}
-th,td{border:1px solid #d9e2ec;padding:8px 10px;vertical-align:top}.summary-table th{background:#2d6a9f;color:white}
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}.kpi-grid div{background:#f8fbff;border-left:4px solid #2d6a9f;border-radius:6px;padding:12px}.kpi-grid span{display:block;color:#66788a;font-size:12px}.kpi-grid b{font-size:20px;color:#1a3a5c}
+th,td{border:1px solid #d9e2ec;padding:8px 10px;vertical-align:top}.summary-table th{background:#2563eb;color:white}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}.kpi-grid div{background:#f8fbff;border-left:4px solid #2563eb;border-radius:6px;padding:12px}.kpi-grid span{display:block;color:#66788a;font-size:12px}.kpi-grid b{font-size:20px;color:#1a3a5c}
 .note{background:#fbfdff;border:1px solid #d9e2ec;border-radius:8px;padding:12px;font-size:13px}.warn{background:#fffaf0;border-color:#ffd08a}.pre{white-space:pre-wrap}
 .three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.three-col .note{min-height:120px}
 @media print{body{margin:16px;max-width:none}.kpi-grid,.three-col{break-inside:avoid}}
@@ -2558,6 +2598,31 @@ async function restoreBuiltinData() {
 
 
 // 电池配置计算面板
+// 顶部标签页导航：单视图切换（智能选型 / 各功能面板）
+function showMainTab(key) {
+  var panels = { battery: 'battery-calc-panel', runtime: 'runtime-calc-panel', lead: 'battery-calc-v1-panel', dc: 'dc-check-panel', db: 'data-table-panel' };
+  Object.keys(panels).forEach(function(k) { var el = document.getElementById(panels[k]); if (el) el.style.display = 'none'; });
+  var homeCard = document.getElementById('home-input-card');
+  var resultSec = document.getElementById('result-section');
+  if (key === 'home') {
+    if (homeCard) homeCard.style.display = '';
+    if (resultSec) resultSec.style.display = '';
+  } else {
+    if (homeCard) homeCard.style.display = 'none';
+    if (resultSec) resultSec.style.display = 'none';
+    var panel = document.getElementById(panels[key]);
+    if (panel) panel.style.display = 'block';
+    if (key === 'battery') { updateUpsModelSelect(); syncUnifiedUpsNumFromDc(false); }
+    else if (key === 'runtime') { refreshRuntimeBatteryOptions(); }
+    else if (key === 'dc') { updateDcArchitectureFields(); }
+    else if (key === 'db') { buildDataTable(); }
+  }
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('nav-tab-active'); });
+  var active = document.getElementById('tab-' + key);
+  if (active) active.classList.add('nav-tab-active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function toggleBatteryCalc() {
   const panel = document.getElementById("battery-calc-panel");
   if (panel.style.display === "none") {
@@ -2908,9 +2973,9 @@ function switchBattV1Tab(tab) {
   ['lead', 'lithium'].forEach(t => {
     const btn = document.getElementById('batt-v1-tab-' + t);
     if (t === tab) {
-      btn.style.background = '#2d6a9f';
+      btn.style.background = '#2563eb';
       btn.style.color = 'white';
-      btn.style.borderColor = '#2d6a9f';
+      btn.style.borderColor = '#2563eb';
     } else {
       btn.style.background = 'white';
       btn.style.color = '#666';
@@ -3181,8 +3246,8 @@ function renderSummaryRowNumberCell(key, rowNum) {
   return `<div style="display:flex;align-items:center;justify-content:center;gap:5px;line-height:1">
     <span style="min-width:16px">${rowNum}</span>
     <span style="display:inline-flex;flex-direction:column;gap:2px">
-      <button onclick="moveSummaryRow(decodeURIComponent('${encodedKey}'), -1)" title="上移" style="width:18px;height:16px;line-height:12px;padding:0;border:1px solid #b7c8d8;border-radius:3px;background:#f8fbff;color:#2d6a9f;font-size:10px;cursor:pointer">▲</button>
-      <button onclick="moveSummaryRow(decodeURIComponent('${encodedKey}'), 1)" title="下移" style="width:18px;height:16px;line-height:12px;padding:0;border:1px solid #b7c8d8;border-radius:3px;background:#f8fbff;color:#2d6a9f;font-size:10px;cursor:pointer">▼</button>
+      <button onclick="moveSummaryRow(decodeURIComponent('${encodedKey}'), -1)" title="上移" style="width:18px;height:16px;line-height:12px;padding:0;border:1px solid #b7c8d8;border-radius:3px;background:#f8fbff;color:#2563eb;font-size:10px;cursor:pointer">▲</button>
+      <button onclick="moveSummaryRow(decodeURIComponent('${encodedKey}'), 1)" title="下移" style="width:18px;height:16px;line-height:12px;padding:0;border:1px solid #b7c8d8;border-radius:3px;background:#f8fbff;color:#2563eb;font-size:10px;cursor:pointer">▼</button>
     </span>
   </div>`;
 }
@@ -28248,7 +28313,7 @@ function renderBatteryRecommendations(category, data, cellPower) {
 
     if (remaining > 0) {
       html += '<details style="margin-top:12px">';
-      html += '<summary style="cursor:pointer;font-size:13px;color:#2d6a9f;font-weight:500;padding:8px 12px;background:#f5f7fa;border-radius:6px;text-align:center">';
+      html += '<summary style="cursor:pointer;font-size:13px;color:#2563eb;font-weight:500;padding:8px 12px;background:#f5f7fa;border-radius:6px;text-align:center">';
       html += '▼ 点击展开查看剩余 ' + remaining + ' 个型号 ▲</summary>';
       html += '<div class="battery-recommend-card" style="margin-top:8px">';
       data.suitable.slice(displayCount).forEach(function(b) {
