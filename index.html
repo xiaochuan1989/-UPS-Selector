@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.1";
+const APP_VERSION = "v1.8.2";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -496,6 +496,7 @@ function checkAuth(){
           <select id="runtime-batt-type" onchange="refreshRuntimeBatteryOptions()">
             <option value="normal">SP12V</option>
             <option value="highpower">SPG12V高功率</option>
+            <option value="jyc">JYC-HR12V高功率</option>
             <option value="2v">GFMD-2V</option>
             <option value="dianneng">电能GBT12-20小时率</option>
             <option value="dianneng10h">电能GBT12-10小时率</option>
@@ -779,6 +780,7 @@ function checkAuth(){
           <select id="unified-batt-type" onchange="refreshUnifiedBatteryPowerOptions()">
             <option value="normal">SP12V</option>
             <option value="highpower">SPG12V高功率</option>
+            <option value="jyc">JYC-HR12V高功率</option>
             <option value="2v">GFMD-2V</option>
             <option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option>
             <option value="custom">自定义/客户指定</option>
@@ -1100,7 +1102,7 @@ function checkAuth(){
       <button onclick="closeBatteryDataTable()" style="background:none;border:none;color:white;font-size:26px;cursor:pointer">×</button>
     </div>
     <div style="padding:16px 24px;background:#f5f7fa;border-bottom:1px solid #e0e0e0;display:flex;gap:12px;flex-wrap:wrap">
-      <div><label style="font-size:12px;color:#888;margin-right:6px">分类:</label><select id="batt-data-category" onchange="refreshBatteryDataVoltageOptions();filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="all">全部</option><option value="normal">SP12V</option><option value="highpower">SPG12V高功率</option><option value="2v">GFMD-2V</option><option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option></select></div>
+      <div><label style="font-size:12px;color:#888;margin-right:6px">分类:</label><select id="batt-data-category" onchange="refreshBatteryDataVoltageOptions();filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="all">全部</option><option value="normal">SP12V</option><option value="highpower">SPG12V高功率</option><option value="jyc">JYC-HR12V高功率</option><option value="2v">GFMD-2V</option><option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option></select></div>
       <div><label style="font-size:12px;color:#888;margin-right:6px">截止电压:</label><select id="batt-data-voltage" onchange="filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="1.75" selected>1.75V</option></select></div>
       <div><label style="font-size:12px;color:#888;margin-right:6px">搜索:</label><input type="text" id="batt-data-search" oninput="filterBatteryDataTable()" placeholder="输入型号" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px;width:140px"></div>
     </div>
@@ -4078,7 +4080,7 @@ function calcAllBatteryConfig() {
     batteryResult = foundBattery.data;
   }
 
-  var catLabelMap = { normal: 'SP12V', highpower: 'SPG12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率', dianneng10h: '电能GBT12-10小时率', custom: '自定义/客户指定' };
+  var catLabelMap = { normal: 'SP12V', highpower: 'SPG12V高功率', jyc: 'JYC-HR12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率', dianneng10h: '电能GBT12-10小时率', custom: '自定义/客户指定' };
   var catLabel = catLabelMap[battType] || battType;
 
   if (isCustomBatteryType) {
@@ -4088,7 +4090,7 @@ function calcAllBatteryConfig() {
     batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
     batteryHtml += `<div style="margin-top:8px;padding:6px;background:#e3f2fd;border-radius:4px;font-size:11px;color:#1565c0">💡 可在项目汇总清单中手动输入客户指定电池型号</div>`;
   } else if (foundBattery) {
-    var catLabelDisplay = { normal: '(SP12V)', highpower: '(SPG12V高功率)', '2v': '(GFMD-2V)', dianneng: '(电能GBT12-20小时率)', dianneng10h: '(电能GBT12-10小时率)' }[foundBattery.category];
+    var catLabelDisplay = { normal: '(SP12V)', highpower: '(SPG12V高功率)', jyc: '(JYC-HR12V高功率)', '2v': '(GFMD-2V)', dianneng: '(电能GBT12-20小时率)', dianneng10h: '(电能GBT12-10小时率)' }[foundBattery.category];
     batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐${catLabelDisplay}: ${batteryResult.model}</div>`;
     batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
     batteryHtml += `<div>恒功率: <b>${batteryResult.power}W</b> (余量+${batteryResult.marginPercent}%)</div>`;
@@ -24895,6 +24897,3022 @@ var BATTERY_POWER_DATA = [
         ]
       }
     ]
+  },
+  {
+    "model": "HR12V260W",
+    "capacity": "65Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 509
+          },
+          {
+            "time": 10,
+            "power": 357
+          },
+          {
+            "time": 15,
+            "power": 268
+          },
+          {
+            "time": 30,
+            "power": 144.18
+          },
+          {
+            "time": 60,
+            "power": 85.173
+          },
+          {
+            "time": 90,
+            "power": 63.368
+          },
+          {
+            "time": 120,
+            "power": 50.9
+          },
+          {
+            "time": 180,
+            "power": 36.312
+          },
+          {
+            "time": 300,
+            "power": 23.49
+          },
+          {
+            "time": 600,
+            "power": 13.17
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 485
+          },
+          {
+            "time": 10,
+            "power": 345
+          },
+          {
+            "time": 15,
+            "power": 260
+          },
+          {
+            "time": 30,
+            "power": 140.62
+          },
+          {
+            "time": 60,
+            "power": 84.372
+          },
+          {
+            "time": 90,
+            "power": 62.656
+          },
+          {
+            "time": 120,
+            "power": 50.01
+          },
+          {
+            "time": 180,
+            "power": 35.956
+          },
+          {
+            "time": 300,
+            "power": 23.4
+          },
+          {
+            "time": 600,
+            "power": 13.08
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 465
+          },
+          {
+            "time": 10,
+            "power": 334
+          },
+          {
+            "time": 15,
+            "power": 256
+          },
+          {
+            "time": 30,
+            "power": 139.73
+          },
+          {
+            "time": 60,
+            "power": 83.66
+          },
+          {
+            "time": 90,
+            "power": 61.944
+          },
+          {
+            "time": 120,
+            "power": 49.66
+          },
+          {
+            "time": 180,
+            "power": 35.778
+          },
+          {
+            "time": 300,
+            "power": 23.31
+          },
+          {
+            "time": 600,
+            "power": 13.08
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 431
+          },
+          {
+            "time": 10,
+            "power": 318
+          },
+          {
+            "time": 15,
+            "power": 248
+          },
+          {
+            "time": 30,
+            "power": 134.39
+          },
+          {
+            "time": 60,
+            "power": 81.435
+          },
+          {
+            "time": 90,
+            "power": 60.431
+          },
+          {
+            "time": 120,
+            "power": 48.68
+          },
+          {
+            "time": 180,
+            "power": 35.333
+          },
+          {
+            "time": 300,
+            "power": 22.96
+          },
+          {
+            "time": 600,
+            "power": 12.99
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 390
+          },
+          {
+            "time": 10,
+            "power": 297
+          },
+          {
+            "time": 15,
+            "power": 235
+          },
+          {
+            "time": 30,
+            "power": 129.94
+          },
+          {
+            "time": 60,
+            "power": 78.676
+          },
+          {
+            "time": 90,
+            "power": 58.562
+          },
+          {
+            "time": 120,
+            "power": 47.43
+          },
+          {
+            "time": 180,
+            "power": 34.532
+          },
+          {
+            "time": 300,
+            "power": 22.69
+          },
+          {
+            "time": 600,
+            "power": 12.81
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V300W",
+    "capacity": "70Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 586
+          },
+          {
+            "time": 10,
+            "power": 420
+          },
+          {
+            "time": 15,
+            "power": 318
+          },
+          {
+            "time": 30,
+            "power": 192.9
+          },
+          {
+            "time": 60,
+            "power": 110.8
+          },
+          {
+            "time": 90,
+            "power": 82
+          },
+          {
+            "time": 120,
+            "power": 63.5
+          },
+          {
+            "time": 180,
+            "power": 44.6
+          },
+          {
+            "time": 300,
+            "power": 28.5
+          },
+          {
+            "time": 600,
+            "power": 15.9
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 553
+          },
+          {
+            "time": 10,
+            "power": 396
+          },
+          {
+            "time": 15,
+            "power": 300
+          },
+          {
+            "time": 30,
+            "power": 183.3
+          },
+          {
+            "time": 60,
+            "power": 107.6
+          },
+          {
+            "time": 90,
+            "power": 80.2
+          },
+          {
+            "time": 120,
+            "power": 62.5
+          },
+          {
+            "time": 180,
+            "power": 44
+          },
+          {
+            "time": 300,
+            "power": 28.2
+          },
+          {
+            "time": 600,
+            "power": 15.8
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 532
+          },
+          {
+            "time": 10,
+            "power": 383
+          },
+          {
+            "time": 15,
+            "power": 291
+          },
+          {
+            "time": 30,
+            "power": 179.6
+          },
+          {
+            "time": 60,
+            "power": 106.2
+          },
+          {
+            "time": 90,
+            "power": 79.3
+          },
+          {
+            "time": 120,
+            "power": 62
+          },
+          {
+            "time": 180,
+            "power": 43.6
+          },
+          {
+            "time": 300,
+            "power": 28
+          },
+          {
+            "time": 600,
+            "power": 15.8
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 500
+          },
+          {
+            "time": 10,
+            "power": 363
+          },
+          {
+            "time": 15,
+            "power": 279
+          },
+          {
+            "time": 30,
+            "power": 172.8
+          },
+          {
+            "time": 60,
+            "power": 104.5
+          },
+          {
+            "time": 90,
+            "power": 78
+          },
+          {
+            "time": 120,
+            "power": 61.1
+          },
+          {
+            "time": 180,
+            "power": 43.1
+          },
+          {
+            "time": 300,
+            "power": 27.7
+          },
+          {
+            "time": 600,
+            "power": 15.7
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 462
+          },
+          {
+            "time": 10,
+            "power": 340
+          },
+          {
+            "time": 15,
+            "power": 264
+          },
+          {
+            "time": 30,
+            "power": 165.1
+          },
+          {
+            "time": 60,
+            "power": 102
+          },
+          {
+            "time": 90,
+            "power": 76.5
+          },
+          {
+            "time": 120,
+            "power": 60.1
+          },
+          {
+            "time": 180,
+            "power": 42.5
+          },
+          {
+            "time": 300,
+            "power": 27.4
+          },
+          {
+            "time": 600,
+            "power": 15.6
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V360W",
+    "capacity": "90Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 619
+          },
+          {
+            "time": 10,
+            "power": 455
+          },
+          {
+            "time": 15,
+            "power": 373
+          },
+          {
+            "time": 30,
+            "power": 220
+          },
+          {
+            "time": 60,
+            "power": 132.5
+          },
+          {
+            "time": 90,
+            "power": 96.1
+          },
+          {
+            "time": 120,
+            "power": 74.76
+          },
+          {
+            "time": 180,
+            "power": 52.91
+          },
+          {
+            "time": 300,
+            "power": 34.88
+          },
+          {
+            "time": 600,
+            "power": 20.41
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 584
+          },
+          {
+            "time": 10,
+            "power": 432
+          },
+          {
+            "time": 15,
+            "power": 360
+          },
+          {
+            "time": 30,
+            "power": 214.1
+          },
+          {
+            "time": 60,
+            "power": 129.7
+          },
+          {
+            "time": 90,
+            "power": 94.1
+          },
+          {
+            "time": 120,
+            "power": 73.43
+          },
+          {
+            "time": 180,
+            "power": 52.3
+          },
+          {
+            "time": 300,
+            "power": 34.55
+          },
+          {
+            "time": 600,
+            "power": 20.25
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 562
+          },
+          {
+            "time": 10,
+            "power": 420
+          },
+          {
+            "time": 15,
+            "power": 353
+          },
+          {
+            "time": 30,
+            "power": 210.1
+          },
+          {
+            "time": 60,
+            "power": 127.8
+          },
+          {
+            "time": 90,
+            "power": 92.9
+          },
+          {
+            "time": 120,
+            "power": 72.55
+          },
+          {
+            "time": 180,
+            "power": 51.82
+          },
+          {
+            "time": 300,
+            "power": 34.34
+          },
+          {
+            "time": 600,
+            "power": 20.17
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 519
+          },
+          {
+            "time": 10,
+            "power": 395
+          },
+          {
+            "time": 15,
+            "power": 336
+          },
+          {
+            "time": 30,
+            "power": 201.9
+          },
+          {
+            "time": 60,
+            "power": 123.9
+          },
+          {
+            "time": 90,
+            "power": 90.4
+          },
+          {
+            "time": 120,
+            "power": 70.65
+          },
+          {
+            "time": 180,
+            "power": 50.79
+          },
+          {
+            "time": 300,
+            "power": 33.87
+          },
+          {
+            "time": 600,
+            "power": 19.98
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 473
+          },
+          {
+            "time": 10,
+            "power": 368
+          },
+          {
+            "time": 15,
+            "power": 316
+          },
+          {
+            "time": 30,
+            "power": 192.7
+          },
+          {
+            "time": 60,
+            "power": 119.7
+          },
+          {
+            "time": 90,
+            "power": 87.5
+          },
+          {
+            "time": 120,
+            "power": 68.5
+          },
+          {
+            "time": 180,
+            "power": 49.61
+          },
+          {
+            "time": 300,
+            "power": 33.34
+          },
+          {
+            "time": 600,
+            "power": 19.73
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V400W",
+    "capacity": "100Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 681
+          },
+          {
+            "time": 10,
+            "power": 504
+          },
+          {
+            "time": 15,
+            "power": 406
+          },
+          {
+            "time": 30,
+            "power": 243
+          },
+          {
+            "time": 60,
+            "power": 143.4
+          },
+          {
+            "time": 90,
+            "power": 103.9
+          },
+          {
+            "time": 120,
+            "power": 82.2
+          },
+          {
+            "time": 180,
+            "power": 58.57
+          },
+          {
+            "time": 300,
+            "power": 37.88
+          },
+          {
+            "time": 600,
+            "power": 21.58
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 642
+          },
+          {
+            "time": 10,
+            "power": 478
+          },
+          {
+            "time": 15,
+            "power": 400
+          },
+          {
+            "time": 30,
+            "power": 236
+          },
+          {
+            "time": 60,
+            "power": 140.6
+          },
+          {
+            "time": 90,
+            "power": 102.5
+          },
+          {
+            "time": 120,
+            "power": 81.1
+          },
+          {
+            "time": 180,
+            "power": 57.97
+          },
+          {
+            "time": 300,
+            "power": 37.56
+          },
+          {
+            "time": 600,
+            "power": 21.5
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 620
+          },
+          {
+            "time": 10,
+            "power": 464
+          },
+          {
+            "time": 15,
+            "power": 388
+          },
+          {
+            "time": 30,
+            "power": 233
+          },
+          {
+            "time": 60,
+            "power": 139.1
+          },
+          {
+            "time": 90,
+            "power": 101.5
+          },
+          {
+            "time": 120,
+            "power": 80.4
+          },
+          {
+            "time": 180,
+            "power": 57.6
+          },
+          {
+            "time": 300,
+            "power": 37.4
+          },
+          {
+            "time": 600,
+            "power": 21.46
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 574
+          },
+          {
+            "time": 10,
+            "power": 438
+          },
+          {
+            "time": 15,
+            "power": 367
+          },
+          {
+            "time": 30,
+            "power": 224
+          },
+          {
+            "time": 60,
+            "power": 135.8
+          },
+          {
+            "time": 90,
+            "power": 99.6
+          },
+          {
+            "time": 120,
+            "power": 79.1
+          },
+          {
+            "time": 180,
+            "power": 56.81
+          },
+          {
+            "time": 300,
+            "power": 37.06
+          },
+          {
+            "time": 600,
+            "power": 21.35
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 526
+          },
+          {
+            "time": 10,
+            "power": 410
+          },
+          {
+            "time": 15,
+            "power": 346
+          },
+          {
+            "time": 30,
+            "power": 216
+          },
+          {
+            "time": 60,
+            "power": 132.4
+          },
+          {
+            "time": 90,
+            "power": 97.5
+          },
+          {
+            "time": 120,
+            "power": 77.7
+          },
+          {
+            "time": 180,
+            "power": 55.97
+          },
+          {
+            "time": 300,
+            "power": 36.69
+          },
+          {
+            "time": 600,
+            "power": 21.22
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V430W",
+    "capacity": "105Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 779
+          },
+          {
+            "time": 10,
+            "power": 574
+          },
+          {
+            "time": 15,
+            "power": 443
+          },
+          {
+            "time": 30,
+            "power": 269
+          },
+          {
+            "time": 60,
+            "power": 155.1
+          },
+          {
+            "time": 90,
+            "power": 111
+          },
+          {
+            "time": 120,
+            "power": 87.7
+          },
+          {
+            "time": 180,
+            "power": 62.9
+          },
+          {
+            "time": 300,
+            "power": 41.22
+          },
+          {
+            "time": 600,
+            "power": 23.09
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 733
+          },
+          {
+            "time": 10,
+            "power": 548
+          },
+          {
+            "time": 15,
+            "power": 430
+          },
+          {
+            "time": 30,
+            "power": 262
+          },
+          {
+            "time": 60,
+            "power": 152.1
+          },
+          {
+            "time": 90,
+            "power": 109.3
+          },
+          {
+            "time": 120,
+            "power": 86.6
+          },
+          {
+            "time": 180,
+            "power": 62.2
+          },
+          {
+            "time": 300,
+            "power": 40.87
+          },
+          {
+            "time": 600,
+            "power": 22.95
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 708
+          },
+          {
+            "time": 10,
+            "power": 533
+          },
+          {
+            "time": 15,
+            "power": 422
+          },
+          {
+            "time": 30,
+            "power": 259
+          },
+          {
+            "time": 60,
+            "power": 150.4
+          },
+          {
+            "time": 90,
+            "power": 108.3
+          },
+          {
+            "time": 120,
+            "power": 86
+          },
+          {
+            "time": 180,
+            "power": 61.8
+          },
+          {
+            "time": 300,
+            "power": 40.69
+          },
+          {
+            "time": 600,
+            "power": 22.87
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 658
+          },
+          {
+            "time": 10,
+            "power": 503
+          },
+          {
+            "time": 15,
+            "power": 405
+          },
+          {
+            "time": 30,
+            "power": 250
+          },
+          {
+            "time": 60,
+            "power": 147.1
+          },
+          {
+            "time": 90,
+            "power": 106.4
+          },
+          {
+            "time": 120,
+            "power": 84.6
+          },
+          {
+            "time": 180,
+            "power": 60.9
+          },
+          {
+            "time": 300,
+            "power": 40.22
+          },
+          {
+            "time": 600,
+            "power": 22.67
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 605
+          },
+          {
+            "time": 10,
+            "power": 470
+          },
+          {
+            "time": 15,
+            "power": 386
+          },
+          {
+            "time": 30,
+            "power": 242
+          },
+          {
+            "time": 60,
+            "power": 143.7
+          },
+          {
+            "time": 90,
+            "power": 104.4
+          },
+          {
+            "time": 120,
+            "power": 83.1
+          },
+          {
+            "time": 180,
+            "power": 60
+          },
+          {
+            "time": 300,
+            "power": 39.7
+          },
+          {
+            "time": 600,
+            "power": 22.43
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V460W",
+    "capacity": "120Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 827
+          },
+          {
+            "time": 10,
+            "power": 587
+          },
+          {
+            "time": 15,
+            "power": 472
+          },
+          {
+            "time": 30,
+            "power": 283
+          },
+          {
+            "time": 60,
+            "power": 164.8
+          },
+          {
+            "time": 90,
+            "power": 119.7
+          },
+          {
+            "time": 120,
+            "power": 95.06
+          },
+          {
+            "time": 180,
+            "power": 68
+          },
+          {
+            "time": 300,
+            "power": 44.94
+          },
+          {
+            "time": 600,
+            "power": 25.94
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 778
+          },
+          {
+            "time": 10,
+            "power": 562
+          },
+          {
+            "time": 15,
+            "power": 460
+          },
+          {
+            "time": 30,
+            "power": 274
+          },
+          {
+            "time": 60,
+            "power": 160.9
+          },
+          {
+            "time": 90,
+            "power": 117.4
+          },
+          {
+            "time": 120,
+            "power": 93.66
+          },
+          {
+            "time": 180,
+            "power": 67.3
+          },
+          {
+            "time": 300,
+            "power": 44.59
+          },
+          {
+            "time": 600,
+            "power": 25.81
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 750
+          },
+          {
+            "time": 10,
+            "power": 548
+          },
+          {
+            "time": 15,
+            "power": 451
+          },
+          {
+            "time": 30,
+            "power": 269
+          },
+          {
+            "time": 60,
+            "power": 158.9
+          },
+          {
+            "time": 90,
+            "power": 116.2
+          },
+          {
+            "time": 120,
+            "power": 92.8
+          },
+          {
+            "time": 180,
+            "power": 66.9
+          },
+          {
+            "time": 300,
+            "power": 44.4
+          },
+          {
+            "time": 600,
+            "power": 25.74
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 694
+          },
+          {
+            "time": 10,
+            "power": 520
+          },
+          {
+            "time": 15,
+            "power": 432
+          },
+          {
+            "time": 30,
+            "power": 261
+          },
+          {
+            "time": 60,
+            "power": 154.6
+          },
+          {
+            "time": 90,
+            "power": 113.6
+          },
+          {
+            "time": 120,
+            "power": 91.07
+          },
+          {
+            "time": 180,
+            "power": 65.8
+          },
+          {
+            "time": 300,
+            "power": 43.91
+          },
+          {
+            "time": 600,
+            "power": 25.53
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 636
+          },
+          {
+            "time": 10,
+            "power": 490
+          },
+          {
+            "time": 15,
+            "power": 411
+          },
+          {
+            "time": 30,
+            "power": 251
+          },
+          {
+            "time": 60,
+            "power": 150.2
+          },
+          {
+            "time": 90,
+            "power": 110.8
+          },
+          {
+            "time": 120,
+            "power": 88.95
+          },
+          {
+            "time": 180,
+            "power": 64.7
+          },
+          {
+            "time": 300,
+            "power": 43.34
+          },
+          {
+            "time": 600,
+            "power": 25.32
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V560W",
+    "capacity": "150Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 956
+          },
+          {
+            "time": 10,
+            "power": 739
+          },
+          {
+            "time": 15,
+            "power": 583
+          },
+          {
+            "time": 30,
+            "power": 353
+          },
+          {
+            "time": 60,
+            "power": 205.9
+          },
+          {
+            "time": 90,
+            "power": 148.4
+          },
+          {
+            "time": 120,
+            "power": 117
+          },
+          {
+            "time": 180,
+            "power": 84
+          },
+          {
+            "time": 300,
+            "power": 55.68
+          },
+          {
+            "time": 600,
+            "power": 31.93
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 895
+          },
+          {
+            "time": 10,
+            "power": 700
+          },
+          {
+            "time": 15,
+            "power": 560
+          },
+          {
+            "time": 30,
+            "power": 343
+          },
+          {
+            "time": 60,
+            "power": 200.9
+          },
+          {
+            "time": 90,
+            "power": 145.3
+          },
+          {
+            "time": 120,
+            "power": 114.8
+          },
+          {
+            "time": 180,
+            "power": 82.7
+          },
+          {
+            "time": 300,
+            "power": 54.96
+          },
+          {
+            "time": 600,
+            "power": 31.69
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 860
+          },
+          {
+            "time": 10,
+            "power": 678
+          },
+          {
+            "time": 15,
+            "power": 547
+          },
+          {
+            "time": 30,
+            "power": 337
+          },
+          {
+            "time": 60,
+            "power": 198.4
+          },
+          {
+            "time": 90,
+            "power": 143.8
+          },
+          {
+            "time": 120,
+            "power": 113.6
+          },
+          {
+            "time": 180,
+            "power": 82
+          },
+          {
+            "time": 300,
+            "power": 54.54
+          },
+          {
+            "time": 600,
+            "power": 31.49
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 789
+          },
+          {
+            "time": 10,
+            "power": 634
+          },
+          {
+            "time": 15,
+            "power": 519
+          },
+          {
+            "time": 30,
+            "power": 325
+          },
+          {
+            "time": 60,
+            "power": 192.8
+          },
+          {
+            "time": 90,
+            "power": 140.3
+          },
+          {
+            "time": 120,
+            "power": 111.3
+          },
+          {
+            "time": 180,
+            "power": 80.5
+          },
+          {
+            "time": 300,
+            "power": 53.64
+          },
+          {
+            "time": 600,
+            "power": 31.03
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 716
+          },
+          {
+            "time": 10,
+            "power": 589
+          },
+          {
+            "time": 15,
+            "power": 488
+          },
+          {
+            "time": 30,
+            "power": 312
+          },
+          {
+            "time": 60,
+            "power": 186.9
+          },
+          {
+            "time": 90,
+            "power": 136.5
+          },
+          {
+            "time": 120,
+            "power": 108.7
+          },
+          {
+            "time": 180,
+            "power": 78.7
+          },
+          {
+            "time": 300,
+            "power": 52.67
+          },
+          {
+            "time": 600,
+            "power": 30.51
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V600W",
+    "capacity": "150Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 964
+          },
+          {
+            "time": 10,
+            "power": 741
+          },
+          {
+            "time": 15,
+            "power": 624
+          },
+          {
+            "time": 30,
+            "power": 385
+          },
+          {
+            "time": 60,
+            "power": 227.1
+          },
+          {
+            "time": 90,
+            "power": 163.2
+          },
+          {
+            "time": 120,
+            "power": 128.4
+          },
+          {
+            "time": 180,
+            "power": 91.3
+          },
+          {
+            "time": 300,
+            "power": 61.08
+          },
+          {
+            "time": 600,
+            "power": 34.52
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 905
+          },
+          {
+            "time": 10,
+            "power": 710
+          },
+          {
+            "time": 15,
+            "power": 600
+          },
+          {
+            "time": 30,
+            "power": 373
+          },
+          {
+            "time": 60,
+            "power": 223.4
+          },
+          {
+            "time": 90,
+            "power": 160.7
+          },
+          {
+            "time": 120,
+            "power": 126.8
+          },
+          {
+            "time": 180,
+            "power": 90.5
+          },
+          {
+            "time": 300,
+            "power": 60.65
+          },
+          {
+            "time": 600,
+            "power": 34.29
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 872
+          },
+          {
+            "time": 10,
+            "power": 693
+          },
+          {
+            "time": 15,
+            "power": 587
+          },
+          {
+            "time": 30,
+            "power": 367
+          },
+          {
+            "time": 60,
+            "power": 221.5
+          },
+          {
+            "time": 90,
+            "power": 159.4
+          },
+          {
+            "time": 120,
+            "power": 125.8
+          },
+          {
+            "time": 180,
+            "power": 90.1
+          },
+          {
+            "time": 300,
+            "power": 60.35
+          },
+          {
+            "time": 600,
+            "power": 34.11
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 805
+          },
+          {
+            "time": 10,
+            "power": 659
+          },
+          {
+            "time": 15,
+            "power": 563
+          },
+          {
+            "time": 30,
+            "power": 354
+          },
+          {
+            "time": 60,
+            "power": 216.8
+          },
+          {
+            "time": 90,
+            "power": 156.5
+          },
+          {
+            "time": 120,
+            "power": 123.8
+          },
+          {
+            "time": 180,
+            "power": 88.7
+          },
+          {
+            "time": 300,
+            "power": 59.57
+          },
+          {
+            "time": 600,
+            "power": 33.72
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 735
+          },
+          {
+            "time": 10,
+            "power": 622
+          },
+          {
+            "time": 15,
+            "power": 537
+          },
+          {
+            "time": 30,
+            "power": 341
+          },
+          {
+            "time": 60,
+            "power": 211.3
+          },
+          {
+            "time": 90,
+            "power": 153.3
+          },
+          {
+            "time": 120,
+            "power": 121.6
+          },
+          {
+            "time": 180,
+            "power": 87.2
+          },
+          {
+            "time": 300,
+            "power": 58.7
+          },
+          {
+            "time": 600,
+            "power": 33.27
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V700W",
+    "capacity": "200Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1212
+          },
+          {
+            "time": 10,
+            "power": 915
+          },
+          {
+            "time": 15,
+            "power": 730
+          },
+          {
+            "time": 30,
+            "power": 455
+          },
+          {
+            "time": 60,
+            "power": 266.8
+          },
+          {
+            "time": 90,
+            "power": 193.1
+          },
+          {
+            "time": 120,
+            "power": 153.9
+          },
+          {
+            "time": 180,
+            "power": 111
+          },
+          {
+            "time": 300,
+            "power": 73.37
+          },
+          {
+            "time": 600,
+            "power": 42.37
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1136
+          },
+          {
+            "time": 10,
+            "power": 864
+          },
+          {
+            "time": 15,
+            "power": 700
+          },
+          {
+            "time": 30,
+            "power": 441
+          },
+          {
+            "time": 60,
+            "power": 261.4
+          },
+          {
+            "time": 90,
+            "power": 190.4
+          },
+          {
+            "time": 120,
+            "power": 151.7
+          },
+          {
+            "time": 180,
+            "power": 109.7
+          },
+          {
+            "time": 300,
+            "power": 72.55
+          },
+          {
+            "time": 600,
+            "power": 42
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1094
+          },
+          {
+            "time": 10,
+            "power": 837
+          },
+          {
+            "time": 15,
+            "power": 678
+          },
+          {
+            "time": 30,
+            "power": 433
+          },
+          {
+            "time": 60,
+            "power": 258.2
+          },
+          {
+            "time": 90,
+            "power": 188.7
+          },
+          {
+            "time": 120,
+            "power": 150.6
+          },
+          {
+            "time": 180,
+            "power": 108.8
+          },
+          {
+            "time": 300,
+            "power": 72.08
+          },
+          {
+            "time": 600,
+            "power": 41.8
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1008
+          },
+          {
+            "time": 10,
+            "power": 781
+          },
+          {
+            "time": 15,
+            "power": 640
+          },
+          {
+            "time": 30,
+            "power": 418
+          },
+          {
+            "time": 60,
+            "power": 251.9
+          },
+          {
+            "time": 90,
+            "power": 185
+          },
+          {
+            "time": 120,
+            "power": 147.7
+          },
+          {
+            "time": 180,
+            "power": 106.8
+          },
+          {
+            "time": 300,
+            "power": 70.97
+          },
+          {
+            "time": 600,
+            "power": 41.26
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 917
+          },
+          {
+            "time": 10,
+            "power": 722
+          },
+          {
+            "time": 15,
+            "power": 600
+          },
+          {
+            "time": 30,
+            "power": 401
+          },
+          {
+            "time": 60,
+            "power": 245
+          },
+          {
+            "time": 90,
+            "power": 180.7
+          },
+          {
+            "time": 120,
+            "power": 144.4
+          },
+          {
+            "time": 180,
+            "power": 104.5
+          },
+          {
+            "time": 300,
+            "power": 69.67
+          },
+          {
+            "time": 600,
+            "power": 40.63
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V730W",
+    "capacity": "200Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1251
+          },
+          {
+            "time": 10,
+            "power": 937
+          },
+          {
+            "time": 15,
+            "power": 763
+          },
+          {
+            "time": 30,
+            "power": 471
+          },
+          {
+            "time": 60,
+            "power": 278.2
+          },
+          {
+            "time": 90,
+            "power": 202.4
+          },
+          {
+            "time": 120,
+            "power": 161
+          },
+          {
+            "time": 180,
+            "power": 116
+          },
+          {
+            "time": 300,
+            "power": 76.42
+          },
+          {
+            "time": 600,
+            "power": 43.52
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1175
+          },
+          {
+            "time": 10,
+            "power": 885
+          },
+          {
+            "time": 15,
+            "power": 730
+          },
+          {
+            "time": 30,
+            "power": 458
+          },
+          {
+            "time": 60,
+            "power": 273.1
+          },
+          {
+            "time": 90,
+            "power": 199.2
+          },
+          {
+            "time": 120,
+            "power": 158.8
+          },
+          {
+            "time": 180,
+            "power": 114.2
+          },
+          {
+            "time": 300,
+            "power": 75.63
+          },
+          {
+            "time": 600,
+            "power": 43.14
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1134
+          },
+          {
+            "time": 10,
+            "power": 859
+          },
+          {
+            "time": 15,
+            "power": 706
+          },
+          {
+            "time": 30,
+            "power": 450
+          },
+          {
+            "time": 60,
+            "power": 270.1
+          },
+          {
+            "time": 90,
+            "power": 197.2
+          },
+          {
+            "time": 120,
+            "power": 157.5
+          },
+          {
+            "time": 180,
+            "power": 113.2
+          },
+          {
+            "time": 300,
+            "power": 75.1
+          },
+          {
+            "time": 600,
+            "power": 42.89
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1050
+          },
+          {
+            "time": 10,
+            "power": 802
+          },
+          {
+            "time": 15,
+            "power": 664
+          },
+          {
+            "time": 30,
+            "power": 434
+          },
+          {
+            "time": 60,
+            "power": 263.2
+          },
+          {
+            "time": 90,
+            "power": 192.7
+          },
+          {
+            "time": 120,
+            "power": 154.4
+          },
+          {
+            "time": 180,
+            "power": 111.1
+          },
+          {
+            "time": 300,
+            "power": 73.94
+          },
+          {
+            "time": 600,
+            "power": 42.33
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 958
+          },
+          {
+            "time": 10,
+            "power": 744
+          },
+          {
+            "time": 15,
+            "power": 619
+          },
+          {
+            "time": 30,
+            "power": 415
+          },
+          {
+            "time": 60,
+            "power": 255.5
+          },
+          {
+            "time": 90,
+            "power": 187.9
+          },
+          {
+            "time": 120,
+            "power": 151.2
+          },
+          {
+            "time": 180,
+            "power": 108.8
+          },
+          {
+            "time": 300,
+            "power": 72.63
+          },
+          {
+            "time": 600,
+            "power": 41.69
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V760W",
+    "capacity": "205Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1294
+          },
+          {
+            "time": 10,
+            "power": 957
+          },
+          {
+            "time": 15,
+            "power": 788
+          },
+          {
+            "time": 30,
+            "power": 494
+          },
+          {
+            "time": 60,
+            "power": 289.5
+          },
+          {
+            "time": 90,
+            "power": 208.1
+          },
+          {
+            "time": 120,
+            "power": 164
+          },
+          {
+            "time": 180,
+            "power": 116.7
+          },
+          {
+            "time": 300,
+            "power": 77.52
+          },
+          {
+            "time": 600,
+            "power": 44.4
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1213
+          },
+          {
+            "time": 10,
+            "power": 907
+          },
+          {
+            "time": 15,
+            "power": 760
+          },
+          {
+            "time": 30,
+            "power": 479
+          },
+          {
+            "time": 60,
+            "power": 284.3
+          },
+          {
+            "time": 90,
+            "power": 204.8
+          },
+          {
+            "time": 120,
+            "power": 161.5
+          },
+          {
+            "time": 180,
+            "power": 115.5
+          },
+          {
+            "time": 300,
+            "power": 76.74
+          },
+          {
+            "time": 600,
+            "power": 44.01
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1172
+          },
+          {
+            "time": 10,
+            "power": 879
+          },
+          {
+            "time": 15,
+            "power": 728
+          },
+          {
+            "time": 30,
+            "power": 471
+          },
+          {
+            "time": 60,
+            "power": 281.2
+          },
+          {
+            "time": 90,
+            "power": 203.1
+          },
+          {
+            "time": 120,
+            "power": 160.2
+          },
+          {
+            "time": 180,
+            "power": 114.6
+          },
+          {
+            "time": 300,
+            "power": 76.25
+          },
+          {
+            "time": 600,
+            "power": 43.7
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1086
+          },
+          {
+            "time": 10,
+            "power": 823
+          },
+          {
+            "time": 15,
+            "power": 686
+          },
+          {
+            "time": 30,
+            "power": 453
+          },
+          {
+            "time": 60,
+            "power": 274.2
+          },
+          {
+            "time": 90,
+            "power": 198.9
+          },
+          {
+            "time": 120,
+            "power": 157.2
+          },
+          {
+            "time": 180,
+            "power": 112.5
+          },
+          {
+            "time": 300,
+            "power": 75.15
+          },
+          {
+            "time": 600,
+            "power": 43.12
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 995
+          },
+          {
+            "time": 10,
+            "power": 765
+          },
+          {
+            "time": 15,
+            "power": 640
+          },
+          {
+            "time": 30,
+            "power": 433
+          },
+          {
+            "time": 60,
+            "power": 266.5
+          },
+          {
+            "time": 90,
+            "power": 194.4
+          },
+          {
+            "time": 120,
+            "power": 153.9
+          },
+          {
+            "time": 180,
+            "power": 110.4
+          },
+          {
+            "time": 300,
+            "power": 73.97
+          },
+          {
+            "time": 600,
+            "power": 42.48
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V800W",
+    "capacity": "210Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1384
+          },
+          {
+            "time": 10,
+            "power": 1015
+          },
+          {
+            "time": 15,
+            "power": 830
+          },
+          {
+            "time": 30,
+            "power": 496
+          },
+          {
+            "time": 60,
+            "power": 290
+          },
+          {
+            "time": 90,
+            "power": 212
+          },
+          {
+            "time": 120,
+            "power": 169
+          },
+          {
+            "time": 180,
+            "power": 122.3
+          },
+          {
+            "time": 300,
+            "power": 80.8
+          },
+          {
+            "time": 600,
+            "power": 45.93
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1304
+          },
+          {
+            "time": 10,
+            "power": 961
+          },
+          {
+            "time": 15,
+            "power": 800
+          },
+          {
+            "time": 30,
+            "power": 483
+          },
+          {
+            "time": 60,
+            "power": 285
+          },
+          {
+            "time": 90,
+            "power": 208.1
+          },
+          {
+            "time": 120,
+            "power": 166.6
+          },
+          {
+            "time": 180,
+            "power": 120.9
+          },
+          {
+            "time": 300,
+            "power": 80.1
+          },
+          {
+            "time": 600,
+            "power": 45.64
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1258
+          },
+          {
+            "time": 10,
+            "power": 931
+          },
+          {
+            "time": 15,
+            "power": 776
+          },
+          {
+            "time": 30,
+            "power": 475
+          },
+          {
+            "time": 60,
+            "power": 282
+          },
+          {
+            "time": 90,
+            "power": 205.9
+          },
+          {
+            "time": 120,
+            "power": 165.5
+          },
+          {
+            "time": 180,
+            "power": 120.1
+          },
+          {
+            "time": 300,
+            "power": 79.7
+          },
+          {
+            "time": 600,
+            "power": 45.44
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1169
+          },
+          {
+            "time": 10,
+            "power": 872
+          },
+          {
+            "time": 15,
+            "power": 734
+          },
+          {
+            "time": 30,
+            "power": 460
+          },
+          {
+            "time": 60,
+            "power": 275
+          },
+          {
+            "time": 90,
+            "power": 201.5
+          },
+          {
+            "time": 120,
+            "power": 162.3
+          },
+          {
+            "time": 180,
+            "power": 118.1
+          },
+          {
+            "time": 300,
+            "power": 78.6
+          },
+          {
+            "time": 600,
+            "power": 44.9
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1074
+          },
+          {
+            "time": 10,
+            "power": 810
+          },
+          {
+            "time": 15,
+            "power": 690
+          },
+          {
+            "time": 30,
+            "power": 442
+          },
+          {
+            "time": 60,
+            "power": 267
+          },
+          {
+            "time": 90,
+            "power": 196.8
+          },
+          {
+            "time": 120,
+            "power": 158.7
+          },
+          {
+            "time": 180,
+            "power": 115.9
+          },
+          {
+            "time": 300,
+            "power": 77.4
+          },
+          {
+            "time": 600,
+            "power": 44.25
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "HR12V870W",
+    "capacity": "260Ah",
+    "category": "jyc",
+    "voltages": [
+      {
+        "endVoltage": 1.6,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1484
+          },
+          {
+            "time": 10,
+            "power": 1143
+          },
+          {
+            "time": 15,
+            "power": 915
+          },
+          {
+            "time": 30,
+            "power": 587
+          },
+          {
+            "time": 60,
+            "power": 351
+          },
+          {
+            "time": 90,
+            "power": 257
+          },
+          {
+            "time": 120,
+            "power": 206
+          },
+          {
+            "time": 180,
+            "power": 148
+          },
+          {
+            "time": 300,
+            "power": 97.8
+          },
+          {
+            "time": 600,
+            "power": 55.3
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.67,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1405
+          },
+          {
+            "time": 10,
+            "power": 1091
+          },
+          {
+            "time": 15,
+            "power": 870
+          },
+          {
+            "time": 30,
+            "power": 573
+          },
+          {
+            "time": 60,
+            "power": 345
+          },
+          {
+            "time": 90,
+            "power": 253
+          },
+          {
+            "time": 120,
+            "power": 203
+          },
+          {
+            "time": 180,
+            "power": 146
+          },
+          {
+            "time": 300,
+            "power": 96.9
+          },
+          {
+            "time": 600,
+            "power": 55
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.7,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1361
+          },
+          {
+            "time": 10,
+            "power": 1062
+          },
+          {
+            "time": 15,
+            "power": 858
+          },
+          {
+            "time": 30,
+            "power": 566
+          },
+          {
+            "time": 60,
+            "power": 342
+          },
+          {
+            "time": 90,
+            "power": 251
+          },
+          {
+            "time": 120,
+            "power": 201
+          },
+          {
+            "time": 180,
+            "power": 144
+          },
+          {
+            "time": 300,
+            "power": 96.5
+          },
+          {
+            "time": 600,
+            "power": 54.8
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.75,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1275
+          },
+          {
+            "time": 10,
+            "power": 1004
+          },
+          {
+            "time": 15,
+            "power": 822
+          },
+          {
+            "time": 30,
+            "power": 549
+          },
+          {
+            "time": 60,
+            "power": 335
+          },
+          {
+            "time": 90,
+            "power": 245
+          },
+          {
+            "time": 120,
+            "power": 197
+          },
+          {
+            "time": 180,
+            "power": 142
+          },
+          {
+            "time": 300,
+            "power": 95.1
+          },
+          {
+            "time": 600,
+            "power": 54.3
+          }
+        ]
+      },
+      {
+        "endVoltage": 1.8,
+        "powers": [
+          {
+            "time": 5,
+            "power": 1183
+          },
+          {
+            "time": 10,
+            "power": 942
+          },
+          {
+            "time": 15,
+            "power": 782
+          },
+          {
+            "time": 30,
+            "power": 529
+          },
+          {
+            "time": 60,
+            "power": 327
+          },
+          {
+            "time": 90,
+            "power": 240
+          },
+          {
+            "time": 120,
+            "power": 192
+          },
+          {
+            "time": 180,
+            "power": 140
+          },
+          {
+            "time": 300,
+            "power": 93.5
+          },
+          {
+            "time": 600,
+            "power": 53.4
+          }
+        ]
+      }
+    ]
   }
 ];
 
@@ -24999,6 +28017,7 @@ function getBatteryCategoryLabel(category) {
   var labels = {
     normal: 'SP12V',
     highpower: 'SPG12V高功率',
+    jyc: 'JYC-HR12V高功率',
     '2v': 'GFMD-2V',
     dianneng: '电能GBT12-20小时率',
     dianneng10h: '电能GBT12-10小时率',
@@ -25163,6 +28182,7 @@ function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
   var result = {
     normal: { suitable: [], all: [] },
     highpower: { suitable: [], all: [] },
+    jyc: { suitable: [], all: [] },
     '2v': { suitable: [], all: [] },
     dianneng: { suitable: [], all: [] },
     dianneng10h: { suitable: [], all: [] }
@@ -25288,7 +28308,7 @@ function renderBatteryDataTable() {
   theadHtml += '</tr>';
   document.getElementById('battery-power-thead').innerHTML = theadHtml;
 
-  var categoryLabels = { normal: 'SP12V', highpower: 'SPG12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率', dianneng10h: '电能GBT12-10小时率' };
+  var categoryLabels = { normal: 'SP12V', highpower: 'SPG12V高功率', jyc: 'JYC-HR12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率', dianneng10h: '电能GBT12-10小时率' };
   var html = '';
   BATTERY_POWER_DATA.forEach(function(battery) {
     if (category !== 'all' && battery.category !== category) return;

@@ -1,7 +1,7 @@
 # UPS 智能选型助手——产品与技术设计
 
-> 版本：v1.8.1
-> 最后更新：2026-07-03
+> 版本：v1.8.2
+> 最后更新：2026-07-13
 > 文档职责：说明产品能力、系统结构、关键数据流、业务公式和技术边界。
 
 ## 1. 产品定位
@@ -47,7 +47,8 @@ UPS 智能选型助手是面向售前、销售和技术人员的单文件 Web �
 | 昆仑 UE | 39 | `PRODUCTS` |
 | 祁连 UM | 22 | `PRODUCTS` |
 | 泰山 UT | 97 | `PRODUCTS` |
-| 电池恒功率型号 | 62 | `index.html` 中 `BATTERY_POWER_DATA` |
+| 电池恒功率型号 | 75 | `index.html` 中 `BATTERY_POWER_DATA` |
+| JYC-HR12V 高功率 | 13 | `BATTERY_POWER_DATA`（category `jyc`） |
 | 电池监控产品 | 15 | `index.html` 中 `MONITOR_PRODUCTS` |
 
 电池类别：
@@ -57,6 +58,7 @@ UPS 智能选型助手是面向售前、销售和技术人员的单文件 Web �
 - `2v`：GFMD-2V
 - `dianneng`：电能 GBT12-20 小时率
 - `dianneng10h`：电能 GBT12-10 小时率
+- `jyc`：JYC-HR12V 高倍率（HR 系列 13 款，终止电压 1.60/1.67/1.70/1.75/1.80V）
 - `custom`：客户指定型号，不进行内置型号推荐
 
 ## 4. 系统结构
@@ -68,7 +70,7 @@ flowchart TD
     UI --> BAT["电池正算与反算"]
     UI --> DB["产品数据库查看与 Excel 导入"]
     AI --> PRODUCTS["PRODUCTS 179款 UPS"]
-    BAT --> POWER["BATTERY_POWER_DATA 62款"]
+    BAT --> POWER["BATTERY_POWER_DATA 75款"]
     BAT --> MONITOR["MONITOR_PRODUCTS 15款"]
     DB --> IDB["IndexedDB 导入数据"]
     AI --> HISTORY["localStorage 选型历史"]
@@ -344,5 +346,6 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 | v1.7.9 | 2026-07-03 | 汇总清单列名和顺序参考供配电配置清单调整，新增非标描述列并同步导出 |
 | v1.8.0 | 2026-07-03 | 桌面端全站主容器放宽，提升汇总宽表和多列配置窗口可读性 |
 | v1.8.1 | 2026-07-06 | 调整汇总清单非标描述与备注列顺序，保持页面、Excel、报价单和技术说明一致 |
+| v1.8.2 | 2026-07-13 | 新增独立电池类别 `jyc`（JYC-HR12V 高倍率 13 款恒功率型号），接入电池类型下拉、推荐链路和数据库视图，恒功率型号总数增至 75 |
 
 更细的历史变更以 Git 提交记录为准。
