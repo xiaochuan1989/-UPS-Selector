@@ -5,7 +5,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXCEL_FILE = PROJECT_ROOT / 'test_data' / '常用UPS速查表-V7 测试.xlsx'
 if not EXCEL_FILE.exists():
-    EXCEL_FILE = PROJECT_ROOT / '常用UPS速查表-V7.5.xlsx'
+    EXCEL_FILE = PROJECT_ROOT / '常用UPS速查表-V8.0.xlsx'
 
 wb = openpyxl.load_workbook(EXCEL_FILE, data_only=True)
 print('所有Sheet名称:', wb.sheetnames)

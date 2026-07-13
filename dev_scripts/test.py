@@ -80,7 +80,7 @@ def check_environment():
     # 检查关键文件
     files = [
         (MAIN_HTML, "主程序文件"),
-        ("常用UPS速查表-V7.5.xlsx", "产品数据"),
+        ("常用UPS速查表-V8.0.xlsx", "产品数据"),
         ("UPS选型助手_开发文档.md", "开发文档"),
     ]
 
