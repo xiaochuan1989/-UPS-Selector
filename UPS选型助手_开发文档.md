@@ -103,6 +103,7 @@ flowchart TD
 |---|---|
 | `APP_VERSION` | 页面与文档版本的唯一代码来源 |
 | `checkAuth` | 客户端访问门槛 |
+| `showMainTab` | 顶部标签页导航，切换"智能选型/UPS与电池配置/后备反算/电池计算/数据中心/产品数据库"的单视图 |
 | `saveConfig` / `getBaseUrl` | 保存和读取 AI 接口配置 |
 | `getCustomPrompt` | 返回自定义或默认系统提示词 |
 | `DEBUG_MODE` / `debugLog` | 控制开发日志，生产默认关闭 |
@@ -293,6 +294,7 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 - `xlsx-js-style`：Excel 读写和样式。
 - `mammoth.js`：DOCX 文本提取。
 - `pdf.js`：PDF 文本提取。
+- `@tabler/icons-webfont`：顶栏与标签页图标（缺失仅图标不显示，不影响功能与布局）。
 
 基础产品查看和内置计算不依赖这些库；Excel、DOCX、PDF 功能在 CDN 不可用时应显示明确错误。
 
