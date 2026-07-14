@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.4";
+const APP_VERSION = "v1.8.5";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -32,7 +32,8 @@ document.addEventListener("DOMContentLoaded", function() {
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
 
   /* ── 顶部品牌栏 ── */
-  .appbar { background: var(--navy); color: #fff; padding: 12px clamp(16px, 2.2vw, 48px); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .appbar { background: var(--navy); color: #fff; }
+  .appbar-inner { max-width: 1600px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .appbar-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .appbar-logo { width: 36px; height: 36px; border-radius: 9px; background: #2f6fd0; display: flex; align-items: center; justify-content: center; font-size: 19px; flex: 0 0 auto; }
   .appbar-name { font-size: 16px; font-weight: 600; line-height: 1.2; }
@@ -46,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   /* ── 标签页导航 ── */
   .nav { background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 50; }
-  .nav-inner { margin: 0; display: flex; gap: 2px; padding: 0 clamp(16px, 2.2vw, 48px); overflow-x: auto; }
+  .nav-inner { max-width: 1600px; margin: 0 auto; display: flex; gap: 2px; padding: 0 24px; overflow-x: auto; }
   .nav-tab { appearance: none; border: none; background: transparent; padding: 13px 16px; font-size: 14px; color: var(--ink-2); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 7px; transition: color .15s; }
   .nav-tab:hover { color: var(--primary); }
   .nav-tab-active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
@@ -60,7 +61,7 @@ document.addEventListener("DOMContentLoaded", function() {
   .header .version { font-size: 12px; opacity: 0.7; margin-top: 2px; }
   .header .logo { font-size: 32px; }
 
-  .container { max-width: none; margin: 0; padding: 24px clamp(16px, 2.2vw, 48px); }
+  .container { max-width: 1600px; margin: 0 auto; padding: 24px 24px; }
 
   /* ── 项目配置汇总清单：自适应宽度、紧凑、可换行，避免横向滚动 ── */
   #project-summary-table { table-layout: fixed; width: 100%; }
@@ -283,21 +284,23 @@ function checkAuth(){
 </script>
 
 <div class="appbar">
-  <div class="appbar-brand">
-    <div class="appbar-logo">⚡</div>
-    <div>
-      <div class="appbar-name">UPS 智能选型助手</div>
-      <div class="appbar-sub" id="data-source-label">内置数据 V8.0 | 太行UR / 昆仑UE / 祁连UM / 泰山UT | 共105款产品</div>
+  <div class="appbar-inner">
+    <div class="appbar-brand">
+      <div class="appbar-logo">⚡</div>
+      <div>
+        <div class="appbar-name">UPS 智能选型助手</div>
+        <div class="appbar-sub" id="data-source-label">内置数据 V8.0 | 太行UR / 昆仑UE / 祁连UM / 泰山UT | 共105款产品</div>
+      </div>
     </div>
-  </div>
-  <div class="appbar-actions">
-    <label class="appbar-btn" title="导入Excel后将替换内置数据">
-      <i class="ti ti-upload" aria-hidden="true"></i> 导入 Excel
-      <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
-    </label>
-    <button class="appbar-btn" onclick="openSettings()"><i class="ti ti-settings" aria-hidden="true"></i> 设置</button>
-    <button class="appbar-btn primary" onclick="openHistoryModal()"><i class="ti ti-history" aria-hidden="true"></i> 历史</button>
-    <button id="restore-btn" class="appbar-btn warn" onclick="restoreBuiltinData()" style="display:none"><i class="ti ti-refresh" aria-hidden="true"></i> 恢复内置数据</button>
+    <div class="appbar-actions">
+      <label class="appbar-btn" title="导入Excel后将替换内置数据">
+        <i class="ti ti-upload" aria-hidden="true"></i> 导入 Excel
+        <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+      </label>
+      <button class="appbar-btn" onclick="openSettings()"><i class="ti ti-settings" aria-hidden="true"></i> 设置</button>
+      <button class="appbar-btn primary" onclick="openHistoryModal()"><i class="ti ti-history" aria-hidden="true"></i> 历史</button>
+      <button id="restore-btn" class="appbar-btn warn" onclick="restoreBuiltinData()" style="display:none"><i class="ti ti-refresh" aria-hidden="true"></i> 恢复内置数据</button>
+    </div>
   </div>
 </div>
 <nav class="nav">
