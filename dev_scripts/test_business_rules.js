@@ -108,6 +108,7 @@ const names = [
   "isTwoVoltBatteryType",
   "getBatteryCellMultiplier",
   "getBatteryMonitorSlaveCode",
+  "resolveSwitchCalculationPower",
   "calculateBatteryElectricals",
   "selectCurrentSensor",
   "getVoltLevel",
@@ -143,6 +144,25 @@ assert.equal(rules.getBatteryCellMultiplier("custom"), 6);
 assert.equal(rules.getBatteryMonitorSlaveCode("jyc2v"), "88091146");
 assert.equal(rules.getBatteryMonitorSlaveCode("jyc2vhr"), "88091146");
 assert.equal(rules.getBatteryMonitorSlaveCode("jyc"), "88091145");
+
+const switchByUps = rules.resolveSwitchCalculationPower({
+  basis: "ups", loadKw: 120, upsCap: 200, pf: 0.9,
+});
+assert.equal(switchByUps.watts, 180000);
+assert.equal(switchByUps.label, "UPS容量 × 功率因数");
+const switchByLoad = rules.resolveSwitchCalculationPower({
+  basis: "load", loadKw: 120, upsCap: 200, pf: 0.9,
+});
+assert.equal(switchByLoad.watts, 120000);
+assert.equal(switchByLoad.label, "负载功率");
+assert.throws(
+  () => rules.resolveSwitchCalculationPower({ basis: "load", loadKw: 0, upsCap: 200, pf: 0.9 }),
+  /负载功率/
+);
+assert.throws(
+  () => rules.resolveSwitchCalculationPower({ basis: "ups", loadKw: 120, upsCap: 0, pf: 0.9 }),
+  /UPS容量/
+);
 
 const twoGroups = rules.calculateBatteryElectricals({
   loadW: 180000,
@@ -257,7 +277,7 @@ assert.equal(JSON.stringify(jyc2vBatteries.map((b) => b.model)), JSON.stringify(
   "GFM-600", "GFM-800", "GFM-1000", "GFM-1500", "GFM-2000",
 ]));
 assert.equal(JSON.stringify(jyc2vHrBatteries.map((b) => b.model)), JSON.stringify([
-  "HR-500W", "HR-750W", "HR-1000W", "HR-1200W", "HR-1500W", "HR-2000W",
+  "HR-2V500W", "HR-2V750W", "HR-2V1000W", "HR-2V1200W", "HR-2V1500W", "HR-2V2000W",
 ]));
 
 for (const battery of [...jyc2vBatteries, ...jyc2vHrBatteries]) {
@@ -274,7 +294,7 @@ for (const battery of [...jyc2vBatteries, ...jyc2vHrBatteries]) {
   }
 }
 
-const hr500 = jyc2vHrBatteries.find((b) => b.model === "HR-500W");
+const hr500 = jyc2vHrBatteries.find((b) => b.model === "HR-2V500W");
 assert.equal(hr500.voltages.find((v) => v.endVoltage === 1.75).powers.find((p) => p.time === 30).power, 321);
 const gfm1000 = jyc2vBatteries.find((b) => b.model === "GFM-1000");
 assert.equal(gfm1000.voltages.find((v) => v.endVoltage === 1.8).powers.find((p) => p.time === 120).power, 636);
@@ -286,6 +306,6 @@ assert.equal(JSON.stringify(getBatteryVoltagesForTime("jyc2vhr", 30)), JSON.stri
 const jyc2vRec = getBatteryRecommendationsByPower(900, 1.75, 60);
 assert.equal(jyc2vRec.jyc2v.suitable[0].model, "GFM-1000");
 const jyc2vHrRec = getBatteryRecommendationsByPower(700, 1.75, 30);
-assert.equal(jyc2vHrRec.jyc2vhr.suitable[0].model, "HR-1200W");
+assert.equal(jyc2vHrRec.jyc2vhr.suitable[0].model, "HR-2V1200W");
 
 console.log("✅ JYC 2V 电池数据校验通过（10款GFM + 6款HR / 稀疏曲线 / 推荐链路 / 数据源风险）");

@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.9";
+const APP_VERSION = "v1.8.11";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -886,6 +886,14 @@ function checkAuth(){
             <option value="domestic">国产开关</option>
           </select>
         </div>
+        <div class="field">
+          <label>开关电流计算依据</label>
+          <select id="unified-switch-basis">
+            <option value="ups" selected>UPS容量 × 功率因数</option>
+            <option value="load">负载功率</option>
+          </select>
+          <div style="font-size:11px;color:#888;margin-top:4px">影响开关箱、电流传感器及配套连接电流等级</div>
+        </div>
       </div>
       <div style="margin-top:10px">
         <button class="save-btn" onclick="calcAllBatteryConfig()" style="padding:12px 24px">🚀 一键计算全部</button>
@@ -899,7 +907,7 @@ function checkAuth(){
       <div style="margin-top:10px;padding:14px;background:#fffbf0;border:1px solid #ffe0b2;border-radius:8px;font-size:12px;line-height:1.8">
         <div style="font-weight:600;color:#e65100;margin-bottom:10px">⚡ 电池开关箱/柜计算公式</div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-          <tr style="background:#fff8e1"><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">负载功率</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>UPS容量 × 功率因数</b>（开关箱按UPS额定功率计算）</td></tr>
+          <tr style="background:#fff8e1"><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">计算功率 P</td><td style="padding:6px 10px;border:1px solid #ffcc80">由“开关电流计算依据”选择：<b>UPS容量 × 功率因数</b> 或 <b>负载功率</b></td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">最大放电电流</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>I = P ÷ (电池节数 × 截止电压 × 单格数 × 效率)</b></td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">分开关电流</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>I ÷ (组数 - 1)</b>，当组数≥2时（一组故障时其余组承担全部电流）</td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #ffcc80;font-weight:500">电压等级</td><td style="padding:6px 10px;border:1px solid #ffcc80"><b>最大充电电压</b> = 2.35V × 单格数 × 电池节数（2V电池单格数=1，12V电池单格数=6）<br>≤250V→250VDC，251~500V→500VDC，>500V→750VDC</td></tr>
@@ -2975,7 +2983,7 @@ const MONITOR_PRODUCTS = [
 window.projectSummary = {
   ups: { code: '', frameCode: '', moduleCode: '', model: '', capacity: '', qty: 1, price: 0, framePrice: 0, modulePrice: 0, note: '', nonStandardDesc: '', frameNonStandardDesc: '', moduleNonStandardDesc: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
   battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', nonStandardDesc: '', customModel: '', customDesc: '' },
-  switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', note: '', nonStandardDesc: '' },
+  switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', currentBasis: 'ups', calculationPowerKw: 0, note: '', nonStandardDesc: '' },
   batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '', nonStandardDesc: '' },
   monitor: { config: [] },
   customRows: [],
@@ -3784,7 +3792,7 @@ function clearProjectSummary() {
   window.projectSummary = {
     ups: { code: '', frameCode: '', moduleCode: '', model: '', capacity: '', qty: 1, price: 0, framePrice: 0, modulePrice: 0, note: '', nonStandardDesc: '', frameNonStandardDesc: '', moduleNonStandardDesc: '', isCustom: false, customDesc: '', isModular: false, frame: '', module: '', moduleQty: 0, maxModules: 0 },
     battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', nonStandardDesc: '', customModel: '', customDesc: '' },
-    switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', note: '', nonStandardDesc: '' },
+    switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', currentBasis: 'ups', calculationPowerKw: 0, note: '', nonStandardDesc: '' },
     batteryRack: { cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '', nonStandardDesc: '' },
     monitor: { config: [] },
     customRows: [],
@@ -3838,6 +3846,33 @@ function getBatteryCellMultiplier(battType) {
 
 function getBatteryMonitorSlaveCode(battType) {
   return isTwoVoltBatteryType(battType) ? '88091146' : '88091145';
+}
+
+function resolveSwitchCalculationPower({ basis, loadKw, upsCap, pf }) {
+  if (basis === 'load') {
+    if (!Number.isFinite(loadKw) || loadKw <= 0) {
+      throw new RangeError('按负载功率计算开关电流时，负载功率必须是正数');
+    }
+    return {
+      basis,
+      watts: loadKw * 1000,
+      label: '负载功率',
+      formula: `${loadKw}kW`
+    };
+  }
+  if (basis !== 'ups') {
+    throw new RangeError('未知的开关电流计算依据');
+  }
+  if (!Number.isFinite(upsCap) || upsCap <= 0 || !Number.isFinite(pf) || pf <= 0 || pf > 1) {
+    throw new RangeError('按UPS容量计算开关电流时，UPS容量和功率因数必须有效');
+  }
+  const powerKw = upsCap * pf;
+  return {
+    basis,
+    watts: powerKw * 1000,
+    label: 'UPS容量 × 功率因数',
+    formula: `${upsCap}kVA × ${pf} = ${powerKw.toFixed(1)}kW`
+  };
 }
 
 function calculateBatteryElectricals({ loadW, switchW, cellsPerGroup, groups, battType, endV, eff }) {
@@ -4022,8 +4057,9 @@ function fillUpsFromSelection() {
  * 3. totalGroups = groups × upsNum（总组数，用于监控配置）
  *
  * 计算公式：
- * - 负载功率(W) = 负载功率kW × 1000 或 UPS容量 × 功率因数 × 1000
- * - 最大放电电流 = 负载功率 / (电池节数 × 截止电压 × 单格数 × 效率)
+ * - 电池选型功率(W) = 负载功率kW × 1000，未填写时用 UPS容量 × 功率因数 × 1000
+ * - 开关计算功率(W) = 用户选择的负载功率或 UPS容量 × 功率因数
+ * - 最大放电电流 = 开关计算功率 / (电池节数 × 截止电压 × 单格数 × 效率)
  * - 分开关电流 = 总电流 / (groups - 1)，仅当 groups ≥ 2 时有效
  * - 单格功率需求 = 负载功率 / (电池节数 × 单格数 × 效率 × 组数)
  *
@@ -4058,6 +4094,7 @@ function calcAllBatteryConfig() {
   const hasNeutral = document.getElementById('unified-neutral').value;  // UPS中性线: 'yes' 或 'no'
   const rackCable = document.getElementById('unified-rack-cable').value;  // 电池架含铜排: 'yes' 或 'no'
   const switchType = document.getElementById('unified-switch-type').value;  // 电池开关: 'imported' 或 'domestic'
+  const switchBasis = document.getElementById('unified-switch-basis').value;  // 开关电流依据: 'ups' 或 'load'
   const dischargeTime = parseInt(document.getElementById('unified-discharge-time').value) || 15;
   const endV = parseFloat(document.getElementById('unified-end-v').value) || 1.75;
   const eff = parseFloat(document.getElementById('unified-eff').value) || 0.95;
@@ -4094,11 +4131,20 @@ function calcAllBatteryConfig() {
     alert('逆变效率应在0~1之间');
     return;
   }
+  if (switchBasis === 'load' && loadKw <= 0) {
+    alert('开关电流选择按负载功率计算时，请填写负载功率');
+    return;
+  }
+  if (switchBasis === 'ups' && upsCap <= 0) {
+    alert('开关电流选择按UPS容量计算时，请填写UPS容量');
+    return;
+  }
 
   const totalGroups = groups * upsNum;
   const totalCells = cellsPerGroup * totalGroups;
   const loadW = loadKw > 0 ? loadKw * 1000 : upsCap * pf * 1000;
-  const switchW = upsCap * pf * 1000;  // 开关箱始终用UPS额定功率
+  const switchCalculation = resolveSwitchCalculationPower({ basis: switchBasis, loadKw, upsCap, pf });
+  const switchW = switchCalculation.watts;
   const electricals = calculateBatteryElectricals({
     loadW, switchW, cellsPerGroup, groups, battType, endV, eff
   });
@@ -4157,7 +4203,7 @@ function calcAllBatteryConfig() {
   }
   document.getElementById('unified-battery-result').innerHTML = batteryHtml;
 
-  // ===== 2. 电池开关箱/柜计算（始终用UPS额定功率） =====
+  // ===== 2. 电池开关箱/柜计算（按用户选择的计算依据） =====
   const voltResult = getVoltLevel(cellsPerGroup, battType);
   const voltLevel = voltResult.level;  // 电压等级字符串（如 '250VDC'）
 
@@ -4169,6 +4215,7 @@ function calcAllBatteryConfig() {
 
   let switchHtml = `<div style="margin-bottom:8px">
     <div>电压等级: <b style="color:#ef6c00">${voltLevel}</b></div>
+    <div>计算依据: <b>${switchCalculation.label}</b> <span style="color:#888;font-size:11px">(${switchCalculation.formula})</span></div>
     <div>最大放电电流: <b>${maxCurrent.toFixed(1)}A</b></div>
     ${groups >= 2 ? `<div>分开关电流: <b>${groupCurrent.toFixed(1)}A</b> <span style="color:#888;font-size:11px">(一组故障时)</span></div>` : ''}
     <div style="font-size:12px;color:#666;margin-top:4px">${neutralDesc}</div>
@@ -4311,7 +4358,9 @@ function calcAllBatteryConfig() {
       price: previousSummary.switchBox?.price || 0,
       neutralLine: hasNeutral,  // 保存中性线选项
       switchType: switchType,    // 电池开关类型: 'imported' 合资 或 'domestic' 国产
-      note: (groups >= 2 ? '' : '单组电池无需分开关; ') + neutralDesc,
+      currentBasis: switchBasis,
+      calculationPowerKw: switchW / 1000,
+      note: (groups >= 2 ? '' : '单组电池无需分开关; ') + neutralDesc + `; 开关电流按${switchCalculation.label} ${switchCalculation.formula}计算`,
       nonStandardDesc: previousSummary.switchBox?.nonStandardDesc || ''
     },
     batteryRack: {
@@ -27961,27 +28010,27 @@ var BATTERY_POWER_DATA = [
 // curves 格式：截止电压 -> [[时间(min), 恒功率(W)], ...]
 var JYC_2V_BATTERY_SPECS = [
   {
-    model: 'HR-500W', capacity: '170Ah', category: 'jyc2vhr',
+    model: 'HR-2V500W', capacity: '170Ah', category: 'jyc2vhr',
     curves: { '1.65': [[15, 508], [30, 330]], '1.70': [[15, 478], [30, 325], [60, 196]], '1.75': [[15, 458], [30, 321], [60, 190]], '1.80': [[15, 425], [30, 289], [60, 186], [120, 107]] }
   },
   {
-    model: 'HR-750W', capacity: '250Ah', category: 'jyc2vhr',
+    model: 'HR-2V750W', capacity: '250Ah', category: 'jyc2vhr',
     curves: { '1.65': [[15, 762], [30, 495]], '1.70': [[15, 717], [30, 487], [60, 294]], '1.75': [[15, 687], [30, 481], [60, 285]], '1.80': [[15, 637], [30, 433], [60, 279], [120, 158]] }
   },
   {
-    model: 'HR-1000W', capacity: '340Ah', category: 'jyc2vhr',
+    model: 'HR-2V1000W', capacity: '340Ah', category: 'jyc2vhr',
     curves: { '1.65': [[15, 1016], [30, 660]], '1.70': [[15, 956], [30, 650], [60, 392]], '1.75': [[15, 916], [30, 642], [60, 380]], '1.80': [[15, 850], [30, 578], [60, 372], [120, 218]] }
   },
   {
-    model: 'HR-1200W', capacity: '410Ah', category: 'jyc2vhr',
+    model: 'HR-2V1200W', capacity: '410Ah', category: 'jyc2vhr',
     curves: { '1.65': [[15, 1219], [30, 792]], '1.70': [[15, 1147], [30, 780], [60, 470]], '1.75': [[15, 1099], [30, 770], [60, 456]], '1.80': [[15, 1020], [30, 693], [60, 446], [120, 259]] }
   },
   {
-    model: 'HR-1500W', capacity: '510Ah', category: 'jyc2vhr',
+    model: 'HR-2V1500W', capacity: '510Ah', category: 'jyc2vhr',
     curves: { '1.65': [[15, 1524], [30, 990]], '1.70': [[15, 1434], [30, 975], [60, 588]], '1.75': [[15, 1374], [30, 963], [60, 570]], '1.80': [[15, 1275], [30, 867], [60, 558], [120, 329]] }
   },
   {
-    model: 'HR-2000W', capacity: '680Ah', category: 'jyc2vhr',
+    model: 'HR-2V2000W', capacity: '680Ah', category: 'jyc2vhr',
     curves: { '1.65': [[15, 2032], [30, 1320]], '1.70': [[15, 1912], [30, 1300], [60, 784]], '1.75': [[15, 1832], [30, 1284], [60, 760]], '1.80': [[15, 1700], [30, 1156], [60, 744], [120, 442]] }
   },
   {
