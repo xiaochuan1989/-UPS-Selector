@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.8";
+const APP_VERSION = "v1.8.9";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -543,6 +543,8 @@ function checkAuth(){
             <option value="highpower">SPG12V高功率</option>
             <option value="jyc">JYC-HR12V高功率</option>
             <option value="2v">GFMD-2V</option>
+            <option value="jyc2v">JYC-GFM-2V</option>
+            <option value="jyc2vhr">JYC-HR-2V高倍率</option>
             <option value="dianneng">电能GBT12-20小时率</option>
             <option value="dianneng10h">电能GBT12-10小时率</option>
             <option value="custom">自定义/客户指定</option>
@@ -827,13 +829,15 @@ function checkAuth(){
             <option value="highpower">SPG12V高功率</option>
             <option value="jyc">JYC-HR12V高功率</option>
             <option value="2v">GFMD-2V</option>
+            <option value="jyc2v">JYC-GFM-2V</option>
+            <option value="jyc2vhr">JYC-HR-2V高倍率</option>
             <option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option>
             <option value="custom">自定义/客户指定</option>
           </select>
         </div>
         <div class="field">
           <label>后备时间 (分钟)</label>
-          <select id="unified-discharge-time">
+          <select id="unified-discharge-time" onchange="refreshUnifiedBatteryVoltageOptions()">
             <option value="15">15分钟</option>
             <option value="30">30分钟</option>
             <option value="60">60分钟</option>
@@ -1149,7 +1153,7 @@ function checkAuth(){
       <button onclick="closeBatteryDataTable()" style="background:none;border:none;color:white;font-size:26px;cursor:pointer">×</button>
     </div>
     <div style="padding:16px 24px;background:#f5f7fa;border-bottom:1px solid #e0e0e0;display:flex;gap:12px;flex-wrap:wrap">
-      <div><label style="font-size:12px;color:#888;margin-right:6px">分类:</label><select id="batt-data-category" onchange="refreshBatteryDataVoltageOptions();filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="all">全部</option><option value="normal">SP12V</option><option value="highpower">SPG12V高功率</option><option value="jyc">JYC-HR12V高功率</option><option value="2v">GFMD-2V</option><option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option></select></div>
+      <div><label style="font-size:12px;color:#888;margin-right:6px">分类:</label><select id="batt-data-category" onchange="refreshBatteryDataVoltageOptions();filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="all">全部</option><option value="normal">SP12V</option><option value="highpower">SPG12V高功率</option><option value="jyc">JYC-HR12V高功率</option><option value="2v">GFMD-2V</option><option value="jyc2v">JYC-GFM-2V</option><option value="jyc2vhr">JYC-HR-2V高倍率</option><option value="dianneng">电能GBT12-20小时率</option><option value="dianneng10h">电能GBT12-10小时率</option></select></div>
       <div><label style="font-size:12px;color:#888;margin-right:6px">截止电压:</label><select id="batt-data-voltage" onchange="filterBatteryDataTable()" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px"><option value="1.75" selected>1.75V</option></select></div>
       <div><label style="font-size:12px;color:#888;margin-right:6px">搜索:</label><input type="text" id="batt-data-search" oninput="filterBatteryDataTable()" placeholder="输入型号" style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 12px;font-size:13px;width:140px"></div>
     </div>
@@ -3749,6 +3753,9 @@ function calcBatteryRuntime() {
   } else if (!curve.length) {
     risks.push('所选电池在' + endV.toFixed(2) + 'V截止电压下没有可用恒功率数据。');
   } else {
+    if (battery.sourceNote) {
+      risks.push(battery.sourceNote);
+    }
     if (estimate.status === 'below-min') {
       risks.push('最低数据点' + curve[0].time + '分钟恒功率已低于需求，当前电池容量明显不足。');
     }
@@ -3821,8 +3828,16 @@ function getNextBreakerSize(calcCurrent) {
   return STANDARD_BREAKER_SIZES[STANDARD_BREAKER_SIZES.length - 1];
 }
 
+function isTwoVoltBatteryType(battType) {
+  return battType === '2v' || battType === 'jyc2v' || battType === 'jyc2vhr';
+}
+
 function getBatteryCellMultiplier(battType) {
-  return battType === '2v' ? 1 : 6;
+  return isTwoVoltBatteryType(battType) ? 1 : 6;
+}
+
+function getBatteryMonitorSlaveCode(battType) {
+  return isTwoVoltBatteryType(battType) ? '88091146' : '88091145';
 }
 
 function calculateBatteryElectricals({ loadW, switchW, cellsPerGroup, groups, battType, endV, eff }) {
@@ -4104,8 +4119,7 @@ function calcAllBatteryConfig() {
     batteryResult = foundBattery.data;
   }
 
-  var catLabelMap = { normal: 'SP12V', highpower: 'SPG12V高功率', jyc: 'JYC-HR12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率', dianneng10h: '电能GBT12-10小时率', custom: '自定义/客户指定' };
-  var catLabel = catLabelMap[battType] || battType;
+  var catLabel = getBatteryCategoryLabel(battType);
 
   if (isCustomBatteryType) {
     batteryHtml = `<div style="font-weight:600;color:#1565c0;margin-bottom:8px">ℹ️ 客户指定电池，跳过内置型号推荐</div>`;
@@ -4114,11 +4128,14 @@ function calcAllBatteryConfig() {
     batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
     batteryHtml += `<div style="margin-top:8px;padding:6px;background:#e3f2fd;border-radius:4px;font-size:11px;color:#1565c0">💡 可在项目汇总清单中手动输入客户指定电池型号</div>`;
   } else if (foundBattery) {
-    var catLabelDisplay = { normal: '(SP12V)', highpower: '(SPG12V高功率)', jyc: '(JYC-HR12V高功率)', '2v': '(GFMD-2V)', dianneng: '(电能GBT12-20小时率)', dianneng10h: '(电能GBT12-10小时率)' }[foundBattery.category];
+    var catLabelDisplay = '(' + getBatteryCategoryLabel(foundBattery.category) + ')';
     batteryHtml = `<div style="font-weight:600;color:#2e7d32;margin-bottom:8px">✅ 推荐${catLabelDisplay}: ${batteryResult.model}</div>`;
     batteryHtml += `<div>所需功率: <b>${reqPower.toFixed(1)}W</b>/单体</div>`;
     batteryHtml += `<div>恒功率: <b>${batteryResult.power}W</b> (余量+${batteryResult.marginPercent}%)</div>`;
     batteryHtml += `<div>总数量: <b>${totalCells}</b>只 (${upsNum}台 × ${groups}组/台 × ${cellsPerGroup}只/组)</div>`;
+    if (batteryResult.sourceNote) {
+      batteryHtml += `<div style="margin-top:8px;padding:6px;background:#fff3cd;border-radius:4px;font-size:11px;color:#856404">⚠️ ${escapeHtml(batteryResult.sourceNote)}</div>`;
+    }
   } else {
     // 未找到推荐电池时，仍显示计算结果，用户可手动输入电池型号
     batteryHtml = `<div style="margin-bottom:8px"><span style="color:#e74c3c">⚠️ 未找到满足要求的${catLabel}电池</span></div>`;
@@ -4193,7 +4210,7 @@ function calcAllBatteryConfig() {
   monitorConfig.push({ ...sensor, desc: sensorDesc, qty: totalGroups, total: totalGroups * sensor.unitPrice, note: `量程${sensorRange}` });
 
   // 单体测量模块
-  const slaveCode = battType === '2v' ? '88091146' : '88091145';
+  const slaveCode = getBatteryMonitorSlaveCode(battType);
   const slave = MONITOR_PRODUCTS.find(p => p.code === slaveCode);
   monitorConfig.push({ ...slave, qty: totalCells, total: totalCells * slave.unitPrice, note: '每只电池配1个' });
 
@@ -4280,7 +4297,7 @@ function calcAllBatteryConfig() {
       upsNum,                    // UPS台数
       totalCells,
       price: previousSummary.battery?.price || 0,
-      note: isCustomBatteryType ? '客户指定电池，手动填写型号' : catLabelMap[battType] + '电池',
+      note: isCustomBatteryType ? '客户指定电池，手动填写型号' : catLabel + '电池' + (batteryResult?.sourceNote ? '; ' + batteryResult.sourceNote : ''),
       nonStandardDesc: previousSummary.battery?.nonStandardDesc || ''
     },
     switchBox: {
@@ -27940,6 +27957,95 @@ var BATTERY_POWER_DATA = [
   }
 ];
 
+// JYC 2V 电池规格书数据（厂家 PDF：高倍率 2025-11 版，GFM 2024-12 版）
+// curves 格式：截止电压 -> [[时间(min), 恒功率(W)], ...]
+var JYC_2V_BATTERY_SPECS = [
+  {
+    model: 'HR-500W', capacity: '170Ah', category: 'jyc2vhr',
+    curves: { '1.65': [[15, 508], [30, 330]], '1.70': [[15, 478], [30, 325], [60, 196]], '1.75': [[15, 458], [30, 321], [60, 190]], '1.80': [[15, 425], [30, 289], [60, 186], [120, 107]] }
+  },
+  {
+    model: 'HR-750W', capacity: '250Ah', category: 'jyc2vhr',
+    curves: { '1.65': [[15, 762], [30, 495]], '1.70': [[15, 717], [30, 487], [60, 294]], '1.75': [[15, 687], [30, 481], [60, 285]], '1.80': [[15, 637], [30, 433], [60, 279], [120, 158]] }
+  },
+  {
+    model: 'HR-1000W', capacity: '340Ah', category: 'jyc2vhr',
+    curves: { '1.65': [[15, 1016], [30, 660]], '1.70': [[15, 956], [30, 650], [60, 392]], '1.75': [[15, 916], [30, 642], [60, 380]], '1.80': [[15, 850], [30, 578], [60, 372], [120, 218]] }
+  },
+  {
+    model: 'HR-1200W', capacity: '410Ah', category: 'jyc2vhr',
+    curves: { '1.65': [[15, 1219], [30, 792]], '1.70': [[15, 1147], [30, 780], [60, 470]], '1.75': [[15, 1099], [30, 770], [60, 456]], '1.80': [[15, 1020], [30, 693], [60, 446], [120, 259]] }
+  },
+  {
+    model: 'HR-1500W', capacity: '510Ah', category: 'jyc2vhr',
+    curves: { '1.65': [[15, 1524], [30, 990]], '1.70': [[15, 1434], [30, 975], [60, 588]], '1.75': [[15, 1374], [30, 963], [60, 570]], '1.80': [[15, 1275], [30, 867], [60, 558], [120, 329]] }
+  },
+  {
+    model: 'HR-2000W', capacity: '680Ah', category: 'jyc2vhr',
+    curves: { '1.65': [[15, 2032], [30, 1320]], '1.70': [[15, 1912], [30, 1300], [60, 784]], '1.75': [[15, 1832], [30, 1284], [60, 760]], '1.80': [[15, 1700], [30, 1156], [60, 744], [120, 442]] }
+  },
+  {
+    model: 'GFM-100', capacity: '100Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 300], [45, 244]], '1.70': [[30, 291], [45, 236], [60, 206]], '1.75': [[30, 278], [45, 231], [60, 199]], '1.80': [[30, 255], [45, 216], [60, 189], [120, 128]] }
+  },
+  {
+    model: 'GFM-200', capacity: '200Ah', category: 'jyc2v',
+    sourceNote: '厂家 2024-12 版 PDF 中 GFM-200 恒功率表与 GFM-100 完全相同，选型前需厂家复核。',
+    curves: { '1.65': [[30, 300], [45, 244]], '1.70': [[30, 291], [45, 236], [60, 206]], '1.75': [[30, 278], [45, 231], [60, 199]], '1.80': [[30, 255], [45, 216], [60, 189], [120, 128]] }
+  },
+  {
+    model: 'GFM-300', capacity: '300Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 451], [45, 366]], '1.70': [[30, 436], [45, 354], [60, 309]], '1.75': [[30, 417], [45, 346], [60, 298]], '1.80': [[30, 382], [45, 324], [60, 284], [120, 192]] }
+  },
+  {
+    model: 'GFM-400', capacity: '400Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 601], [45, 488]], '1.70': [[30, 582], [45, 472], [60, 412]], '1.75': [[30, 556], [45, 462], [60, 398]], '1.80': [[30, 510], [45, 432], [60, 379], [120, 256]] }
+  },
+  {
+    model: 'GFM-500', capacity: '500Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 752], [45, 610]], '1.70': [[30, 728], [45, 590], [60, 516]], '1.75': [[30, 696], [45, 578], [60, 498]], '1.80': [[30, 638], [45, 540], [60, 474], [120, 320]] }
+  },
+  {
+    model: 'GFM-600', capacity: '600Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 898], [45, 732]], '1.70': [[30, 872], [45, 726], [60, 618]], '1.75': [[30, 835], [45, 694], [60, 602]], '1.80': [[30, 766], [45, 656], [60, 564], [120, 383]] }
+  },
+  {
+    model: 'GFM-800', capacity: '800Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 1202], [45, 976]], '1.70': [[30, 1156], [45, 948], [60, 825]], '1.75': [[30, 1112], [45, 924], [60, 803]], '1.80': [[30, 1021], [45, 861], [60, 748], [120, 512]] }
+  },
+  {
+    model: 'GFM-1000', capacity: '1000Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 1492], [45, 1230]], '1.70': [[30, 1445], [45, 1193], [60, 1028]], '1.75': [[30, 1376], [45, 1155], [60, 1010]], '1.80': [[30, 1260], [45, 1074], [60, 935], [120, 636]] }
+  },
+  {
+    model: 'GFM-1500', capacity: '1500Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 2055], [45, 1779]], '1.70': [[30, 1920], [45, 1696], [60, 1570]], '1.75': [[30, 1825], [45, 1654], [60, 1550]], '1.80': [[30, 1756], [45, 1586], [60, 1472], [120, 962]] }
+  },
+  {
+    model: 'GFM-2000', capacity: '2000Ah', category: 'jyc2v',
+    curves: { '1.65': [[30, 2756], [45, 2368]], '1.70': [[30, 2546], [45, 2235], [60, 2105]], '1.75': [[30, 2513], [45, 2186], [60, 2066]], '1.80': [[30, 2310], [45, 2112], [60, 1952], [120, 1278]] }
+  }
+];
+
+function expandBatteryPowerSpec(spec) {
+  return {
+    model: spec.model,
+    capacity: spec.capacity,
+    category: spec.category,
+    sourceNote: spec.sourceNote || '',
+    voltages: Object.keys(spec.curves).map(function(endVoltage) {
+      return {
+        endVoltage: Number(endVoltage),
+        powers: spec.curves[endVoltage].map(function(point) {
+          return { time: point[0], power: point[1] };
+        })
+      };
+    })
+  };
+}
+
+BATTERY_POWER_DATA = BATTERY_POWER_DATA.concat(JYC_2V_BATTERY_SPECS.map(expandBatteryPowerSpec));
+
 function getBatteryPowerMeta(category) {
   var times = new Set();
   var voltages = new Set();
@@ -27963,6 +28069,20 @@ function getBatteryPowerMeta(category) {
     times: Array.from(times).sort(function(a, b) { return a - b; }),
     voltages: Array.from(voltages).sort(function(a, b) { return a - b; })
   };
+}
+
+function getBatteryVoltagesForTime(category, dischargeTime) {
+  var voltages = new Set();
+  BATTERY_POWER_DATA.forEach(function(battery) {
+    if (category && category !== 'all' && battery.category !== category) return;
+    battery.voltages.forEach(function(voltageData) {
+      var hasTime = voltageData.powers.some(function(powerPoint) {
+        return powerPoint.time === dischargeTime && powerPoint.power !== null && powerPoint.power !== undefined;
+      });
+      if (hasTime) voltages.add(Number(voltageData.endVoltage.toFixed(2)));
+    });
+  });
+  return Array.from(voltages).sort(function(a, b) { return a - b; });
 }
 
 function formatDischargeTimeLabel(minutes) {
@@ -28011,9 +28131,21 @@ function refreshUnifiedBatteryPowerOptions() {
     formatDischargeTimeLabel,
     function(value) { return String(value); }
   );
+  refreshUnifiedBatteryVoltageOptions();
+}
+
+function refreshUnifiedBatteryVoltageOptions() {
+  var categoryEl = document.getElementById('unified-batt-type');
+  var timeEl = document.getElementById('unified-discharge-time');
+  var voltageEl = document.getElementById('unified-end-v');
+  if (!categoryEl || !timeEl || !voltageEl) return;
+
+  var category = categoryEl.value === 'custom' ? 'all' : categoryEl.value;
+  var voltages = getBatteryVoltagesForTime(category, Number(timeEl.value));
+  if (!voltages.length) voltages = getBatteryPowerMeta(category).voltages;
   setSelectOptions(
     voltageEl,
-    meta.voltages,
+    voltages,
     voltageEl.value,
     '1.75',
     function(value) { return formatEndVoltageValue(value) + 'V'; },
@@ -28043,6 +28175,8 @@ function getBatteryCategoryLabel(category) {
     highpower: 'SPG12V高功率',
     jyc: 'JYC-HR12V高功率',
     '2v': 'GFMD-2V',
+    jyc2v: 'JYC-GFM-2V',
+    jyc2vhr: 'JYC-HR-2V高倍率',
     dianneng: '电能GBT12-20小时率',
     dianneng10h: '电能GBT12-10小时率',
     custom: '自定义/客户指定'
@@ -28208,6 +28342,8 @@ function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
     highpower: { suitable: [], all: [] },
     jyc: { suitable: [], all: [] },
     '2v': { suitable: [], all: [] },
+    jyc2v: { suitable: [], all: [] },
+    jyc2vhr: { suitable: [], all: [] },
     dianneng: { suitable: [], all: [] },
     dianneng10h: { suitable: [], all: [] }
   };
@@ -28231,6 +28367,7 @@ function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
       model: battery.model,
       capacity: battery.capacity,
       power: batteryPower,
+      sourceNote: battery.sourceNote || '',
       isSuitable: isSuitable,
       margin: batteryPower - cellPower,
       marginPercent: cellPower > 0 ? ((batteryPower - cellPower) / cellPower * 100).toFixed(1) : '0'
@@ -28332,7 +28469,6 @@ function renderBatteryDataTable() {
   theadHtml += '</tr>';
   document.getElementById('battery-power-thead').innerHTML = theadHtml;
 
-  var categoryLabels = { normal: 'SP12V', highpower: 'SPG12V高功率', jyc: 'JYC-HR12V高功率', '2v': 'GFMD-2V', dianneng: '电能GBT12-20小时率', dianneng10h: '电能GBT12-10小时率' };
   var html = '';
   BATTERY_POWER_DATA.forEach(function(battery) {
     if (category !== 'all' && battery.category !== category) return;
@@ -28344,8 +28480,8 @@ function renderBatteryDataTable() {
     if (!voltageData) return;
 
     html += '<tr style="border-bottom:1px solid #f0f0f0">';
-    html += '<td style="padding:10px 12px;font-weight:500">' + battery.model + '</td>';
-    html += '<td style="padding:10px 12px">' + categoryLabels[battery.category] + '</td>';
+    html += '<td style="padding:10px 12px;font-weight:500">' + battery.model + (battery.sourceNote ? ' <span title="' + escapeHtml(battery.sourceNote) + '" style="color:#e65100">⚠</span>' : '') + '</td>';
+    html += '<td style="padding:10px 12px">' + getBatteryCategoryLabel(battery.category) + '</td>';
     times.forEach(function(time) {
       var powerInfo = voltageData.powers.find(function(p) { return p.time === time; });
       var powerValue = powerInfo ? powerInfo.power : null;

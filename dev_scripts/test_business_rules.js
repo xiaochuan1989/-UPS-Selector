@@ -105,7 +105,9 @@ function extractVarDecl(name) {
 
 const names = [
   "getNextBreakerSize",
+  "isTwoVoltBatteryType",
   "getBatteryCellMultiplier",
+  "getBatteryMonitorSlaveCode",
   "calculateBatteryElectricals",
   "selectCurrentSensor",
   "getVoltLevel",
@@ -134,8 +136,13 @@ assert.equal(rules.getNextBreakerSize(3999.9), 4000);
 assert.throws(() => rules.getNextBreakerSize(-1), /非负/);
 
 assert.equal(rules.getBatteryCellMultiplier("2v"), 1);
+assert.equal(rules.getBatteryCellMultiplier("jyc2v"), 1);
+assert.equal(rules.getBatteryCellMultiplier("jyc2vhr"), 1);
 assert.equal(rules.getBatteryCellMultiplier("normal"), 6);
 assert.equal(rules.getBatteryCellMultiplier("custom"), 6);
+assert.equal(rules.getBatteryMonitorSlaveCode("jyc2v"), "88091146");
+assert.equal(rules.getBatteryMonitorSlaveCode("jyc2vhr"), "88091146");
+assert.equal(rules.getBatteryMonitorSlaveCode("jyc"), "88091145");
 
 const twoGroups = rules.calculateBatteryElectricals({
   loadW: 180000,
@@ -185,13 +192,17 @@ console.log("✅ 核心业务规则测试通过（断路器、电池电气量、
 // ===== JYC HR12V 高功率电池数据校验 =====
 const dataProgram = [
   extractVarDecl("BATTERY_POWER_DATA"),
+  extractVarDecl("JYC_2V_BATTERY_SPECS"),
+  extractFunction("expandBatteryPowerSpec"),
+  "BATTERY_POWER_DATA = BATTERY_POWER_DATA.concat(JYC_2V_BATTERY_SPECS.map(expandBatteryPowerSpec));",
+  extractFunction("getBatteryVoltagesForTime"),
   extractFunction("getBatteryRecommendationsByPower"),
-  "globalThis.battery = { BATTERY_POWER_DATA, getBatteryRecommendationsByPower };",
+  "globalThis.battery = { BATTERY_POWER_DATA, getBatteryVoltagesForTime, getBatteryRecommendationsByPower };",
 ].join("\n");
 const dataContext = {};
 vm.createContext(dataContext);
 vm.runInContext(dataProgram, dataContext);
-const { BATTERY_POWER_DATA, getBatteryRecommendationsByPower } = dataContext.battery;
+const { BATTERY_POWER_DATA, getBatteryVoltagesForTime, getBatteryRecommendationsByPower } = dataContext.battery;
 
 const jycBatteries = BATTERY_POWER_DATA.filter((b) => b.category === "jyc");
 assert.equal(jycBatteries.length, 13, "JYC 型号数量应为 13");
@@ -234,3 +245,47 @@ assert.ok(jycRec.jyc.suitable.length > 0, "200W/单体应能在 JYC 中找到满
 assert.ok(jycRec.jyc.suitable[0].power >= 200, "JYC 首选型号恒功率应满足所需功率");
 
 console.log("✅ JYC HR12V 高功率电池数据校验通过（13型号 / 结构 / 单调性 / 推荐链路）");
+
+// ===== JYC 2V 常规与高倍率电池数据校验 =====
+const jyc2vBatteries = BATTERY_POWER_DATA.filter((b) => b.category === "jyc2v");
+const jyc2vHrBatteries = BATTERY_POWER_DATA.filter((b) => b.category === "jyc2vhr");
+assert.equal(BATTERY_POWER_DATA.length, 91, "电池恒功率型号总数应为 91");
+assert.equal(jyc2vBatteries.length, 10, "JYC-GFM-2V 型号数量应为 10");
+assert.equal(jyc2vHrBatteries.length, 6, "JYC-HR-2V 高倍率型号数量应为 6");
+assert.equal(JSON.stringify(jyc2vBatteries.map((b) => b.model)), JSON.stringify([
+  "GFM-100", "GFM-200", "GFM-300", "GFM-400", "GFM-500",
+  "GFM-600", "GFM-800", "GFM-1000", "GFM-1500", "GFM-2000",
+]));
+assert.equal(JSON.stringify(jyc2vHrBatteries.map((b) => b.model)), JSON.stringify([
+  "HR-500W", "HR-750W", "HR-1000W", "HR-1200W", "HR-1500W", "HR-2000W",
+]));
+
+for (const battery of [...jyc2vBatteries, ...jyc2vHrBatteries]) {
+  for (const voltage of battery.voltages) {
+    for (const point of voltage.powers) {
+      assert.ok(Number.isFinite(point.power) && point.power > 0, `${battery.model} 恒功率必须为正数`);
+    }
+    for (let index = 1; index < voltage.powers.length; index += 1) {
+      assert.ok(
+        voltage.powers[index].power < voltage.powers[index - 1].power,
+        `${battery.model}@${voltage.endVoltage}V 恒功率应随时间严格递减`
+      );
+    }
+  }
+}
+
+const hr500 = jyc2vHrBatteries.find((b) => b.model === "HR-500W");
+assert.equal(hr500.voltages.find((v) => v.endVoltage === 1.75).powers.find((p) => p.time === 30).power, 321);
+const gfm1000 = jyc2vBatteries.find((b) => b.model === "GFM-1000");
+assert.equal(gfm1000.voltages.find((v) => v.endVoltage === 1.8).powers.find((p) => p.time === 120).power, 636);
+const gfm200 = jyc2vBatteries.find((b) => b.model === "GFM-200");
+assert.match(gfm200.sourceNote, /GFM-100.*完全相同.*厂家复核/);
+
+assert.equal(JSON.stringify(getBatteryVoltagesForTime("jyc2v", 120)), JSON.stringify([1.8]));
+assert.equal(JSON.stringify(getBatteryVoltagesForTime("jyc2vhr", 30)), JSON.stringify([1.65, 1.7, 1.75, 1.8]));
+const jyc2vRec = getBatteryRecommendationsByPower(900, 1.75, 60);
+assert.equal(jyc2vRec.jyc2v.suitable[0].model, "GFM-1000");
+const jyc2vHrRec = getBatteryRecommendationsByPower(700, 1.75, 30);
+assert.equal(jyc2vHrRec.jyc2vhr.suitable[0].model, "HR-1200W");
+
+console.log("✅ JYC 2V 电池数据校验通过（10款GFM + 6款HR / 稀疏曲线 / 推荐链路 / 数据源风险）");

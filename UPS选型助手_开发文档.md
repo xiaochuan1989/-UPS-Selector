@@ -1,7 +1,7 @@
 # UPS 智能选型助手——产品与技术设计
 
-> 版本：v1.8.8
-> 最后更新：2026-07-13
+> 版本：v1.8.9
+> 最后更新：2026-08-31
 > 文档职责：说明产品能力、系统结构、关键数据流、业务公式和技术边界。
 
 ## 1. 产品定位
@@ -47,8 +47,10 @@ UPS 智能选型助手是面向售前、销售和技术人员的单文件 Web �
 | 昆仑 UE | 31 | `PRODUCTS` |
 | 祁连 UM | 27 | `PRODUCTS` |
 | 泰山 UT | 31 | `PRODUCTS` |
-| 电池恒功率型号 | 75 | `index.html` 中 `BATTERY_POWER_DATA` |
+| 电池恒功率型号 | 91 | `index.html` 中 `BATTERY_POWER_DATA` |
 | JYC-HR12V 高功率 | 13 | `BATTERY_POWER_DATA`（category `jyc`） |
+| JYC-GFM-2V 常规 | 10 | `BATTERY_POWER_DATA`（category `jyc2v`） |
+| JYC-HR-2V 高倍率 | 6 | `BATTERY_POWER_DATA`（category `jyc2vhr`） |
 | 电池监控产品 | 15 | `index.html` 中 `MONITOR_PRODUCTS` |
 
 电池类别：
@@ -59,6 +61,8 @@ UPS 智能选型助手是面向售前、销售和技术人员的单文件 Web �
 - `dianneng`：电能 GBT12-20 小时率
 - `dianneng10h`：电能 GBT12-10 小时率
 - `jyc`：JYC-HR12V 高倍率（HR 系列 13 款，终止电压 1.60/1.67/1.70/1.75/1.80V）
+- `jyc2v`：JYC-GFM-2V 常规（GFM 系列 10 款，终止电压 1.65/1.70/1.75/1.80V）
+- `jyc2vhr`：JYC-HR-2V 高倍率（HR 系列 6 款，终止电压 1.65/1.70/1.75/1.80V）
 - `custom`：客户指定型号，不进行内置型号推荐
 
 ## 4. 系统结构
@@ -70,7 +74,7 @@ flowchart TD
     UI --> BAT["电池正算与反算"]
     UI --> DB["产品数据库查看与 Excel 导入"]
     AI --> PRODUCTS["PRODUCTS 105款 UPS"]
-    BAT --> POWER["BATTERY_POWER_DATA 75款"]
+    BAT --> POWER["BATTERY_POWER_DATA 91款"]
     BAT --> MONITOR["MONITOR_PRODUCTS 15款"]
     DB --> IDB["IndexedDB 导入数据"]
     AI --> HISTORY["localStorage 选型历史"]
@@ -355,5 +359,6 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 | v1.8.6 | 2026-07-14 | 清理被标签页导航取代的 5 个死函数（toggleBatteryCalc/toggleBatteryCalcV1/toggleRuntimeCalc/toggleDataCenterCheck/toggleDataTable），同步文档 |
 | v1.8.7 | 2026-07-14 | 界面视觉刷新（第二阶段）：登录页改为品牌 logo 方块 + 副标语，风格与顶栏统一 |
 | v1.8.8 | 2026-07-14 | 接入 iTeaQ 艾特网能公司 logo：base64 内嵌为 .iteaq-logo，替换顶栏（白底 chip）与登录页的通用图标 |
+| v1.8.9 | 2026-08-31 | 接入 JYC-GFM-2V 常规 10 款与 JYC-HR-2V 高倍率 6 款规格书数据，支持推荐、反算、动态有效电压和 2V 监控模块；对厂家 GFM-200 重复曲线显示复核风险 |
 
 更细的历史变更以 Git 提交记录为准。
