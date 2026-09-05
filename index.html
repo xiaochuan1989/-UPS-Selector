@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.18";
+const APP_VERSION = "v1.8.19";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -106,6 +106,19 @@ document.addEventListener("DOMContentLoaded", function() {
   .multi-ups-save-btn { background:#0f8a5f !important; }
   .multi-ups-save-btn:hover { background:#0a704d !important; }
   .summary-config-source { display:block;margin-top:3px;color:#64748b;font-size:10px;font-weight:500;line-height:1.35; }
+  .ups-model-search { position:relative;display:flex;flex:1;min-width:0; }
+  .ups-model-search-input { width:100%;min-width:0;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 40px 8px 12px;background:#fff;color:#172033;font-family:inherit;font-size:13px;transition:border-color .18s,box-shadow .18s; }
+  .ups-model-search-input:focus { outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+  .ups-model-search-toggle { position:absolute;right:3px;top:50%;width:32px;height:30px;transform:translateY(-50%);border:0;border-radius:5px;background:transparent;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center; }
+  .ups-model-search-toggle:hover { background:#eef5ff;color:#2563eb; }
+  .ups-model-search-toggle i { font-size:17px;transition:transform .18s; }
+  .ups-model-search.is-open .ups-model-search-toggle i { transform:rotate(180deg); }
+  .ups-model-search-results { position:absolute;z-index:120;top:calc(100% + 5px);left:0;right:0;max-height:290px;overflow-y:auto;border:1px solid #cbd6e2;border-radius:8px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.16);padding:5px; }
+  .ups-model-search-results[hidden] { display:none; }
+  .ups-model-search-count { position:sticky;top:-5px;z-index:1;padding:7px 10px;border-bottom:1px solid #e5edf5;background:#f8fafc;color:#64748b;font-size:11px; }
+  .ups-model-search-option { display:block;width:100%;border:0;border-radius:5px;background:#fff;padding:8px 10px;color:#172033;font-family:inherit;font-size:13px;text-align:left;cursor:pointer; }
+  .ups-model-search-option:hover,.ups-model-search-option.is-active { background:#eaf2ff;color:#1d4ed8; }
+  .ups-model-search-empty { padding:16px 10px;color:#94a3b8;font-size:12px;text-align:center; }
   @media (max-width:1100px) { .multi-ups-list { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width:700px) {
     .multi-ups-manager-head { align-items:flex-start;flex-direction:column; }
@@ -937,9 +950,11 @@ function checkAuth(){
         <!-- 标准模式：从数据表选择 -->
         <div id="ups-standard-area" style="display:flex;align-items:center;gap:12px">
           <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap">⚡ UPS型号：</label>
-          <select id="unified-ups-model" onchange="fillUpsFromSelection()" style="flex:1;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 12px;font-size:13px;background:white;min-width:0">
-            <option value="">请选择UPS型号</option>
-          </select>
+          <div id="ups-model-search" class="ups-model-search">
+            <input type="text" id="unified-ups-model" class="ups-model-search-input" placeholder="输入型号关键字，如 600、UR、昆仑" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ups-model-search-results" onfocus="openUpsModelSearchResults()" oninput="handleUpsModelSearchInput()" onkeydown="handleUpsModelSearchKeydown(event)">
+            <button type="button" class="ups-model-search-toggle" onclick="toggleUpsModelSearchResults()" aria-label="展开全部 UPS 型号" title="展开全部 UPS 型号"><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+            <div id="ups-model-search-results" class="ups-model-search-results" role="listbox" hidden></div>
+          </div>
           <button onclick="fillUpsFromSelection()" style="background:#2563eb;color:white;border:none;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap">填入参数</button>
           <span id="ups-model-hint" style="font-size:12px;color:#888;min-width:140px"></span>
         </div>
@@ -3370,6 +3385,12 @@ function saveCurrentUpsConfigurationAndStartNext() {
     setTimeout(function() { modelInput?.focus(); }, 300);
     return;
   }
+  if (upsType === 'standard' && !findProduct(modelInput.value.trim())) {
+    alert('请从匹配结果中选择完整的 UPS 型号，再加入项目');
+    renderUpsModelSearchResults(modelInput.value);
+    modelInput.focus();
+    return;
+  }
   if (!calcAllBatteryConfig()) return;
   const rows = collectProjectSummaryRows({ includeSaved: false }).filter(row => !String(row.key).startsWith('custom-'));
   if (!rows.length) {
@@ -4414,6 +4435,7 @@ function toggleUpsType(type) {
     standardArea.style.display = 'flex';
     customArea.style.display = 'none';
   } else {
+    closeUpsModelSearchResults();
     standardArea.style.display = 'none';
     customArea.style.display = 'block';
   }
@@ -4435,18 +4457,136 @@ function getUpsType() {
  * 1. AI选型完成后
  * 2. 打开电池配置面板时
  * 
- * 支持两种输入方式：
- * 1. 从AI推荐列表选择
- * 2. 手动输入任意型号
+ * 支持输入任意关键字过滤全部型号，并使用鼠标或键盘选择。
  */
+window.upsModelSearchOptions = [];
+window.upsModelSearchMatches = [];
+window.upsModelSearchActiveIndex = -1;
+
+function getFilteredUpsModels(query) {
+  const keyword = String(query || '').trim().toLocaleLowerCase();
+  if (!keyword) return window.upsModelSearchOptions.slice();
+  const terms = keyword.split(/\s+/).filter(Boolean);
+  return window.upsModelSearchOptions.filter(function(model) {
+    const normalized = model.toLocaleLowerCase();
+    return terms.every(term => normalized.includes(term));
+  });
+}
+
+function setUpsModelSearchActiveIndex(index) {
+  const resultPanel = document.getElementById('ups-model-search-results');
+  const options = Array.from(resultPanel?.querySelectorAll('.ups-model-search-option') || []);
+  if (!options.length) {
+    window.upsModelSearchActiveIndex = -1;
+    return;
+  }
+  window.upsModelSearchActiveIndex = Math.max(0, Math.min(index, options.length - 1));
+  options.forEach(function(option, optionIndex) {
+    const active = optionIndex === window.upsModelSearchActiveIndex;
+    option.classList.toggle('is-active', active);
+    option.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  options[window.upsModelSearchActiveIndex]?.scrollIntoView({ block: 'nearest' });
+}
+
+function renderUpsModelSearchResults(query, options) {
+  const settings = options || {};
+  const input = document.getElementById('unified-ups-model');
+  const wrapper = document.getElementById('ups-model-search');
+  const resultPanel = document.getElementById('ups-model-search-results');
+  if (!input || !wrapper || !resultPanel) return;
+  const matches = getFilteredUpsModels(query);
+  window.upsModelSearchMatches = matches;
+  window.upsModelSearchActiveIndex = matches.length ? 0 : -1;
+  const queryText = String(query || '').trim();
+  const countLabel = queryText ? `“${escapeHtml(queryText)}”匹配 ${matches.length} 个型号` : `全部 ${matches.length} 个型号`;
+  resultPanel.innerHTML = `<div class="ups-model-search-count">${countLabel}</div>` + (matches.length
+    ? matches.map(function(model, index) {
+        return `<button type="button" class="ups-model-search-option${index === 0 ? ' is-active' : ''}" role="option" aria-selected="${index === 0 ? 'true' : 'false'}" data-model="${escapeHtml(model)}" onmousedown="event.preventDefault()" onclick="selectUpsModelOption(this.dataset.model)">${escapeHtml(model)}</button>`;
+      }).join('')
+    : '<div class="ups-model-search-empty">没有匹配型号，请更换关键字</div>');
+  resultPanel.hidden = false;
+  wrapper.classList.add('is-open');
+  input.setAttribute('aria-expanded', 'true');
+  if (settings.keepActiveIndex) setUpsModelSearchActiveIndex(settings.keepActiveIndex);
+}
+
+function openUpsModelSearchResults(showAll) {
+  const input = document.getElementById('unified-ups-model');
+  if (!input) return;
+  renderUpsModelSearchResults(showAll ? '' : input.value);
+}
+
+function closeUpsModelSearchResults() {
+  const input = document.getElementById('unified-ups-model');
+  const wrapper = document.getElementById('ups-model-search');
+  const resultPanel = document.getElementById('ups-model-search-results');
+  if (resultPanel) resultPanel.hidden = true;
+  if (wrapper) wrapper.classList.remove('is-open');
+  if (input) input.setAttribute('aria-expanded', 'false');
+  window.upsModelSearchActiveIndex = -1;
+}
+
+function toggleUpsModelSearchResults() {
+  const resultPanel = document.getElementById('ups-model-search-results');
+  if (resultPanel?.hidden) openUpsModelSearchResults(true);
+  else closeUpsModelSearchResults();
+  document.getElementById('unified-ups-model')?.focus();
+}
+
+function handleUpsModelSearchInput() {
+  const input = document.getElementById('unified-ups-model');
+  const hint = document.getElementById('ups-model-hint');
+  if (!input) return;
+  renderUpsModelSearchResults(input.value);
+  if (hint) {
+    const matches = window.upsModelSearchMatches.length;
+    hint.textContent = input.value.trim() ? `找到 ${matches} 个匹配型号` : '输入关键字筛选型号';
+    hint.style.color = matches ? '#2563eb' : '#e74c3c';
+  }
+}
+
+function handleUpsModelSearchKeydown(event) {
+  const resultPanel = document.getElementById('ups-model-search-results');
+  const isOpen = resultPanel && !resultPanel.hidden;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    if (!isOpen) openUpsModelSearchResults();
+    else setUpsModelSearchActiveIndex(window.upsModelSearchActiveIndex + (event.key === 'ArrowDown' ? 1 : -1));
+    return;
+  }
+  if (event.key === 'Enter') {
+    if (isOpen && window.upsModelSearchActiveIndex >= 0) {
+      event.preventDefault();
+      selectUpsModelOption(window.upsModelSearchMatches[window.upsModelSearchActiveIndex]);
+    } else {
+      fillUpsFromSelection();
+    }
+    return;
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeUpsModelSearchResults();
+  }
+  if (event.key === 'Tab') closeUpsModelSearchResults();
+}
+
+function selectUpsModelOption(model) {
+  const input = document.getElementById('unified-ups-model');
+  if (!input) return;
+  input.value = model || '';
+  closeUpsModelSearchResults();
+  fillUpsFromSelection();
+  input.focus();
+}
+
 function updateUpsModelSelect() {
-  const select = document.getElementById('unified-ups-model');
+  const input = document.getElementById('unified-ups-model');
   const hint = document.getElementById('ups-model-hint');
   
-  if (!select) return;
+  if (!input) return;
   
-  const currentValue = select.value;
-  select.innerHTML = '<option value="">请选择UPS型号</option>';
+  const currentValue = input.value;
   
   // 收集所有型号（AI推荐优先显示）
   const models = new Set();
@@ -4463,23 +4603,23 @@ function updateUpsModelSelect() {
     if (p['型号']) models.add(p['型号']);
   });
   
-  // 添加到 select，下拉可直接切换型号，无需先删除已选内容
-  models.forEach(model => {
-    const opt = document.createElement('option');
-    opt.value = model;
-    opt.textContent = model;
-    select.appendChild(opt);
-  });
-  if (currentValue && models.has(currentValue)) {
-    select.value = currentValue;
+  window.upsModelSearchOptions = Array.from(models);
+  if (currentValue && models.has(currentValue)) input.value = currentValue;
+  closeUpsModelSearchResults();
+
+  if (!window.upsModelOutsideClickBound) {
+    document.addEventListener('pointerdown', function(event) {
+      if (!event.target.closest('#ups-model-search')) closeUpsModelSearchResults();
+    });
+    window.upsModelOutsideClickBound = true;
   }
   
   // 更新提示
   if (hint) {
     if (lastResult && (lastResult.recommended?.length || lastResult.also_consider?.length)) {
-      hint.textContent = 'AI推荐型号已加载，也可手动输入';
+      hint.textContent = 'AI推荐型号已加载，可输入关键字筛选';
     } else {
-      hint.textContent = '可手动输入或从列表选择';
+      hint.textContent = '可输入关键字筛选型号';
     }
   }
 }
@@ -4511,13 +4651,17 @@ function fillUpsFromSelection() {
   const product = findProduct(model);
   
   if (!product) {
+    const matches = getFilteredUpsModels(model);
     if (hint) {
-      hint.textContent = `⚠️ "${model}" 未在产品库中`;
-      hint.style.color = '#e74c3c';
+      hint.textContent = matches.length
+        ? `找到 ${matches.length} 个匹配型号，请选择完整型号`
+        : `⚠️ "${model}" 未在产品库中`;
+      hint.style.color = matches.length ? '#2563eb' : '#e74c3c';
     }
-    // 即使未找到产品，也允许用户继续使用（手动填写容量和功率因数）
+    if (matches.length) renderUpsModelSearchResults(model);
     return;
   }
+  closeUpsModelSearchResults();
   
   // 提取UPS容量（从描述中提取kVA数值）
   const desc = product['描述'] || '';

@@ -110,6 +110,13 @@ class QuietHTTPHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+class DevHTTPServer(socketserver.ThreadingTCPServer):
+    """支持浏览器并发连接，并允许开发时立即重启端口。"""
+
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 def print_banner(port: int, html_file: str):
     """打印启动横幅"""
     print("\n" + "=" * 50)
@@ -186,7 +193,7 @@ def main():
             thread.start()
 
     # 启动服务器
-    with socketserver.TCPServer(("", port), QuietHTTPHandler) as httpd:
+    with DevHTTPServer(("", port), QuietHTTPHandler) as httpd:
         try:
             print(f"🚀 服务器运行中...\n")
             httpd.serve_forever()
