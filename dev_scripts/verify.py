@@ -27,6 +27,8 @@ checks = [
     ('横向平移不误触详情', "scroller.dataset.suppressRowClick = 'true'"),
     ('多套UPS配置管理区', 'id="multi-ups-list"'),
     ('保存并新增下一套', 'function saveCurrentUpsConfigurationAndStartNext'),
+    ('新配置按钮定位表单', "showImportToast('已开始新配置，请选择或填写 UPS 型号')"),
+    ('空UPS型号禁止加入项目', "请先选择 UPS 型号，再加入项目"),
     ('载入已保存配置', 'function loadSavedUpsConfiguration'),
     ('相同物料自动合并', 'function collectSavedConfigurationRows'),
     ('多配置导出链路', 'collectProjectSummaryRows({ includeSaved: false })'),

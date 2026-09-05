@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.17";
+const APP_VERSION = "v1.8.18";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -912,7 +912,7 @@ function checkAuth(){
         </div>
         <div class="multi-ups-manager-actions">
           <span id="multi-ups-count" class="multi-ups-count">0 套已保存</span>
-          <button type="button" class="save-btn" onclick="startNewUpsConfiguration()" style="padding:8px 13px"><i class="ti ti-plus" aria-hidden="true"></i> 新增一套 UPS</button>
+          <button type="button" class="save-btn" onclick="startNewUpsConfiguration()" title="清空当前草稿并定位到下方表单" style="padding:8px 13px"><i class="ti ti-plus" aria-hidden="true"></i> 开始新配置</button>
         </div>
       </div>
       <div id="multi-ups-list" class="multi-ups-list">
@@ -921,7 +921,7 @@ function checkAuth(){
     </section>
 
     <!-- 统一参数输入区 -->
-    <div style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
+    <div id="unified-config-input-panel" style="background:#f8fbff;border:1.5px solid #d0e8ff;border-radius:10px;padding:16px;margin-bottom:16px">
       <div style="font-weight:600;margin-bottom:12px;color:#2563eb">📥 参数输入</div>
       <!-- UPS型号选择（支持标准/非标切换） -->
       <div style="margin-bottom:12px;padding:10px;background:#fff8e1;border:1px solid #ffcc80;border-radius:8px">
@@ -3324,6 +3324,12 @@ function resetUnifiedConfigurationDraft() {
 function startNewUpsConfiguration() {
   if (hasProjectConfigurationData(window.projectSummary) && !confirm('当前配置尚未加入项目，确定开始新增一套吗？')) return;
   resetUnifiedConfigurationDraft();
+  document.getElementById('unified-config-input-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const modelInput = getUpsType() === 'custom'
+    ? document.getElementById('custom-ups-model')
+    : document.getElementById('unified-ups-model');
+  setTimeout(function() { modelInput?.focus(); }, 300);
+  showImportToast('已开始新配置，请选择或填写 UPS 型号');
 }
 
 function loadSavedUpsConfiguration(id) {
@@ -3354,6 +3360,16 @@ function deleteSavedUpsConfiguration(id) {
 }
 
 function saveCurrentUpsConfigurationAndStartNext() {
+  const upsType = getUpsType();
+  const modelInput = upsType === 'custom'
+    ? document.getElementById('custom-ups-model')
+    : document.getElementById('unified-ups-model');
+  if (!modelInput?.value?.trim()) {
+    alert(upsType === 'custom' ? '请先填写非标 UPS 型号，再加入项目' : '请先选择 UPS 型号，再加入项目');
+    document.getElementById('unified-config-input-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function() { modelInput?.focus(); }, 300);
+    return;
+  }
   if (!calcAllBatteryConfig()) return;
   const rows = collectProjectSummaryRows({ includeSaved: false }).filter(row => !String(row.key).startsWith('custom-'));
   if (!rows.length) {
