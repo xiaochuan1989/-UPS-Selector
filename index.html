@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.14";
+const APP_VERSION = "v1.8.15";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -173,7 +173,7 @@ document.addEventListener("DOMContentLoaded", function() {
   .db-pane-title-bottom { color:#1a5c3a;background:#edfbf3;border-left:3px solid #27ae60; }
   .db-pane-hint { display:inline-flex;align-items:center;gap:5px;color:#64748b;font-size:11px;font-weight:500;white-space:nowrap; }
   .db-table-scroll { flex:1 1 auto;min-height:0;overflow:auto;border:1px solid var(--border);border-radius:6px;background:#fff;scrollbar-gutter:stable;overscroll-behavior:contain; }
-  .db-table-scroll.can-pan-horizontal { cursor:grab; }
+  .db-table-scroll.can-pan-horizontal { cursor:text; }
   .db-table-scroll.is-panning { cursor:grabbing;user-select:none; }
   .db-splitter { flex:0 0 20px;display:flex;align-items:center;justify-content:center;margin:7px 0;cursor:row-resize;touch-action:none;color:#64748b;background:#eef3f8;border:1px solid #cbd6e2;border-radius:6px;transition:background-color .15s,border-color .15s,color .15s; }
   .db-splitter:hover,.db-splitter:focus-visible,.db-splitter.is-dragging { color:#1d4ed8;background:#e2ebff;border-color:#7aa2f7;outline:none; }
@@ -362,8 +362,8 @@ function checkAuth(){
     <div id="db-split-layout" class="db-split-layout">
       <!-- 上栏：产品信息 -->
       <section id="db-pane-top" class="db-pane db-pane-top" aria-labelledby="db-pane-title-top">
-        <div id="db-pane-title-top" class="db-pane-title db-pane-title-top"><span>📋 产品信息</span><span class="db-pane-hint"><i class="ti ti-arrows-horizontal" aria-hidden="true"></i>拖动表头边界调整列宽</span></div>
-        <div id="db-scroll-top" class="db-table-scroll" aria-label="产品信息表，可按住内容左右拖动">
+        <div id="db-pane-title-top" class="db-pane-title db-pane-title-top"><span>📋 产品信息</span><span class="db-pane-hint"><i class="ti ti-arrows-horizontal" aria-hidden="true"></i>拖动列宽 · Shift+拖动横移</span></div>
+        <div id="db-scroll-top" class="db-table-scroll" aria-label="产品信息表，可选择文字；按住 Shift 拖动可横向查看">
           <table id="db-table-top" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
             <thead id="db-thead-top"></thead>
             <tbody id="db-tbody-top"></tbody>
@@ -375,8 +375,8 @@ function checkAuth(){
       </div>
       <!-- 下栏：泰尔技术规格 -->
       <section id="db-pane-bottom" class="db-pane db-pane-bottom" aria-labelledby="db-pane-title-bottom">
-        <div id="db-pane-title-bottom" class="db-pane-title db-pane-title-bottom"><span>🔧 技术规格（泰尔参数）</span><span class="db-pane-hint"><i class="ti ti-arrows-horizontal" aria-hidden="true"></i>拖动表头边界调整列宽</span></div>
-        <div id="db-scroll-bottom" class="db-table-scroll" aria-label="技术规格表，可按住内容左右拖动">
+        <div id="db-pane-title-bottom" class="db-pane-title db-pane-title-bottom"><span>🔧 技术规格（泰尔参数）</span><span class="db-pane-hint"><i class="ti ti-arrows-horizontal" aria-hidden="true"></i>拖动列宽 · Shift+拖动横移</span></div>
+        <div id="db-scroll-bottom" class="db-table-scroll" aria-label="技术规格表，可选择文字；按住 Shift 拖动可横向查看">
           <table id="db-table-bot" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
             <thead id="db-thead-bot"></thead>
             <tbody id="db-tbody-bot"></tbody>
@@ -28790,7 +28790,8 @@ function initDatabaseHorizontalDrag() {
     let isPanning = false;
 
     scroller.addEventListener('pointerdown', function(event) {
-      if (event.button !== 0 || scroller.scrollWidth <= scroller.clientWidth) return;
+      const wantsHorizontalPan = event.button === 1 || (event.button === 0 && event.shiftKey);
+      if (!wantsHorizontalPan || scroller.scrollWidth <= scroller.clientWidth) return;
       if (event.target.closest('thead')) return;
       const rect = scroller.getBoundingClientRect();
       if (event.clientY >= rect.bottom - 18) return;
@@ -28824,7 +28825,9 @@ function initDatabaseHorizontalDrag() {
 
     scroller.addEventListener('pointerup', finishHorizontalPan);
     scroller.addEventListener('pointercancel', finishHorizontalPan);
-    scroller.addEventListener('dragstart', function(event) { event.preventDefault(); });
+    scroller.addEventListener('dragstart', function(event) {
+      if (pointerId !== null) event.preventDefault();
+    });
     scroller.addEventListener('wheel', function(event) {
       if (!event.shiftKey || scroller.scrollWidth <= scroller.clientWidth) return;
       scroller.scrollLeft += event.deltaY || event.deltaX;
