@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.11";
+const APP_VERSION = "v1.8.12";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -156,6 +156,25 @@ document.addEventListener("DOMContentLoaded", function() {
   #db-table-bot th:hover { background:#27ae60; }
   #db-table-top td,#db-table-bot td { padding:7px 12px;border-bottom:1px solid #f0f0f0;max-width:200px;overflow:hidden;text-overflow:ellipsis; }
   .db-row-hover td { background:#e8f4ff !important; }
+  .db-split-layout { display:flex;flex-direction:column;height:clamp(620px,calc(100vh - 250px),920px);min-height:520px; }
+  .db-pane { display:flex;flex-direction:column;min-height:160px;min-width:0; }
+  .db-pane-top { flex:0 0 calc(50% - 10px); }
+  .db-pane-bottom { flex:1 1 0; }
+  .db-pane-title { flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;font-weight:700;padding:6px 9px;margin-bottom:5px;border-radius:0 5px 5px 0; }
+  .db-pane-title-top { color:#1a3a5c;background:#eef4fb;border-left:3px solid #2563eb; }
+  .db-pane-title-bottom { color:#1a5c3a;background:#edfbf3;border-left:3px solid #27ae60; }
+  .db-pane-hint { display:inline-flex;align-items:center;gap:5px;color:#64748b;font-size:11px;font-weight:500;white-space:nowrap; }
+  .db-table-scroll { flex:1 1 auto;min-height:0;overflow:auto;border:1px solid var(--border);border-radius:6px;background:#fff;scrollbar-gutter:stable;overscroll-behavior:contain; }
+  .db-table-scroll.can-pan-horizontal { cursor:grab; }
+  .db-table-scroll.is-panning { cursor:grabbing;user-select:none; }
+  .db-splitter { flex:0 0 20px;display:flex;align-items:center;justify-content:center;margin:7px 0;cursor:row-resize;touch-action:none;color:#64748b;background:#eef3f8;border:1px solid #cbd6e2;border-radius:6px;transition:background-color .15s,border-color .15s,color .15s; }
+  .db-splitter:hover,.db-splitter:focus-visible,.db-splitter.is-dragging { color:#1d4ed8;background:#e2ebff;border-color:#7aa2f7;outline:none; }
+  .db-splitter-label { display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;line-height:1;pointer-events:none; }
+  .db-splitter .ti { font-size:16px; }
+  body.db-resizing { cursor:row-resize;user-select:none; }
+  @media (max-height:760px) {
+    .db-split-layout { height:560px; }
+  }
   /* ── 设置弹窗 ── */
   #settings-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; overflow-y:auto; padding:40px 16px; }
   #settings-panel { max-width:640px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.25); }
@@ -331,21 +350,30 @@ function checkAuth(){
           style="border:1.5px solid #e0e0e0;border-radius:8px;padding:7px 12px;font-size:13px;width:220px">
       </div>
     </div>
-    <!-- 上栏：产品信息 -->
-    <div style="font-size:12px;font-weight:700;color:#1a3a5c;padding:5px 8px;background:#eef4fb;border-left:3px solid #2563eb;margin-bottom:4px;border-radius:0 4px 4px 0">📋 产品信息</div>
-    <div style="overflow:auto;max-height:240px;margin-bottom:12px">
-      <table id="db-table-top" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
-        <thead id="db-thead-top"></thead>
-        <tbody id="db-tbody-top"></tbody>
-      </table>
-    </div>
-    <!-- 下栏：泰尔技术规格 -->
-    <div style="font-size:12px;font-weight:700;color:#1a5c3a;padding:5px 8px;background:#edfbf3;border-left:3px solid #27ae60;margin-bottom:4px;border-radius:0 4px 4px 0">🔧 技术规格（泰尔参数）</div>
-    <div style="overflow:auto;max-height:240px">
-      <table id="db-table-bot" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
-        <thead id="db-thead-bot"></thead>
-        <tbody id="db-tbody-bot"></tbody>
-      </table>
+    <div id="db-split-layout" class="db-split-layout">
+      <!-- 上栏：产品信息 -->
+      <section id="db-pane-top" class="db-pane db-pane-top" aria-labelledby="db-pane-title-top">
+        <div id="db-pane-title-top" class="db-pane-title db-pane-title-top"><span>📋 产品信息</span><span class="db-pane-hint"><i class="ti ti-hand-move" aria-hidden="true"></i>按住表格左右拖动</span></div>
+        <div id="db-scroll-top" class="db-table-scroll" aria-label="产品信息表，可按住内容左右拖动">
+          <table id="db-table-top" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
+            <thead id="db-thead-top"></thead>
+            <tbody id="db-tbody-top"></tbody>
+          </table>
+        </div>
+      </section>
+      <div id="db-splitter" class="db-splitter" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="调整产品信息与技术规格表格高度" aria-controls="db-pane-top db-pane-bottom" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" title="上下拖动调整表格高度，双击恢复均分">
+        <span class="db-splitter-label"><i class="ti ti-grip-horizontal" aria-hidden="true"></i>上下拖动调整</span>
+      </div>
+      <!-- 下栏：泰尔技术规格 -->
+      <section id="db-pane-bottom" class="db-pane db-pane-bottom" aria-labelledby="db-pane-title-bottom">
+        <div id="db-pane-title-bottom" class="db-pane-title db-pane-title-bottom"><span>🔧 技术规格（泰尔参数）</span><span class="db-pane-hint"><i class="ti ti-hand-move" aria-hidden="true"></i>按住表格左右拖动</span></div>
+        <div id="db-scroll-bottom" class="db-table-scroll" aria-label="技术规格表，可按住内容左右拖动">
+          <table id="db-table-bot" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
+            <thead id="db-thead-bot"></thead>
+            <tbody id="db-tbody-bot"></tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -2634,7 +2662,7 @@ function showMainTab(key) {
     if (key === 'battery') { updateUpsModelSelect(); syncUnifiedUpsNumFromDc(false); }
     else if (key === 'runtime') { refreshRuntimeBatteryOptions(); }
     else if (key === 'dc') { updateDcArchitectureFields(); }
-    else if (key === 'db') { buildDataTable(); }
+    else if (key === 'db') { buildDataTable(); initDatabaseSplitter(); initDatabaseHorizontalDrag(); }
   }
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('nav-tab-active'); });
   var active = document.getElementById('tab-' + key);
@@ -28659,6 +28687,139 @@ function getLeadBatteryRecommendations(cellPower, groups, battNum) {
   html += '实际选型请参考电池厂家恒功率放电曲线表</div>';
 
   return html;
+}
+
+const DB_SPLIT_STORAGE_KEY = 'ups_db_split_ratio';
+
+function initDatabaseSplitter() {
+  const layout = document.getElementById('db-split-layout');
+  const topPane = document.getElementById('db-pane-top');
+  const bottomPane = document.getElementById('db-pane-bottom');
+  const splitter = document.getElementById('db-splitter');
+  if (!layout || !topPane || !bottomPane || !splitter) return;
+
+  let currentRatio = parseFloat(localStorage.getItem(DB_SPLIT_STORAGE_KEY));
+  if (!Number.isFinite(currentRatio)) currentRatio = 0.5;
+  currentRatio = Math.min(0.8, Math.max(0.2, currentRatio));
+
+  function applyRatio(ratio, persist) {
+    const availableHeight = layout.clientHeight - splitter.offsetHeight - 14;
+    if (availableHeight <= 0) return;
+    const minimumPaneHeight = Math.min(160, availableHeight * 0.4);
+    const minRatio = minimumPaneHeight / availableHeight;
+    currentRatio = Math.min(1 - minRatio, Math.max(minRatio, ratio));
+    topPane.style.flex = `0 0 ${Math.round(availableHeight * currentRatio)}px`;
+    bottomPane.style.flex = '1 1 0';
+    splitter.setAttribute('aria-valuenow', String(Math.round(currentRatio * 100)));
+    if (persist) localStorage.setItem(DB_SPLIT_STORAGE_KEY, currentRatio.toFixed(4));
+  }
+
+  if (splitter.dataset.initialized !== 'true') {
+    splitter.dataset.initialized = 'true';
+    let dragging = false;
+
+    splitter.addEventListener('pointerdown', function(event) {
+      if (event.button !== 0) return;
+      dragging = true;
+      splitter.setPointerCapture(event.pointerId);
+      splitter.classList.add('is-dragging');
+      document.body.classList.add('db-resizing');
+      event.preventDefault();
+    });
+
+    splitter.addEventListener('pointermove', function(event) {
+      if (!dragging) return;
+      const rect = layout.getBoundingClientRect();
+      const availableHeight = layout.clientHeight - splitter.offsetHeight - 14;
+      const splitterMarginTop = parseFloat(getComputedStyle(splitter).marginTop) || 0;
+      const pointerOffset = event.clientY - rect.top - splitterMarginTop - splitter.offsetHeight / 2;
+      applyRatio(pointerOffset / availableHeight, false);
+    });
+
+    function finishDrag(event) {
+      if (!dragging) return;
+      dragging = false;
+      if (splitter.hasPointerCapture(event.pointerId)) splitter.releasePointerCapture(event.pointerId);
+      splitter.classList.remove('is-dragging');
+      document.body.classList.remove('db-resizing');
+      localStorage.setItem(DB_SPLIT_STORAGE_KEY, currentRatio.toFixed(4));
+    }
+
+    splitter.addEventListener('pointerup', finishDrag);
+    splitter.addEventListener('pointercancel', finishDrag);
+    splitter.addEventListener('dblclick', function() { applyRatio(0.5, true); });
+    splitter.addEventListener('keydown', function(event) {
+      const availableHeight = layout.clientHeight - splitter.offsetHeight - 14;
+      if (availableHeight <= 0) return;
+      if (event.key === 'ArrowUp') applyRatio(currentRatio - 24 / availableHeight, true);
+      else if (event.key === 'ArrowDown') applyRatio(currentRatio + 24 / availableHeight, true);
+      else if (event.key === 'Home') applyRatio(0.2, true);
+      else if (event.key === 'End') applyRatio(0.8, true);
+      else return;
+      event.preventDefault();
+    });
+
+    if ('ResizeObserver' in window) {
+      const resizeObserver = new ResizeObserver(function() { applyRatio(currentRatio, false); });
+      resizeObserver.observe(layout);
+    }
+  }
+
+  requestAnimationFrame(function() { applyRatio(currentRatio, false); });
+}
+
+function initDatabaseHorizontalDrag() {
+  document.querySelectorAll('.db-table-scroll').forEach(function(scroller) {
+    if (scroller.dataset.horizontalPanInitialized === 'true') return;
+    scroller.dataset.horizontalPanInitialized = 'true';
+    scroller.classList.add('can-pan-horizontal');
+
+    let pointerId = null;
+    let startX = 0;
+    let startScrollLeft = 0;
+    let isPanning = false;
+
+    scroller.addEventListener('pointerdown', function(event) {
+      if (event.button !== 0 || scroller.scrollWidth <= scroller.clientWidth) return;
+      const rect = scroller.getBoundingClientRect();
+      if (event.clientY >= rect.bottom - 18) return;
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      startScrollLeft = scroller.scrollLeft;
+      isPanning = false;
+      scroller.setPointerCapture(pointerId);
+      event.preventDefault();
+    });
+
+    scroller.addEventListener('pointermove', function(event) {
+      if (pointerId !== event.pointerId) return;
+      const deltaX = event.clientX - startX;
+      if (!isPanning && Math.abs(deltaX) >= 4) {
+        isPanning = true;
+        scroller.classList.add('is-panning');
+      }
+      if (!isPanning) return;
+      scroller.scrollLeft = startScrollLeft - deltaX;
+      event.preventDefault();
+    });
+
+    function finishHorizontalPan(event) {
+      if (pointerId !== event.pointerId) return;
+      if (scroller.hasPointerCapture(pointerId)) scroller.releasePointerCapture(pointerId);
+      pointerId = null;
+      isPanning = false;
+      scroller.classList.remove('is-panning');
+    }
+
+    scroller.addEventListener('pointerup', finishHorizontalPan);
+    scroller.addEventListener('pointercancel', finishHorizontalPan);
+    scroller.addEventListener('dragstart', function(event) { event.preventDefault(); });
+    scroller.addEventListener('wheel', function(event) {
+      if (!event.shiftKey || scroller.scrollWidth <= scroller.clientWidth) return;
+      scroller.scrollLeft += event.deltaY || event.deltaX;
+      event.preventDefault();
+    }, { passive: false });
+  });
 }
 
 function buildDataTable() {

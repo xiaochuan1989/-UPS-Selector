@@ -11,6 +11,11 @@ with open(PROJECT_ROOT / 'index.html', encoding='utf-8') as f:
 checks = [
     ('双表HTML-上栏', 'db-table-top'),
     ('双表HTML-下栏', 'db-table-bot'),
+    ('双表分栏容器', 'id="db-split-layout"'),
+    ('可拖动分隔条', 'id="db-splitter"'),
+    ('分隔条初始化', 'function initDatabaseSplitter'),
+    ('双表横向拖动', 'function initDatabaseHorizontalDrag'),
+    ('横向拖动提示', '按住表格左右拖动'),
     ('产品信息标签', '产品信息'),
     ('泰尔规格标签', '技术规格（泰尔参数）'),
     ('DB_TOP_SET', 'const DB_TOP_SET'),
