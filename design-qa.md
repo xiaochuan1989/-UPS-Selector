@@ -1,69 +1,34 @@
-# Product Database Adaptive-Height Design QA
+# Product Database Detail Cards — Design QA
 
-**Comparison target**
+## Evidence
 
-- Source visual truth: `D:\Claude 安装\UPS选型助手_开发包\artifacts\design-qa\product-database-empty-space-source.png`
-- Implementation screenshot: `D:\Claude 安装\UPS选型助手_开发包\artifacts\design-qa\product-database-fill-height-final.png`
-- Route/state: local `产品数据库` tab, built-in 105-product data set, approximately balanced vertical split.
-- Source capture: 1950 × 1321 px, 96 dpi, 1× density.
-- Implementation capture: 847 × 1272 px, 96 dpi, 1× density; CSS viewport approximately 847 × 1272 px.
-- Density normalization: both captures are 1×/96 dpi. Viewport widths differ, so the comparison focuses on viewport-height use, footer placement, table usability, and responsive integrity.
+- Source visual truth: `artifacts/design-qa/ups-product-database-source-v1.8.16.png` (1854 × 1118 px).
+- Browser comparison fixture: `artifacts/design-qa/ups-product-detail-comparison.html`.
+- Implementation capture: Codex in-app Browser at 1854 × 1118 CSS pixels, device scale factor 1, with the first product detail dialog open. The browser API exposed the capture inline during QA but did not expose a standalone PNG path.
+- Focused states checked: dialog header and key metrics; Product Information cards; Technical Specifications (泰尔参数) cards after dialog scroll; close and keyboard reopen states.
 
-**Findings**
+## Comparison state
 
-- No remaining actionable P0/P1/P2 findings.
-- Typography: the existing system font, hierarchy, table headers, and compact interaction hints remain unchanged.
-- Spacing/layout: the database card now grows through the browser's remaining height. The two table panes share that space, retain independent overflow, and keep minimum-height protection. The footer follows the card near the viewport bottom instead of floating inside a large empty region.
-- Colors/tokens: the navy and green table headers, pale section bands, borders, and page background remain unchanged.
-- Image/asset fidelity: the product logo and icon library are unchanged; no replacement or generated assets were introduced.
-- Copy/content: section names and all product data remain unchanged.
+The source image is the pre-feature Product Database view. The implemented comparison opens the new detail view for `太行 UR-0010SPS`. Because no separate card mockup was supplied, the source is used as the visual-language reference rather than as a pixel-identical target.
 
-**Full-view comparison evidence**
+## Findings
 
-- The source and implementation screenshots were opened together in one comparison input.
-- Before the fix, the 1950 × 1321 source showed a large unused block below the database card while the two table panes remained artificially capped.
-- After the fix, the active database panel becomes a flex column and consumes the remaining page height. The lower table extends into the space previously left blank, while the footer sits close to the bottom edge.
-- At the narrower implementation viewport, the card, both table title bars, the draggable separator, both vertical scrollbars, and both horizontal scrollbars remain visible and usable without overlap.
+- Layout: passed. The overlay keeps the two existing tables visible as context and presents one centered, independently scrollable detail surface.
+- Visual hierarchy: passed. Model and series lead, six common metrics provide a quick scan, and the complete data follows in two clearly separated sections.
+- Visual consistency: passed. Product Information uses the existing navy/blue treatment; Technical Specifications uses the existing green treatment.
+- Data completeness: passed. All non-empty values from the selected product and 泰尔 parameter records are rendered; the detail counts were 18 and 19 respectively for the checked model.
+- Interaction: passed. Mouse click, Enter, and Space open the same-model detail; Escape, the close button, and backdrop click close it; focus returns to the invoking row; Tab remains inside the modal.
+- Existing table behavior: passed. Text remains selectable, column-width dragging remains active, and Shift-drag horizontal panning does not accidentally open the detail dialog.
+- Responsive behavior: passed. At the narrow in-app Browser viewport the grids reduce to two columns and remain readable without overflowing the dialog.
+- Console: passed. No browser console errors were observed.
 
-**Focused region comparison evidence**
+## Severity summary
 
-- A separate crop was unnecessary because the issue and the fix are both visible in the full-page comparison: card bottom, lower-table scrollbar, remaining page background, and footer are all shown together.
+- P0: none
+- P1: none
+- P2: none
+- P3: none requiring remediation
 
-**Comparison history**
+## Final result
 
-1. P1 layout issue: `.db-split-layout` used a clamped fixed height with a 920 px maximum, leaving a large blank area on tall displays.
-   - Fix: the active database view now switches the page container and database panel to a viewport-filling flex layout. The split layout uses the available height rather than a fixed maximum.
-   - Post-fix evidence: the implementation screenshot shows the lower table reaching the lower portion of the viewport and the footer following immediately below, with no large empty rectangle.
-2. P2 regression risk: a height fix could have broken the existing separator or table scrolling.
-   - Fix: retained minimum heights and the existing pane overflow model while moving only the outer layout to flex sizing.
-   - Post-fix evidence: the separator was dragged downward successfully, both panes stayed usable, and both horizontal and vertical scrollbars remained present.
-
-**Primary interactions tested**
-
-- Opened the product database tab after a fresh v1.8.14 load.
-- Confirmed the database card fills the browser's remaining height.
-- Dragged the center separator vertically and confirmed both pane heights update while keeping both panes usable.
-- Confirmed both horizontal scrollbars and both vertical scrollbars remain available.
-- Confirmed existing column-resize handles remain exposed in both table headers.
-- Confirmed the page remains usable at the narrower in-app-browser viewport.
-
-**Console/errors checked**
-
-- Browser error/warning log: empty after navigation and separator dragging.
-- Full project verification passed 11/11, including JavaScript parsing, HTML structure, DOM references, business rules, database-view guards, and version consistency.
-
-**Open Questions**
-
-- None.
-
-**Implementation Checklist**
-
-- [x] Remove the fixed maximum-height cap from the active database view.
-- [x] Let the database card consume the browser's remaining height.
-- [x] Let the two table panes share the newly available space.
-- [x] Keep the footer near the viewport bottom.
-- [x] Preserve separator dragging and independent table scrolling.
-- [x] Verify source and implementation visually together.
-- [x] Run the complete project test suite and browser error check.
-
-final result: passed
+passed

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>UPS 型号详情设计对照</title>
+  <style>
+    * { box-sizing:border-box; }
+    body { margin:0;padding:18px;background:#eaf0f6;color:#173a5e;font-family:"Microsoft YaHei","Segoe UI",sans-serif; }
+    header { display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:12px; }
+    h1 { margin:0;font-size:18px; }
+    p { margin:4px 0 0;color:#64748b;font-size:12px; }
+    .board { display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:calc(100vh - 76px); }
+    .frame { overflow:hidden;background:#fff;border:1px solid #cbd6e2;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.08); }
+    .label { padding:9px 12px;border-bottom:1px solid #dbe5ef;background:#f8fafc;font-size:12px;font-weight:700; }
+    .canvas { height:calc(100vh - 116px);overflow:auto;background:#fff; }
+    img { display:block;width:100%;height:auto; }
+    iframe { display:block;width:1854px;height:1118px;border:0;transform:scale(.485);transform-origin:top left; }
+    .live { width:100%;height:100%;overflow:hidden; }
+    @media (max-width:1000px) {
+      .board { grid-template-columns:1fr; }
+      .canvas { height:760px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>产品数据库 → 单型号数据全景卡片</h1>
+      <p>左侧为用户提供的现状截图，右侧为 v1.8.16 浏览器实现。</p>
+    </div>
+  </header>
+  <main class="board">
+    <section class="frame">
+      <div class="label">源界面 · 产品数据库双表</div>
+      <div class="canvas"><img src="ups-product-database-source-v1.8.16.png" alt="用户提供的产品数据库界面截图"></div>
+    </section>
+    <section class="frame">
+      <div class="label">实现 · 点击型号后的详情卡片</div>
+      <div class="canvas live"><iframe id="preview" src="../../index.html?v=1.8.16&amp;qa=product-detail" title="UPS 型号详情实现"></iframe></div>
+    </section>
+  </main>
+  <script>
+    document.getElementById('preview').addEventListener('load', function() {
+      var frameWindow = this.contentWindow;
+      frameWindow.showMainTab('db');
+      setTimeout(function() {
+        var firstModel = frameWindow.document.querySelector('#db-tbody-top tr');
+        if (firstModel) firstModel.click();
+      }, 120);
+    });
+  </script>
+</body>
+</html>
