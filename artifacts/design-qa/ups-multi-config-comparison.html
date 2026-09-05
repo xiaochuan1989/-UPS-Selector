@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>多套 UPS 项目配置设计对照</title>
+  <style>
+    * { box-sizing:border-box; }
+    body { margin:0;padding:18px;background:#eaf0f6;color:#173a5e;font-family:"Microsoft YaHei","Segoe UI",sans-serif; }
+    h1 { margin:0;font-size:18px; }
+    p { margin:4px 0 12px;color:#64748b;font-size:12px; }
+    .board { display:grid;grid-template-columns:minmax(420px,.8fr) minmax(620px,1.2fr);gap:14px;min-height:calc(100vh - 74px); }
+    .source-stack { display:grid;grid-template-rows:1fr 1fr;gap:14px;min-height:0; }
+    .frame { overflow:hidden;background:#fff;border:1px solid #cbd6e2;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.08); }
+    .label { padding:9px 12px;border-bottom:1px solid #dbe5ef;background:#f8fafc;font-size:12px;font-weight:700; }
+    .canvas { height:calc(50vh - 70px);overflow:auto;background:#fff; }
+    .canvas img { display:block;width:100%;height:auto; }
+    .live { height:calc(100vh - 118px);overflow:hidden; }
+    iframe { display:block;width:1826px;height:1027px;border:0;transform:scale(.615);transform-origin:top left; }
+    @media (max-width:1100px) {
+      .board { grid-template-columns:1fr; }
+      .live { height:760px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>UPS 与电池配置 → 多套 UPS 项目配置</h1>
+  <p>左侧为用户提供的单套配置界面与多 UPS 项目清单，右侧为 v1.8.17 的可操作实现。</p>
+  <main class="board">
+    <div class="source-stack">
+      <section class="frame">
+        <div class="label">源界面 · 单套 UPS 配置</div>
+        <div class="canvas"><img src="ups-multi-config-source-ui-v1.8.17.png" alt="原单套 UPS 配置界面"></div>
+      </section>
+      <section class="frame">
+        <div class="label">业务参考 · 多 UPS 项目配置清单</div>
+        <div class="canvas"><img src="ups-multi-config-source-list-v1.8.17.png" alt="多 UPS 项目 Excel 配置清单"></div>
+      </section>
+    </div>
+    <section class="frame">
+      <div class="label">实现 · 多套独立计算、载入修改、物料自动汇总</div>
+      <div class="live"><iframe id="preview" src="../../index.html?v=1.8.17&amp;qa=multi-ups" title="多套 UPS 项目配置实现"></iframe></div>
+    </section>
+  </main>
+  <script>
+    document.getElementById('preview').addEventListener('load', function() {
+      var frameWindow = this.contentWindow;
+      frameWindow.showMainTab('battery');
+      frameWindow.savedUpsConfigurations = [];
+      frameWindow.editingUpsConfigurationId = null;
+      frameWindow.projectSummary = frameWindow.createEmptyProjectSummary();
+      function addConfiguration(model, quantity) {
+        var select = frameWindow.document.getElementById('unified-ups-model');
+        select.value = model;
+        frameWindow.fillUpsFromSelection();
+        frameWindow.document.getElementById('unified-ups-num').value = quantity;
+        frameWindow.saveCurrentUpsConfigurationAndStartNext();
+      }
+      addConfiguration('太行 UR-0100TPL', 2);
+      addConfiguration('昆仑 UE-0200TPL', 1);
+      frameWindow.document.getElementById('multi-ups-manager-title').scrollIntoView({ block:'start' });
+    });
+  </script>
+</body>
+</html>

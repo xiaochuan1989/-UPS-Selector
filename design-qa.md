@@ -1,26 +1,28 @@
-# Product Database Detail Cards — Design QA
+# Multi-UPS Project Configuration — Design QA
 
 ## Evidence
 
-- Source visual truth: `artifacts/design-qa/ups-product-database-source-v1.8.16.png` (1854 × 1118 px).
-- Browser comparison fixture: `artifacts/design-qa/ups-product-detail-comparison.html`.
-- Implementation capture: Codex in-app Browser at 1854 × 1118 CSS pixels, device scale factor 1, with the first product detail dialog open. The browser API exposed the capture inline during QA but did not expose a standalone PNG path.
-- Focused states checked: dialog header and key metrics; Product Information cards; Technical Specifications (泰尔参数) cards after dialog scroll; close and keyboard reopen states.
+- Source UI: `artifacts/design-qa/ups-multi-config-source-ui-v1.8.17.png`.
+- Business reference: `artifacts/design-qa/ups-multi-config-source-list-v1.8.17.png`.
+- Side-by-side comparison: `artifacts/design-qa/ups-multi-config-comparison.html`.
+- Implementation checked in the Codex in-app Browser at 1826 × 1027 CSS pixels and at the narrower 1075 px browser width.
+- Test project: `太行 UR-0100TPL × 2台` plus `昆仑 UE-0200TPL × 1台`.
 
 ## Comparison state
 
-The source image is the pre-feature Product Database view. The implemented comparison opens the new detail view for `太行 UR-0010SPS`. Because no separate card mockup was supplied, the source is used as the visual-language reference rather than as a pixel-identical target.
+The supplied application screenshot establishes the existing UPS configuration visual language. The supplied Excel screenshot establishes the business need for multiple independent UPS systems and one consolidated bill of materials. The implementation adds a project-level manager above the existing input form without changing the original calculation cards.
 
 ## Findings
 
-- Layout: passed. The overlay keeps the two existing tables visible as context and presents one centered, independently scrollable detail surface.
-- Visual hierarchy: passed. Model and series lead, six common metrics provide a quick scan, and the complete data follows in two clearly separated sections.
-- Visual consistency: passed. Product Information uses the existing navy/blue treatment; Technical Specifications uses the existing green treatment.
-- Data completeness: passed. All non-empty values from the selected product and 泰尔 parameter records are rendered; the detail counts were 18 and 19 respectively for the checked model.
-- Interaction: passed. Mouse click, Enter, and Space open the same-model detail; Escape, the close button, and backdrop click close it; focus returns to the invoking row; Tab remains inside the modal.
-- Existing table behavior: passed. Text remains selectable, column-width dragging remains active, and Shift-drag horizontal panning does not accidentally open the detail dialog.
-- Responsive behavior: passed. At the narrow in-app Browser viewport the grids reduce to two columns and remain readable without overflowing the dialog.
-- Console: passed. No browser console errors were observed.
+- Layout: passed. Saved configurations are visible before the form, use the existing blue panel treatment, and reduce from three to two to one columns with viewport width.
+- Visual hierarchy: passed. Project count and “新增一套 UPS” remain prominent; each saved card exposes name, model, UPS quantity, battery model, material count, load, and delete actions.
+- Workflow: passed. Two different UPS configurations can be calculated, added, loaded for modification, resaved, renamed, or deleted independently.
+- Aggregation: passed. Identical material models are merged in the project summary while distinct UPS models remain separate. In the checked scenario, `SP12-38b` merged from 128 + 64 into 192 batteries and preserved both configuration calculations in the description.
+- Traceability: passed. Aggregated rows show `配置 1、配置 2` sources in the category badge and notes.
+- Export continuity: passed. Excel, quotation, and technical-description exports consume the consolidated multi-configuration rows through the existing summary pipeline.
+- Existing feature consistency: passed. Battery recommendation, switch cabinet sizing, monitoring quantities, editable summary fields, row ordering, price visibility, and custom summary rows remain available.
+- Responsive behavior: passed. Cards and the input grid remain readable at both checked widths; the full-width desktop state matches the supplied application density.
+- Console: passed. No application console errors were observed on the direct v1.8.17 page after add, merge, load, and resave interactions.
 
 ## Severity summary
 
