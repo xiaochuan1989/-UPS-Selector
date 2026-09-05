@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.12";
+const APP_VERSION = "v1.8.13";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -154,7 +154,12 @@ document.addEventListener("DOMContentLoaded", function() {
   #db-table-bot th { background:#1a5c3a;color:white;padding:8px 12px;text-align:left;cursor:pointer;user-select:none;position:sticky;top:0;z-index:1; }
   #db-table-top th:hover { background:#2563eb; }
   #db-table-bot th:hover { background:#27ae60; }
-  #db-table-top td,#db-table-bot td { padding:7px 12px;border-bottom:1px solid #f0f0f0;max-width:200px;overflow:hidden;text-overflow:ellipsis; }
+  #db-table-top,#db-table-bot { table-layout:fixed;min-width:100%; }
+  #db-table-top td,#db-table-bot td { padding:7px 12px;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis; }
+  .db-col-resizer { position:absolute;top:0;right:0;bottom:0;width:14px;z-index:4;cursor:col-resize;touch-action:none; }
+  .db-col-resizer::after { content:"";position:absolute;top:5px;right:0;bottom:5px;width:2px;border-radius:2px;background:rgba(255,255,255,.32);transition:background-color .15s,box-shadow .15s; }
+  .db-col-resizer:hover::after,.db-col-resizer:focus-visible::after,.db-col-resizer.is-resizing::after { background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.28); }
+  .db-col-resizer:focus-visible { outline:2px solid #bfdbfe;outline-offset:-2px; }
   .db-row-hover td { background:#e8f4ff !important; }
   .db-split-layout { display:flex;flex-direction:column;height:clamp(620px,calc(100vh - 250px),920px);min-height:520px; }
   .db-pane { display:flex;flex-direction:column;min-height:160px;min-width:0; }
@@ -172,6 +177,7 @@ document.addEventListener("DOMContentLoaded", function() {
   .db-splitter-label { display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;line-height:1;pointer-events:none; }
   .db-splitter .ti { font-size:16px; }
   body.db-resizing { cursor:row-resize;user-select:none; }
+  body.db-col-resizing { cursor:col-resize;user-select:none; }
   @media (max-height:760px) {
     .db-split-layout { height:560px; }
   }
@@ -353,7 +359,7 @@ function checkAuth(){
     <div id="db-split-layout" class="db-split-layout">
       <!-- 上栏：产品信息 -->
       <section id="db-pane-top" class="db-pane db-pane-top" aria-labelledby="db-pane-title-top">
-        <div id="db-pane-title-top" class="db-pane-title db-pane-title-top"><span>📋 产品信息</span><span class="db-pane-hint"><i class="ti ti-hand-move" aria-hidden="true"></i>按住表格左右拖动</span></div>
+        <div id="db-pane-title-top" class="db-pane-title db-pane-title-top"><span>📋 产品信息</span><span class="db-pane-hint"><i class="ti ti-arrows-horizontal" aria-hidden="true"></i>拖动表头边界调整列宽</span></div>
         <div id="db-scroll-top" class="db-table-scroll" aria-label="产品信息表，可按住内容左右拖动">
           <table id="db-table-top" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
             <thead id="db-thead-top"></thead>
@@ -366,7 +372,7 @@ function checkAuth(){
       </div>
       <!-- 下栏：泰尔技术规格 -->
       <section id="db-pane-bottom" class="db-pane db-pane-bottom" aria-labelledby="db-pane-title-bottom">
-        <div id="db-pane-title-bottom" class="db-pane-title db-pane-title-bottom"><span>🔧 技术规格（泰尔参数）</span><span class="db-pane-hint"><i class="ti ti-hand-move" aria-hidden="true"></i>按住表格左右拖动</span></div>
+        <div id="db-pane-title-bottom" class="db-pane-title db-pane-title-bottom"><span>🔧 技术规格（泰尔参数）</span><span class="db-pane-hint"><i class="ti ti-arrows-horizontal" aria-hidden="true"></i>拖动表头边界调整列宽</span></div>
         <div id="db-scroll-bottom" class="db-table-scroll" aria-label="技术规格表，可按住内容左右拖动">
           <table id="db-table-bot" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
             <thead id="db-thead-bot"></thead>
@@ -28781,6 +28787,7 @@ function initDatabaseHorizontalDrag() {
 
     scroller.addEventListener('pointerdown', function(event) {
       if (event.button !== 0 || scroller.scrollWidth <= scroller.clientWidth) return;
+      if (event.target.closest('thead')) return;
       const rect = scroller.getBoundingClientRect();
       if (event.clientY >= rect.bottom - 18) return;
       pointerId = event.pointerId;
@@ -28850,17 +28857,151 @@ function buildDataTable() {
 
 function buildTableHead(theadId, cols, section) {
   const thead = document.getElementById(theadId);
+  const table = thead.closest('table');
   thead.innerHTML = "";
+  const oldColgroup = table.querySelector('colgroup');
+  if (oldColgroup) oldColgroup.remove();
+  const colgroup = document.createElement('colgroup');
+  const savedWidths = getDatabaseColumnWidths(section);
   const htr = document.createElement("tr");
   cols.forEach((col, i) => {
+    const colElement = document.createElement('col');
+    const initialWidth = clampDatabaseColumnWidth(savedWidths[col] || getDatabaseDefaultColumnWidth(col));
+    colElement.style.width = initialWidth + 'px';
+    colElement.dataset.column = col;
+    colgroup.appendChild(colElement);
+
     const th = document.createElement("th");
     th.textContent = col;
     th.title = col;
-    th.style.maxWidth = "160px";
     th.onclick = () => sortDataTable(i, section);
+
+    const resizer = document.createElement('span');
+    resizer.className = 'db-col-resizer';
+    resizer.tabIndex = 0;
+    resizer.setAttribute('role', 'separator');
+    resizer.setAttribute('aria-orientation', 'vertical');
+    resizer.setAttribute('aria-label', '调整“' + col + '”列宽');
+    resizer.setAttribute('aria-valuemin', '72');
+    resizer.setAttribute('aria-valuemax', '560');
+    resizer.setAttribute('aria-valuenow', String(initialWidth));
+    resizer.title = '左右拖动调整“' + col + '”列宽，双击恢复默认';
+    initDatabaseColumnResizer(resizer, table, colElement, col, section);
+    th.appendChild(resizer);
     htr.appendChild(th);
   });
+  table.insertBefore(colgroup, thead);
   thead.appendChild(htr);
+  updateDatabaseTableWidth(table);
+}
+
+const DB_COLUMN_WIDTH_STORAGE_KEY = 'ups_db_column_widths_v1';
+
+function getDatabaseDefaultColumnWidth(columnName) {
+  const fixedWidths = {
+    '系列': 88,
+    '型号': 200,
+    '描述': 300,
+    '通讯': 240,
+    '输入电压范围(V)': 190,
+    '输入频率范围(Hz)': 180,
+    '输入频率范围\n(Hz)': 180,
+    '动态电压瞬变范围': 180,
+    '电压瞬变恢复时间(ms)': 190
+  };
+  if (fixedWidths[columnName]) return fixedWidths[columnName];
+  return Math.min(220, Math.max(110, columnName.length * 14 + 44));
+}
+
+function clampDatabaseColumnWidth(width) {
+  return Math.min(560, Math.max(72, Math.round(Number(width) || 120)));
+}
+
+function getDatabaseColumnWidths(section) {
+  try {
+    const allWidths = JSON.parse(localStorage.getItem(DB_COLUMN_WIDTH_STORAGE_KEY) || '{}');
+    return allWidths[section] || {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveDatabaseColumnWidth(section, columnName, width) {
+  let allWidths = {};
+  try { allWidths = JSON.parse(localStorage.getItem(DB_COLUMN_WIDTH_STORAGE_KEY) || '{}'); }
+  catch (error) { allWidths = {}; }
+  if (!allWidths[section]) allWidths[section] = {};
+  allWidths[section][columnName] = clampDatabaseColumnWidth(width);
+  localStorage.setItem(DB_COLUMN_WIDTH_STORAGE_KEY, JSON.stringify(allWidths));
+}
+
+function updateDatabaseTableWidth(table) {
+  const totalWidth = Array.from(table.querySelectorAll('col')).reduce(function(total, col) {
+    return total + (parseFloat(col.style.width) || 0);
+  }, 0);
+  table.style.width = Math.ceil(totalWidth) + 'px';
+}
+
+function initDatabaseColumnResizer(resizer, table, colElement, columnName, section) {
+  let pointerId = null;
+  let startX = 0;
+  let startWidth = 0;
+
+  function applyWidth(width, persist) {
+    const nextWidth = clampDatabaseColumnWidth(width);
+    colElement.style.width = nextWidth + 'px';
+    resizer.setAttribute('aria-valuenow', String(nextWidth));
+    updateDatabaseTableWidth(table);
+    if (persist) saveDatabaseColumnWidth(section, columnName, nextWidth);
+  }
+
+  resizer.addEventListener('pointerdown', function(event) {
+    if (event.button !== 0) return;
+    pointerId = event.pointerId;
+    startX = event.clientX;
+    startWidth = parseFloat(colElement.style.width) || getDatabaseDefaultColumnWidth(columnName);
+    resizer.setPointerCapture(pointerId);
+    resizer.focus({ preventScroll: true });
+    resizer.classList.add('is-resizing');
+    document.body.classList.add('db-col-resizing');
+    event.preventDefault();
+    event.stopPropagation();
+  });
+
+  resizer.addEventListener('pointermove', function(event) {
+    if (pointerId !== event.pointerId) return;
+    applyWidth(startWidth + event.clientX - startX, false);
+    event.preventDefault();
+    event.stopPropagation();
+  });
+
+  function finishResize(event) {
+    if (pointerId !== event.pointerId) return;
+    if (resizer.hasPointerCapture(pointerId)) resizer.releasePointerCapture(pointerId);
+    pointerId = null;
+    resizer.classList.remove('is-resizing');
+    document.body.classList.remove('db-col-resizing');
+    saveDatabaseColumnWidth(section, columnName, parseFloat(colElement.style.width));
+    event.stopPropagation();
+  }
+
+  resizer.addEventListener('pointerup', finishResize);
+  resizer.addEventListener('pointercancel', finishResize);
+  resizer.addEventListener('click', function(event) { event.stopPropagation(); });
+  resizer.addEventListener('dblclick', function(event) {
+    applyWidth(getDatabaseDefaultColumnWidth(columnName), true);
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  resizer.addEventListener('keydown', function(event) {
+    const currentWidth = parseFloat(colElement.style.width) || getDatabaseDefaultColumnWidth(columnName);
+    if (event.key === 'ArrowLeft') applyWidth(currentWidth - 16, true);
+    else if (event.key === 'ArrowRight') applyWidth(currentWidth + 16, true);
+    else if (event.key === 'Home') applyWidth(getDatabaseDefaultColumnWidth(columnName), true);
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
+  });
 }
 
 function renderDataTable(rows, keyword) {
