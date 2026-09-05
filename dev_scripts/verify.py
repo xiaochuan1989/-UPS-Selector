@@ -17,6 +17,8 @@ checks = [
     ('双表横向拖动', 'function initDatabaseHorizontalDrag'),
     ('列宽拖动功能', 'function initDatabaseColumnResizer'),
     ('列宽拖动提示', '拖动表头边界调整列宽'),
+    ('数据库视图占满剩余高度', 'body.db-view-active #data-table-panel'),
+    ('数据库视图状态切换', "document.body.classList.toggle('db-view-active', key === 'db')"),
     ('产品信息标签', '产品信息'),
     ('泰尔规格标签', '技术规格（泰尔参数）'),
     ('DB_TOP_SET', 'const DB_TOP_SET'),
