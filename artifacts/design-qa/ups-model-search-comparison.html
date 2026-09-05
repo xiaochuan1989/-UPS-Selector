@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>UPS 型号搜索设计对照</title>
+  <style>
+    * { box-sizing:border-box; }
+    body { margin:0;padding:18px;background:#eaf0f6;color:#172033;font-family:"Microsoft YaHei","Segoe UI",sans-serif; }
+    h1 { margin:0;font-size:18px;color:#173a5e; }
+    p { margin:5px 0 14px;color:#64748b;font-size:12px; }
+    .board { display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start; }
+    .frame { overflow:hidden;border:1px solid #cbd6e2;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.08); }
+    .label { padding:10px 13px;border-bottom:1px solid #dbe5ef;background:#f8fafc;font-size:12px;font-weight:700;color:#173a5e; }
+    .source { height:620px;overflow:auto;background:#eef3f8; }
+    .source img { display:block;width:100%;height:auto; }
+    .implementation { min-height:620px;padding:36px 22px;background:#fff; }
+    .section { padding:18px;border:1px solid #bfdbfe;border-radius:10px;background:#f8fbff; }
+    .section-title { margin-bottom:14px;color:#2563eb;font-size:15px;font-weight:700; }
+    .standard-row { display:flex;align-items:center;gap:12px;padding:13px;border:1px solid #f9c76f;border-radius:8px;background:#fff9e8; }
+    .standard-row label { color:#e65100;font-size:13px;font-weight:600;white-space:nowrap; }
+    .search { position:relative;display:flex;flex:1;min-width:0; }
+    .search input { width:100%;border:1.5px solid #2563eb;border-radius:6px;padding:9px 40px 9px 12px;box-shadow:0 0 0 3px rgba(37,99,235,.12);font:13px inherit; }
+    .toggle { position:absolute;right:3px;top:4px;width:31px;height:30px;border:0;border-radius:5px;background:#eef5ff;color:#2563eb;font-size:16px; }
+    .results { position:absolute;z-index:2;top:43px;left:0;right:0;max-height:295px;overflow:auto;border:1px solid #cbd6e2;border-radius:8px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.16);padding:5px; }
+    .count { position:sticky;top:-5px;padding:8px 10px;border-bottom:1px solid #e5edf5;background:#f8fafc;color:#64748b;font-size:11px; }
+    .option { width:100%;border:0;border-radius:5px;padding:8px 10px;background:#fff;color:#172033;text-align:left;font:13px inherit; }
+    .option.active { background:#eaf2ff;color:#1d4ed8; }
+    .fill { border:0;border-radius:6px;padding:9px 14px;background:#2563eb;color:#fff;font:13px inherit;white-space:nowrap; }
+    .hint { margin-top:320px;padding-left:105px;color:#2563eb;font-size:12px; }
+    .note { margin-top:18px;padding:13px;border-radius:8px;background:#eff6ff;color:#334155;font-size:12px;line-height:1.7; }
+    @media (max-width:1000px) { .board { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <h1>UPS 与电池配置 → 型号关键字搜索</h1>
+  <p>左侧为原生长下拉框，右侧为 v1.8.19 搜索组合框的“输入 600”状态。</p>
+  <main class="board">
+    <section class="frame">
+      <div class="label">原界面 · 只能滚动浏览全部型号</div>
+      <div class="source"><img src="ups-model-search-source-v1.8.19.png" alt="原生 UPS 型号下拉框"></div>
+    </section>
+    <section class="frame">
+      <div class="label">实现 · 输入关键字后立即缩小候选范围</div>
+      <div class="implementation">
+        <div class="section">
+          <div class="section-title">📥 参数输入</div>
+          <div class="standard-row">
+            <label>⚡ UPS型号：</label>
+            <div class="search">
+              <input value="600" aria-label="UPS 型号关键字">
+              <button class="toggle" aria-label="收起候选">⌃</button>
+              <div class="results">
+                <div class="count">“600”匹配 8 个型号</div>
+                <button class="option active">昆仑 UE-0600TPL</button>
+                <button class="option">昆仑 UE-1600TPL</button>
+                <button class="option">昆仑UE-6000TAL-F-1</button>
+                <button class="option">祁连UM-6000TAL-FF/5-1 …</button>
+                <button class="option">祁连UM-6000TFL-FS/100 …</button>
+                <button class="option">泰山UT-0600TPL-6P</button>
+                <button class="option">泰山UT-1600TPL-6P</button>
+                <button class="option">泰山UT-6000TPL-12P</button>
+              </div>
+            </div>
+            <button class="fill">填入参数</button>
+          </div>
+          <div class="hint">找到 8 个匹配型号</div>
+        </div>
+        <div class="note">交互覆盖：输入实时过滤；鼠标点击选择；方向键移动高亮；回车确认；Esc、Tab 或点击外部关闭。标准模式只允许把产品库中的完整型号加入项目。</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
