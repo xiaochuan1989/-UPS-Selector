@@ -7,7 +7,11 @@ import sys
 from pathlib import Path
 
 import openpyxl
-from pypdf import PdfReader
+
+try:
+    from pypdf import PdfReader
+except ModuleNotFoundError:
+    PdfReader = None
 
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -79,7 +83,7 @@ def workbook_pairs():
 
 
 def catalog_text():
-    if not CATALOG_PATH.exists():
+    if not CATALOG_PATH.exists() or PdfReader is None:
         return None
     reader = PdfReader(CATALOG_PATH)
     return "\n".join((page.extract_text() or "") for page in reader.pages[53:66])
