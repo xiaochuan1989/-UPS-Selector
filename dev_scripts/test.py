@@ -231,6 +231,10 @@ def main():
             DEV_SCRIPTS_DIR / "test_business_rules.js",
             "核心业务规则测试"
         )
+        results['目录价匹配'] = run_script(
+            DEV_SCRIPTS_DIR / "check_catalog_enrichment.py",
+            "UPS 编码与目录价严格匹配检查"
+        )
 
     if args.all:
         results['HTML深度检查'] = run_script(

@@ -23,6 +23,16 @@ checks = [
     ('型号详情打开逻辑', 'function openDatabaseProductDetail'),
     ('型号详情产品信息卡片', 'db-detail-product-grid'),
     ('型号详情泰尔参数卡片', 'db-detail-tech-grid'),
+    ('产品收藏筛选入口', 'id="db-favorites-filter"'),
+    ('产品收藏本地持久化', "const DB_FAVORITES_STORAGE_KEY = 'ups_db_favorites_v1'"),
+    ('产品收藏切换逻辑', 'function toggleDatabaseFavorite'),
+    ('UPS目录价严格匹配表', 'const UPS_CATALOG_ENRICHMENTS'),
+    ('UPS目录价回填逻辑', 'function enrichProductsWithCatalog'),
+    ('目录价同时校验型号与描述', 'normalizeCatalogMatchText(item.model) + "|" + normalizeCatalogMatchText(item.description)'),
+    ('持久化数据目录价回填', 'const catalogMatchCount = enrichProductsWithCatalog(PRODUCTS)'),
+    ('目录价版本字段', 'product["目录价版本"] = "iTeaQ-2026-04-V1.0"'),
+    ('收藏筛选逻辑', "dbFavoritesOnly && !isDatabaseFavorite"),
+    ('详情卡片收藏入口', 'id="db-detail-favorite"'),
     ('文字选择不触发行详情', 'selection && !selection.isCollapsed'),
     ('横向平移不误触详情', "scroller.dataset.suppressRowClick = 'true'"),
     ('多套UPS配置管理区', 'id="multi-ups-list"'),
@@ -45,7 +55,7 @@ checks = [
     ('buildRow', 'function buildRow'),
     ('悬停联动', 'db-row-hover'),
     ('sortDataTable双section', 'dbSortSection'),
-    ('正则已修复', 'kw.replace(/[.*+?^${}()|['),
+    ('搜索高亮正则转义', 'keyword.replace(/[.*+?^${}()|['),
 ]
 for name, key in checks:
     found = key in html
