@@ -61,6 +61,8 @@ checks = [
     ('汇总自定义行Excel批量粘贴', 'function handleCustomSummaryPaste'),
     ('汇总粘贴自动补行', 'function applyCustomSummaryPasteMatrix'),
     ('汇总粘贴跳过小计列', "'unitPrice', null, 'nonStandardDesc'"),
+    ('汇总描述框自动增高', 'function autoResizeSummaryTextarea'),
+    ('汇总自动增高初始化', 'function initSummaryAutoGrowTextareas'),
     ('载入已保存配置', 'function loadSavedUpsConfiguration'),
     ('相同物料自动合并', 'function collectSavedConfigurationRows'),
     ('多配置导出链路', 'collectProjectSummaryRows({ includeSaved: false })'),

@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.28";
+const APP_VERSION = "v1.8.29";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", function() {
   #project-summary-table th { position:relative;white-space:nowrap; }
   #project-summary-table th, #project-summary-table td { padding:5px 7px !important;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;vertical-align:middle; }
   #project-summary-table input, #project-summary-table select { width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
-  #project-summary-table textarea { width:100%;min-width:0;min-height:48px;resize:vertical;box-sizing:border-box;white-space:pre-wrap;line-height:1.45; }
+  #project-summary-table textarea { width:100%;min-width:0;min-height:48px;resize:vertical;overflow-y:hidden;box-sizing:border-box;white-space:pre-wrap;line-height:1.45; }
   #project-summary-table .summary-paste-cell:focus { border-color:#16a34a !important;outline:2px solid rgba(22,163,74,.2);outline-offset:1px; }
   #summary-tbody tr.summary-paste-flash td { animation:summaryPasteFlash 1.2s ease-out; }
   @keyframes summaryPasteFlash { 0%,35% { background:#dcfce7; } 100% { background:transparent; } }
@@ -1193,7 +1193,7 @@ function checkAuth(){
           <div style="margin-top:3px;color:#64748b;font-size:11px">多套 UPS 的相同型号物料将自动合并数量，配置来源保留在备注中</div>
           <div class="summary-resize-hint">默认按 UPS、功率模块、电池、电池开关箱/柜、电池架、电池监控排序；拖动序号列“⠿”手柄可快速调整，上下箭头可微调</div>
           <div class="summary-resize-hint">左右拖动表头分隔线可调整列宽，双击恢复默认</div>
-          <div class="summary-resize-hint">新增行支持 Excel 批量粘贴：复制单元格区域，点击起始单元格后按 Ctrl+V；超出行数自动新增，小计列自动跳过</div>
+          <div class="summary-resize-hint">新增行支持 Excel 批量粘贴：复制单元格区域，点击起始单元格后按 Ctrl+V；超出行数自动新增，小计列自动跳过，描述框随内容自动增高</div>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
@@ -4382,6 +4382,19 @@ function initSummaryColumnResizers() {
   updateSummaryTableWidth(table);
 }
 
+function autoResizeSummaryTextarea(textarea) {
+  if (!textarea || textarea.tagName !== 'TEXTAREA') return 0;
+  textarea.style.height = 'auto';
+  const minHeight = parseFloat(getComputedStyle(textarea).minHeight) || 48;
+  const nextHeight = Math.max(minHeight, textarea.scrollHeight + 2);
+  textarea.style.height = Math.ceil(nextHeight) + 'px';
+  return nextHeight;
+}
+
+function initSummaryAutoGrowTextareas() {
+  document.querySelectorAll('#summary-tbody textarea.summary-auto-grow').forEach(autoResizeSummaryTextarea);
+}
+
 // 渲染项目汇总表格
 function renderProjectSummary() {
   const tbody = document.getElementById('summary-tbody');
@@ -4459,7 +4472,7 @@ function renderProjectSummary() {
         ? `<input type="text" value="${ups.model || ''}" onchange="updateCustomUps('model', this.value)" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`
         : (ups.model || '-');
       const capacityCell = ups.isCustom
-        ? `<textarea rows="2" onchange="updateCustomUps('customDesc', this.value)" placeholder="输入描述" style="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">${escapeHtml(ups.customDesc || ups.capacity || '')}</textarea>`
+        ? `<textarea class="summary-auto-grow" rows="2" oninput="autoResizeSummaryTextarea(this)" onchange="updateCustomUps('customDesc', this.value)" placeholder="输入描述" style="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">${escapeHtml(ups.customDesc || ups.capacity || '')}</textarea>`
         : (ups.capacity || '');
       const noteCell = ups.isCustom 
         ? '⚠️ 非标型号，请确认参数'
@@ -4494,7 +4507,7 @@ function renderProjectSummary() {
     // 电池描述：可编辑，默认为计算结果
     const defaultDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
     const batDesc = bat.customDesc || defaultDesc;
-    const descCell = `<textarea rows="2" onchange="updateCustomBattery('customDesc', this.value)" placeholder="输入描述" style="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">${escapeHtml(batDesc)}</textarea>`;
+    const descCell = `<textarea class="summary-auto-grow" rows="2" oninput="autoResizeSummaryTextarea(this)" onchange="updateCustomBattery('customDesc', this.value)" placeholder="输入描述" style="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">${escapeHtml(batDesc)}</textarea>`;
     addSummaryRowBlock('battery', subtotal, `
       <tr style="background:#e8f5e9">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
@@ -4637,7 +4650,7 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="0" type="text" value="${escapeHtml(row.category || '')}" oninput="updateCustomSummaryRow('${row.id}', 'category', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'category', this.value)" placeholder="类别" title="可从 Excel 批量粘贴" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
         <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="1" type="text" value="${escapeHtml(row.code || '')}" oninput="updateCustomSummaryRow('${row.id}', 'code', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'code', this.value)" placeholder="编码" title="可从 Excel 批量粘贴" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
         <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="2" type="text" value="${escapeHtml(row.model || '')}" oninput="updateCustomSummaryRow('${row.id}', 'model', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'model', this.value)" placeholder="型号/名称" title="可从 Excel 批量粘贴" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
-        <td style="padding:8px;border:1px solid #ddd"><textarea class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="3" rows="2" oninput="updateCustomSummaryRow('${row.id}', 'desc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'desc', this.value)" placeholder="描述" title="可从 Excel 批量粘贴" style="border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px">${escapeHtml(row.desc || '')}</textarea></td>
+        <td style="padding:8px;border:1px solid #ddd"><textarea class="summary-paste-cell summary-auto-grow" data-custom-row-key="${row.id}" data-summary-paste-column="3" rows="2" oninput="updateCustomSummaryRow('${row.id}', 'desc', this.value, false);autoResizeSummaryTextarea(this)" onchange="updateCustomSummaryRow('${row.id}', 'desc', this.value)" placeholder="描述" title="可从 Excel 批量粘贴，内容自动展开" style="border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px">${escapeHtml(row.desc || '')}</textarea></td>
         <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="4" type="number" value="${escapeHtml(row.qty || '')}" oninput="updateCustomSummaryRow('${row.id}', 'qty', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'qty', this.value)" min="0" step="0.01" title="可从 Excel 批量粘贴" style="width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
         <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="5" type="text" value="${escapeHtml(row.unit || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unit', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unit', this.value)" placeholder="单位" title="可从 Excel 批量粘贴" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? `<input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="6" type="number" value="${escapeHtml(row.unitPrice || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value)" min="0" step="0.01" title="可从 Excel 批量粘贴" style="width:78px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:right">` : '-'}</td>
@@ -4672,6 +4685,7 @@ function renderProjectSummary() {
 
   // 保存汇总数据
   window.projectSummary.generatedAt = new Date().toISOString();
+  initSummaryAutoGrowTextareas();
 }
 
 function getCustomSummaryRows() {
