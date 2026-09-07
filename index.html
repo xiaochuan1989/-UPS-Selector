@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.23";
+const APP_VERSION = "v1.8.24";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -1877,7 +1877,8 @@ function findProduct(model) {
  * 识别模块化UPS产品类型
  * 
  * 规则：
- * 1. 含空格 → 整机配置（机框+模块组合），如 "祁连UM-6000TFL-FS/100 祁连UM-1000TFL-M"
+ * 1. 最后一段是功率模块、前面一至多个型号是机框 → 整机配置
+ *    如 "祁连UM-6000TFL-FS/100 祁连UM-6000TFL-FF/100 祁连UM-1000TFL-M"
  * 2. 不含空格且以 -M 结尾 → 功率模块，如 "祁连UM-1000TFL-M"
  * 3. 其他 → 整机（非模块化或机框）
  * 
@@ -1890,8 +1891,10 @@ function getUpsProductType(model, series) {
   
   // 只对祁连UM系列进行模块化识别
   if (series && series.includes('UM')) {
-    // 含任意空白分隔 = 整机配置（机框+模块组合）
-    if (String(model).trim().split(/\s+/).length === 2) {
+    // 产品库可能把多种机框版本和一个功率模块合并在同一条记录中。
+    // 只要最后一段是模块、前面至少有一个机框，就按整机配置处理。
+    const parts = String(model).trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2 && /-M\d*$/.test(parts[parts.length - 1])) {
       return { type: 'system', label: '整机配置' };
     }
     // 以 -M 结尾 = 功率模块
@@ -1912,7 +1915,7 @@ function getUpsProductType(model, series) {
  * 解析祁连UM系列模块化UPS型号，拆分为机框和模块
  * @param {string} model - 产品型号
  * @param {object} product - 产品数据对象
- * @returns {object|null} 如果是整机配置，返回 { frame: 机框型号, module: 模块型号, maxModules: 最大模块数 }
+ * @returns {object|null} 如果是整机配置，返回 { frame: 机框型号汇总, frames: 机框型号数组, module: 模块型号, maxModules: 最大模块数 }
  */
 function parseModularUpsModel(model, product) {
   if (!model) return null;
@@ -1921,21 +1924,23 @@ function parseModularUpsModel(model, product) {
   const series = product?.["系列"] || "";
   if (!series.includes('UM')) return null;
 
-  // 拆分型号：祁连UM-6000TFL-FS/100 祁连UM-1000TFL-M
-  const parts = String(model).trim().split(/\s+/);
-  if (parts.length !== 2) return null;
+  // 产品库既有“单机框+模块”，也有“多个机框版本+模块”的组合记录。
+  const parts = String(model).trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return null;
 
-  // 机框型号：去掉 /100 部分
-  const frameModel = parts[0].replace(/\/\d+$/, '');
-  // 模块型号
-  const moduleModel = parts[1];
+  const moduleModel = parts[parts.length - 1];
+  if (!/-M\d*$/.test(moduleModel)) return null;
+
+  // 每个机框型号去掉表示模块规格的 /30、/50、/100 等尾缀。
+  const frameModels = parts.slice(0, -1).map(part => part.replace(/\/\d+$/, ''));
 
   // 解析最大模块数：从 "≤6" 提取数字
   const maxModulesStr = product?.["模块数量"] || "";
   const maxModules = parseInt(maxModulesStr.replace(/[^\d]/g, '')) || 1;
 
   return {
-    frame: frameModel,
+    frame: frameModels.join('；'),
+    frames: frameModels,
     module: moduleModel,
     maxModules: maxModules
   };

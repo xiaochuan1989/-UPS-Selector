@@ -47,6 +47,7 @@ checks = [
     ('已有结果切换型号自动重算', 'if (window.projectSummary?.generatedAt) calcAllBatteryConfig();'),
     ('配置参数修改提示重算', 'function markUnifiedConfigurationDirty'),
     ('UPS目录字段进入汇总', 'function getUpsCatalogSummaryDefaults'),
+    ('多机框版本UPS识别模块', 'parts.length >= 2 && /-M\\d*$/.test(parts[parts.length - 1])'),
     ('载入已保存配置', 'function loadSavedUpsConfiguration'),
     ('相同物料自动合并', 'function collectSavedConfigurationRows'),
     ('多配置导出链路', 'collectProjectSummaryRows({ includeSaved: false })'),

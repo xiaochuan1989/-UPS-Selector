@@ -112,6 +112,7 @@ const names = [
   "calculateBatteryElectricals",
   "selectCurrentSensor",
   "getVoltLevel",
+  "getUpsProductType",
   "parseModularUpsModel",
   "getUpsCatalogSummaryDefaults",
 ];
@@ -223,6 +224,19 @@ assert.equal(modularFromSpace.module, "祁连UM-0500TFL-M");
 assert.equal(modularFromSpace.maxModules, 12);
 assert.equal(JSON.stringify(modularFromNewline), JSON.stringify(modularFromSpace));
 
+const multiFrameModel = "祁连UM-6000TFL-FS/100\r 祁连UM-6000TFL-FF/100\r 祁连UM-6000TFL-F/100\r 祁连UM-1000TFL-M";
+const multiFrameProduct = { "系列": "祁连UM", "模块数量": "≤6" };
+assert.equal(rules.getUpsProductType(multiFrameModel, "祁连UM").type, "system");
+const multiFrameModular = rules.parseModularUpsModel(multiFrameModel, multiFrameProduct);
+assert.equal(JSON.stringify(multiFrameModular.frames), JSON.stringify([
+  "祁连UM-6000TFL-FS",
+  "祁连UM-6000TFL-FF",
+  "祁连UM-6000TFL-F",
+]));
+assert.equal(multiFrameModular.frame, "祁连UM-6000TFL-FS；祁连UM-6000TFL-FF；祁连UM-6000TFL-F");
+assert.equal(multiFrameModular.module, "祁连UM-1000TFL-M");
+assert.equal(multiFrameModular.maxModules, 6);
+
 const catalogDefaults = rules.getUpsCatalogSummaryDefaults({
   "产品编码": "高效型机柜 01020393；标准型机柜 01020403；50kVA模块 01021107",
   "目录价": "高效型机柜 ¥373,330；标准型机柜 ¥327,980；50kVA模块 ¥82,690/个",
@@ -233,6 +247,14 @@ assert.equal(catalogDefaults.framePrice, 0, "多机柜版本不能擅自选择�
 assert.equal(catalogDefaults.moduleCode, "50kVA模块 01021107");
 assert.equal(catalogDefaults.modulePrice, 82690);
 assert.equal(catalogDefaults.note, "保留两组机柜目录编码");
+
+const multiFrameCatalogDefaults = rules.getUpsCatalogSummaryDefaults({
+  "产品编码": "维修旁路机柜 01021116；四开关机柜 01021117；100kVA模块 01021115",
+  "目录价": "维修旁路机柜 ¥327,000；四开关机柜 ¥353,330；100kVA模块 ¥149,500/个",
+}, multiFrameModular);
+assert.equal(multiFrameCatalogDefaults.frameCode, "维修旁路机柜 01021116；四开关机柜 01021117");
+assert.equal(multiFrameCatalogDefaults.moduleCode, "100kVA模块 01021115");
+assert.equal(multiFrameCatalogDefaults.modulePrice, 149500);
 
 console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级、UPS汇总）");
 
