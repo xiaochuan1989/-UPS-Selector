@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.22";
+const APP_VERSION = "v1.8.23";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -1890,8 +1890,8 @@ function getUpsProductType(model, series) {
   
   // 只对祁连UM系列进行模块化识别
   if (series && series.includes('UM')) {
-    // 含空格 = 整机配置（机框+模块组合）
-    if (model.includes(' ')) {
+    // 含任意空白分隔 = 整机配置（机框+模块组合）
+    if (String(model).trim().split(/\s+/).length === 2) {
       return { type: 'system', label: '整机配置' };
     }
     // 以 -M 结尾 = 功率模块
@@ -1915,14 +1915,14 @@ function getUpsProductType(model, series) {
  * @returns {object|null} 如果是整机配置，返回 { frame: 机框型号, module: 模块型号, maxModules: 最大模块数 }
  */
 function parseModularUpsModel(model, product) {
-  if (!model || !model.includes(' ')) return null;
+  if (!model) return null;
 
   // 只对祁连UM系列进行拆分（其他系列含空格是整机型号）
   const series = product?.["系列"] || "";
   if (!series.includes('UM')) return null;
 
   // 拆分型号：祁连UM-6000TFL-FS/100 祁连UM-1000TFL-M
-  const parts = model.split(' ');
+  const parts = String(model).trim().split(/\s+/);
   if (parts.length !== 2) return null;
 
   // 机框型号：去掉 /100 部分
@@ -1938,6 +1938,55 @@ function parseModularUpsModel(model, product) {
     frame: frameModel,
     module: moduleModel,
     maxModules: maxModules
+  };
+}
+
+function getUpsCatalogSummaryDefaults(product, modularInfo) {
+  const rawCode = String(product?.['产品编码'] || '').trim();
+  const rawPrice = String(product?.['目录价'] || '').trim();
+  const note = String(product?.['目录价备注'] || '').trim();
+  const codeParts = rawCode ? rawCode.split(/[；;]/).map(item => item.trim()).filter(Boolean) : [];
+  const priceParts = rawPrice ? rawPrice.split(/[；;]/).map(item => item.trim()).filter(Boolean) : [];
+  const readPrice = value => {
+    const match = String(value || '').match(/¥\s*([\d,]+(?:\.\d+)?)/);
+    return match ? Number(match[1].replace(/,/g, '')) : 0;
+  };
+
+  if (!modularInfo) {
+    return {
+      code: rawCode,
+      price: priceParts.length === 1 ? readPrice(priceParts[0]) : 0,
+      frameCode: '',
+      framePrice: 0,
+      moduleCode: '',
+      modulePrice: 0,
+      note
+    };
+  }
+
+  const frameCodes = [];
+  const moduleCodes = [];
+  const framePrices = [];
+  const modulePrices = [];
+  codeParts.forEach((codePart, index) => {
+    const pricePart = priceParts[index] || '';
+    if (/模块/.test(codePart)) {
+      moduleCodes.push(codePart);
+      if (pricePart) modulePrices.push(pricePart);
+    } else {
+      frameCodes.push(codePart);
+      if (pricePart) framePrices.push(pricePart);
+    }
+  });
+
+  return {
+    code: rawCode,
+    price: 0,
+    frameCode: frameCodes.join('；'),
+    framePrice: framePrices.length === 1 ? readPrice(framePrices[0]) : 0,
+    moduleCode: moduleCodes.join('；'),
+    modulePrice: modulePrices.length === 1 ? readPrice(modulePrices[0]) : 0,
+    note
   };
 }
 
@@ -3521,6 +3570,7 @@ function renderSavedUpsConfigurations() {
   if (hint) {
     const editing = configs.find(config => config.id === window.editingUpsConfigurationId);
     hint.textContent = editing ? '正在编辑：' + editing.name : '当前为新配置';
+    hint.style.color = '#64748b';
   }
   if (!configs.length) {
     list.innerHTML = '<div class="multi-ups-empty">当前还没有保存配置。填写下方参数并计算后，点击“加入项目并新增下一套”。</div>';
@@ -3545,6 +3595,23 @@ function renderSavedUpsConfigurations() {
     </article>`;
   }).join('');
 }
+
+function markUnifiedConfigurationDirty() {
+  if (!window.projectSummary?.generatedAt) return;
+  window.unifiedCalculationDirty = true;
+  const hint = document.getElementById('multi-ups-draft-hint');
+  if (!hint) return;
+  const editing = getSavedUpsConfigurations().find(config => config.id === window.editingUpsConfigurationId);
+  hint.textContent = (editing ? '正在编辑：' + editing.name + ' · ' : '') + '参数已修改，请重新计算';
+  hint.style.color = '#e65100';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const panel = document.getElementById('unified-config-input-panel');
+  if (!panel) return;
+  panel.addEventListener('input', markUnifiedConfigurationDirty);
+  panel.addEventListener('change', markUnifiedConfigurationDirty);
+});
 
 function renameSavedUpsConfiguration(id, name) {
   const config = getSavedUpsConfigurations().find(item => item.id === id);
@@ -4935,6 +5002,9 @@ function fillUpsFromSelection() {
     hint.innerHTML = `✓ <b>${model}</b> ${series} | ${kvaText} / PF:${pfText}`;
     hint.style.color = '#27ae60';
   }
+
+  // 已有计算结果时，选择新型号必须同步刷新，避免输入区与汇总清单显示两套数据。
+  if (window.projectSummary?.generatedAt) calcAllBatteryConfig();
 }
 
 // ==================== UPS 与电池配置计算 ====================
@@ -4992,6 +5062,17 @@ function calcAllBatteryConfig() {
   const optVm = document.getElementById('unified-opt-vm').checked;
 
   // ===== 输入验证 =====
+  if (upsType === 'standard' && !upsModel) {
+    alert('请先选择 UPS 型号，再计算当前配置');
+    document.getElementById('unified-ups-model')?.focus();
+    return false;
+  }
+  if (upsType === 'standard' && !upsProduct) {
+    alert('请从匹配结果中选择完整的 UPS 型号，再计算当前配置');
+    renderUpsModelSearchResults(upsModel);
+    document.getElementById('unified-ups-model')?.focus();
+    return false;
+  }
   // 非标模式必须输入型号
   if (upsType === 'custom' && !upsModel) {
     alert('非标模式请输入UPS型号');
@@ -5190,6 +5271,8 @@ function calcAllBatteryConfig() {
   // 检测是否是祁连UM模块化UPS（仅标准模式）
   const modularInfo = (upsType === 'standard') ? parseModularUpsModel(upsModel, upsProduct) : null;
   const previousSummary = window.projectSummary || {};
+  const sameUpsModel = String(previousSummary.ups?.model || '').replace(/\s+/g, '') === String(upsModel || '').replace(/\s+/g, '');
+  const catalogDefaults = getUpsCatalogSummaryDefaults(upsProduct, modularInfo);
   const customRows = getCustomSummaryRows();
   const rowOrder = getSummaryRowOrder();
   const previousMonitorPrice = new Map((previousSummary.monitor?.config || []).map((item, index) => [item.code || item.name || index, item.unitPrice]));
@@ -5202,19 +5285,19 @@ function calcAllBatteryConfig() {
 
   window.projectSummary = {
     ups: {
-      code: previousSummary.ups?.code || '',
-      frameCode: previousSummary.ups?.frameCode || previousSummary.ups?.code || '',
-      moduleCode: previousSummary.ups?.moduleCode || '',
+      code: sameUpsModel ? (previousSummary.ups?.code || catalogDefaults.code) : catalogDefaults.code,
+      frameCode: sameUpsModel ? (previousSummary.ups?.frameCode || catalogDefaults.frameCode) : catalogDefaults.frameCode,
+      moduleCode: sameUpsModel ? (previousSummary.ups?.moduleCode || catalogDefaults.moduleCode) : catalogDefaults.moduleCode,
       model: upsModel,           // UPS型号
       capacity: upsDesc,         // 描述
       qty: upsNum,
-      price: previousSummary.ups?.price || 0,
-      framePrice: previousSummary.ups?.framePrice || 0,
-      modulePrice: previousSummary.ups?.modulePrice || 0,
-      note: upsModel ? '' : '请输入UPS型号',
-      nonStandardDesc: previousSummary.ups?.nonStandardDesc || '',
-      frameNonStandardDesc: previousSummary.ups?.frameNonStandardDesc || '',
-      moduleNonStandardDesc: previousSummary.ups?.moduleNonStandardDesc || '',
+      price: sameUpsModel ? (previousSummary.ups?.price || catalogDefaults.price) : catalogDefaults.price,
+      framePrice: sameUpsModel ? (previousSummary.ups?.framePrice || catalogDefaults.framePrice) : catalogDefaults.framePrice,
+      modulePrice: sameUpsModel ? (previousSummary.ups?.modulePrice || catalogDefaults.modulePrice) : catalogDefaults.modulePrice,
+      note: catalogDefaults.note || '',
+      nonStandardDesc: sameUpsModel ? (previousSummary.ups?.nonStandardDesc || '') : '',
+      frameNonStandardDesc: sameUpsModel ? (previousSummary.ups?.frameNonStandardDesc || '') : '',
+      moduleNonStandardDesc: sameUpsModel ? (previousSummary.ups?.moduleNonStandardDesc || '') : '',
       // 非标标志
       isCustom: upsType === 'custom',
       customDesc: customUpsDesc, // 非标描述（可编辑）
@@ -5269,7 +5352,9 @@ function calcAllBatteryConfig() {
     rowOrder,
     hiddenRowKeys: []
   };
+  window.unifiedCalculationDirty = false;
   renderProjectSummary();
+  renderSavedUpsConfigurations();
   return true;
 }
 

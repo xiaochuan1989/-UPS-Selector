@@ -112,6 +112,8 @@ const names = [
   "calculateBatteryElectricals",
   "selectCurrentSensor",
   "getVoltLevel",
+  "parseModularUpsModel",
+  "getUpsCatalogSummaryDefaults",
 ];
 const program = [
   extractConst("STANDARD_BREAKER_SIZES"),
@@ -207,7 +209,32 @@ assert.equal(rules.getVoltLevel(32, "normal").level, "500VDC");
 assert.equal(rules.getVoltLevel(40, "normal").level, "750VDC");
 assert.equal(rules.getVoltLevel(100, "2v").level, "250VDC");
 
-console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级）");
+const modularProduct = { "系列": "祁连UM", "模块数量": "≤12" };
+const modularFromSpace = rules.parseModularUpsModel(
+  "祁连UM-6000TAL-FF/5-1 祁连UM-0500TFL-M",
+  modularProduct
+);
+const modularFromNewline = rules.parseModularUpsModel(
+  "祁连UM-6000TAL-FF/5-1\r\n祁连UM-0500TFL-M",
+  modularProduct
+);
+assert.equal(modularFromSpace.frame, "祁连UM-6000TAL-FF/5-1");
+assert.equal(modularFromSpace.module, "祁连UM-0500TFL-M");
+assert.equal(modularFromSpace.maxModules, 12);
+assert.equal(JSON.stringify(modularFromNewline), JSON.stringify(modularFromSpace));
+
+const catalogDefaults = rules.getUpsCatalogSummaryDefaults({
+  "产品编码": "高效型机柜 01020393；标准型机柜 01020403；50kVA模块 01021107",
+  "目录价": "高效型机柜 ¥373,330；标准型机柜 ¥327,980；50kVA模块 ¥82,690/个",
+  "目录价备注": "保留两组机柜目录编码"
+}, modularFromSpace);
+assert.equal(catalogDefaults.frameCode, "高效型机柜 01020393；标准型机柜 01020403");
+assert.equal(catalogDefaults.framePrice, 0, "多机柜版本不能擅自选择单一价格");
+assert.equal(catalogDefaults.moduleCode, "50kVA模块 01021107");
+assert.equal(catalogDefaults.modulePrice, 82690);
+assert.equal(catalogDefaults.note, "保留两组机柜目录编码");
+
+console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级、UPS汇总）");
 
 // ===== JYC HR12V 高功率电池数据校验 =====
 const dataProgram = [
