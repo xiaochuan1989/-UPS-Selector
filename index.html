@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.25";
+const APP_VERSION = "v1.8.26";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -1181,6 +1181,7 @@ function checkAuth(){
         <div>
           <div style="font-weight:600;color:#1a3a5c;font-size:16px">📋 项目配置汇总清单</div>
           <div style="margin-top:3px;color:#64748b;font-size:11px">多套 UPS 的相同型号物料将自动合并数量，配置来源保留在备注中</div>
+          <div class="summary-resize-hint">默认按 UPS、功率模块、电池、电池开关箱/柜、电池架、电池监控排序；上下箭头可手动微调</div>
           <div class="summary-resize-hint">左右拖动表头分隔线可调整列宽，双击恢复默认</div>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
@@ -3491,6 +3492,7 @@ function createEmptyProjectSummary(preserve) {
     monitor: { config: [] },
     customRows: Array.isArray(carried.customRows) ? carried.customRows : [],
     rowOrder: Array.isArray(carried.rowOrder) ? carried.rowOrder : [],
+    rowOrderCustomized: carried.rowOrderCustomized === true,
     hiddenRowKeys: Array.isArray(carried.hiddenRowKeys) ? carried.hiddenRowKeys : []
   };
 }
@@ -3656,6 +3658,7 @@ function resetUnifiedConfigurationDraft() {
   window.projectSummary = createEmptyProjectSummary({
     customRows: previous.customRows,
     rowOrder: previous.rowOrder,
+    rowOrderCustomized: previous.rowOrderCustomized,
     hiddenRowKeys: previous.hiddenRowKeys
   });
   window.editingUpsConfigurationId = null;
@@ -3698,6 +3701,7 @@ function loadSavedUpsConfiguration(id) {
   window.projectSummary = cloneProjectData(config.summary);
   window.projectSummary.customRows = globals.customRows || [];
   window.projectSummary.rowOrder = globals.rowOrder || [];
+  window.projectSummary.rowOrderCustomized = globals.rowOrderCustomized === true;
   window.projectSummary.hiddenRowKeys = globals.hiddenRowKeys || [];
   window.editingUpsConfigurationId = id;
   restoreUnifiedConfigurationInputs(config.inputs);
@@ -4017,16 +4021,61 @@ function collectProjectSummaryRows(options) {
   return rows;
 }
 
+function getSummaryCategoryPriority(category) {
+  switch (String(category || '').trim()) {
+    case 'UPS':
+    case 'UPS（非标）':
+    case 'UPS机框':
+      return 0;
+    case '功率模块':
+      return 1;
+    case '电池':
+      return 2;
+    case '电池开关箱/柜':
+      return 3;
+    case '电池架':
+      return 4;
+    case '电池监控':
+      return 5;
+    default:
+      return 99;
+  }
+}
+
+function getSummaryMonitorPriority(row) {
+  if (row.category !== '电池监控' || !Array.isArray(MONITOR_PRODUCTS)) return 0;
+  const code = String(row.code || '').trim();
+  const model = String(row.model || '').trim();
+  const index = MONITOR_PRODUCTS.findIndex(function(product) {
+    return (code && product.code === code) || (model && product.name === model);
+  });
+  return index >= 0 ? index : MONITOR_PRODUCTS.length;
+}
+
+function sortSummaryRowsByBusinessOrder(rows) {
+  return rows.map(function(row, index) { return { row, index }; })
+    .sort(function(left, right) {
+      const categoryDiff = getSummaryCategoryPriority(left.row.category) - getSummaryCategoryPriority(right.row.category);
+      if (categoryDiff) return categoryDiff;
+      const monitorDiff = getSummaryMonitorPriority(left.row) - getSummaryMonitorPriority(right.row);
+      return monitorDiff || left.index - right.index;
+    })
+    .map(function(item) { return item.row; });
+}
+
 function getOrderedSummaryRows(rows) {
   const visibleRows = rows.filter(row => !isSummaryRowHidden(row.key));
-  const activeKeys = visibleRows.map(row => row.key);
+  const defaultRows = sortSummaryRowsByBusinessOrder(visibleRows);
+  const activeKeys = defaultRows.map(row => row.key);
   const activeKeySet = new Set(activeKeys);
-  const order = getSummaryRowOrder().filter(key => activeKeySet.has(key));
+  const order = window.projectSummary.rowOrderCustomized === true
+    ? getSummaryRowOrder().filter(key => activeKeySet.has(key))
+    : [];
   activeKeys.forEach(key => {
     if (!order.includes(key)) order.push(key);
   });
   window.projectSummary.rowOrder = order;
-  const rowMap = new Map(visibleRows.map(row => [row.key, row]));
+  const rowMap = new Map(defaultRows.map(row => [row.key, row]));
   return order.map(key => rowMap.get(key)).filter(Boolean);
 }
 
@@ -4039,6 +4088,7 @@ function moveSummaryRow(key, direction) {
   const [moved] = order.splice(index, 1);
   order.splice(targetIndex, 0, moved);
   window.projectSummary.rowOrder = order;
+  window.projectSummary.rowOrderCustomized = true;
   renderProjectSummary();
 }
 
@@ -4531,7 +4581,10 @@ function renderProjectSummary() {
     `);
   });
 
-  html = getOrderedSummaryRows(rowBlocks)
+  const rowBlockMap = new Map(rowBlocks.map(row => [row.key, row]));
+  html = getOrderedSummaryRows(collectProjectSummaryRows())
+    .map(row => rowBlockMap.get(row.key))
+    .filter(Boolean)
     .map((row, index) => row.html.replace(rowNumberToken, renderSummaryRowNumberCell(row.key, index + 1)))
     .join('');
 
@@ -5509,6 +5562,7 @@ function calcAllBatteryConfig() {
     monitor: { config: monitorConfig },
     customRows,
     rowOrder,
+    rowOrderCustomized: previousSummary.rowOrderCustomized === true,
     hiddenRowKeys: []
   };
   window.unifiedCalculationDirty = false;

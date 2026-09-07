@@ -310,7 +310,78 @@ assert.equal(
   "不同配置说明必须换行完整保留"
 );
 
-console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级、UPS汇总）");
+const summarySortContext = {};
+vm.createContext(summarySortContext);
+vm.runInContext([
+  extractConst("MONITOR_PRODUCTS"),
+  extractFunction("getSummaryCategoryPriority"),
+  extractFunction("getSummaryMonitorPriority"),
+  extractFunction("sortSummaryRowsByBusinessOrder"),
+  "globalThis.sortSummaryRows = sortSummaryRowsByBusinessOrder;",
+].join("\n"), summarySortContext);
+const unorderedSummaryRows = [
+  { key: "frame-1", category: "UPS机框", model: "600kVA机框" },
+  { key: "sensor-800", category: "电池监控", code: "88091143", model: "SBMS-CS800EK2T5" },
+  { key: "battery-rack", category: "电池架", model: "电池架" },
+  { key: "battery", category: "电池", model: "SPG12750b" },
+  { key: "frame-2", category: "UPS机框", model: "800kVA机框" },
+  { key: "battery-module", category: "电池监控", code: "88091145", model: "SBMS-PBAT51-12" },
+  { key: "switch", category: "电池开关箱/柜", model: "750VDC 电池开关箱/柜" },
+  { key: "module", category: "功率模块", model: "祁连UM-1000TFL-M" },
+  { key: "monitor-main", category: "电池监控", code: "88091156", model: "SBMS-PBMS6000" },
+  { key: "sensor-600", category: "电池监控", code: "88091142", model: "SBMS-CS600EK2T5" },
+];
+const orderedSummaryKeys = summarySortContext.sortSummaryRows(unorderedSummaryRows).map((row) => row.key);
+assert.equal(
+  JSON.stringify(orderedSummaryKeys),
+  JSON.stringify([
+    "frame-1", "frame-2", "module", "battery", "switch", "battery-rack",
+    "monitor-main", "sensor-600", "sensor-800", "battery-module",
+  ]),
+  "汇总清单必须按 UPS、模块、电池、开关柜、电池架、电池监控排列，监控产品保持定义顺序"
+);
+
+const legacyOrderContext = {
+  window: {
+    projectSummary: {
+      rowOrder: ["sensor-800", "frame-1", "battery"],
+      rowOrderCustomized: false,
+      hiddenRowKeys: [],
+    },
+  },
+};
+vm.createContext(legacyOrderContext);
+vm.runInContext([
+  extractConst("MONITOR_PRODUCTS"),
+  extractFunction("getSummaryRowOrder"),
+  extractFunction("getHiddenSummaryRowKeys"),
+  extractFunction("isSummaryRowHidden"),
+  extractFunction("getSummaryCategoryPriority"),
+  extractFunction("getSummaryMonitorPriority"),
+  extractFunction("sortSummaryRowsByBusinessOrder"),
+  extractFunction("getOrderedSummaryRows"),
+  `const sampleRows = ${JSON.stringify([
+    { key: "frame-1", category: "UPS机框", model: "600kVA机框" },
+    { key: "sensor-800", category: "电池监控", code: "88091143", model: "SBMS-CS800EK2T5" },
+    { key: "battery", category: "电池", model: "SPG12750b" },
+  ])};`,
+  "globalThis.migratedOrder = getOrderedSummaryRows(sampleRows).map(function(row) { return row.key; });",
+  "window.projectSummary.rowOrder = ['sensor-800', 'frame-1', 'battery'];",
+  "window.projectSummary.rowOrderCustomized = true;",
+  "globalThis.manualOrder = getOrderedSummaryRows(sampleRows).map(function(row) { return row.key; });",
+].join("\n"), legacyOrderContext);
+assert.equal(
+  JSON.stringify(legacyOrderContext.migratedOrder),
+  JSON.stringify(["frame-1", "battery", "sensor-800"]),
+  "旧版自动 rowOrder 必须迁移为业务顺序"
+);
+assert.equal(
+  JSON.stringify(legacyOrderContext.manualOrder),
+  JSON.stringify(["sensor-800", "frame-1", "battery"]),
+  "用户手动微调后的 rowOrder 必须保留"
+);
+
+console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级、UPS汇总与排序）");
 
 // ===== JYC HR12V 高功率电池数据校验 =====
 const dataProgram = [

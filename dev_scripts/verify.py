@@ -53,6 +53,8 @@ checks = [
     ('汇总使用产品完整描述', "upsProduct?.['描述']"),
     ('汇总表列宽拖动', 'function initSummaryColumnResizers'),
     ('汇总表横向滚动', 'id="project-summary-scroll"'),
+    ('汇总表业务顺序', 'function sortSummaryRowsByBusinessOrder'),
+    ('汇总表手动顺序标记', 'rowOrderCustomized'),
     ('载入已保存配置', 'function loadSavedUpsConfiguration'),
     ('相同物料自动合并', 'function collectSavedConfigurationRows'),
     ('多配置导出链路', 'collectProjectSummaryRows({ includeSaved: false })'),
