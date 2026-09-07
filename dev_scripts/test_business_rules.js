@@ -398,7 +398,44 @@ assert.equal(
   "拖到目标行下半部必须插入目标行之后"
 );
 
-console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级、UPS汇总与排序）");
+const summaryPasteContext = {};
+vm.createContext(summaryPasteContext);
+vm.runInContext([
+  extractConst("CUSTOM_SUMMARY_PASTE_FIELDS"),
+  extractFunction("createCustomSummaryRow"),
+  extractFunction("parseSummaryClipboardText"),
+  extractFunction("normalizeCustomSummaryPasteValue"),
+  extractFunction("applyCustomSummaryPasteMatrix"),
+  "globalThis.parsePaste = parseSummaryClipboardText;",
+  "globalThis.applyPaste = applyCustomSummaryPasteMatrix;",
+].join("\n"), summaryPasteContext);
+const pastedRows = [{
+  id: "custom-existing",
+  category: "自定义",
+  code: "",
+  model: "",
+  desc: "",
+  qty: 1,
+  unit: "项",
+  unitPrice: 0,
+  nonStandardDesc: "",
+  note: "",
+}];
+const clipboardMatrix = summaryPasteContext.parsePaste(
+  '配电柜\tA001\tXGM-1\t"第一行\n第二行"\t2\t套\t1,234.50\t2469\t非标A\t备注A\r\n' +
+  '电缆\tB002\tWDZ-YJY\t动力电缆\t3\t米\t20\t60\t\t备注B\r\n'
+);
+const pasteResult = summaryPasteContext.applyPaste(pastedRows, 0, 0, clipboardMatrix);
+assert.equal(pasteResult.rowsAdded, 1, "Excel 粘贴行数超过现有自定义行时必须自动补行");
+assert.equal(pasteResult.cellsUpdated, 18, "小计列必须跳过，其余九个业务字段应写入");
+assert.equal(pastedRows[0].desc, "第一行\n第二行", "Excel 单元格内换行必须保留");
+assert.equal(pastedRows[0].unitPrice, 1234.5, "带千位分隔符的单价必须转为数值");
+assert.equal(pastedRows[0].nonStandardDesc, "非标A", "小计列之后的非标描述不得错位");
+assert.equal(pastedRows[0].note, "备注A", "小计列之后的备注不得错位");
+assert.equal(pastedRows[1].category, "电缆", "第二行产品名称必须写入自动新增行");
+assert.equal(pastedRows[1].qty, 3, "第二行数量必须转为数值");
+
+console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级、UPS汇总、排序与Excel粘贴）");
 
 // ===== JYC HR12V 高功率电池数据校验 =====
 const dataProgram = [

@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.27";
+const APP_VERSION = "v1.8.28";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -73,6 +73,9 @@ document.addEventListener("DOMContentLoaded", function() {
   #project-summary-table th, #project-summary-table td { padding:5px 7px !important;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;vertical-align:middle; }
   #project-summary-table input, #project-summary-table select { width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
   #project-summary-table textarea { width:100%;min-width:0;min-height:48px;resize:vertical;box-sizing:border-box;white-space:pre-wrap;line-height:1.45; }
+  #project-summary-table .summary-paste-cell:focus { border-color:#16a34a !important;outline:2px solid rgba(22,163,74,.2);outline-offset:1px; }
+  #summary-tbody tr.summary-paste-flash td { animation:summaryPasteFlash 1.2s ease-out; }
+  @keyframes summaryPasteFlash { 0%,35% { background:#dcfce7; } 100% { background:transparent; } }
   .summary-col-resizer { position:absolute;top:0;right:-7px;bottom:0;width:14px;z-index:4;cursor:col-resize;touch-action:none; }
   .summary-col-resizer::after { content:"";position:absolute;top:4px;right:6px;bottom:4px;width:2px;border-radius:2px;background:rgba(255,255,255,.38);transition:background-color .15s,box-shadow .15s; }
   .summary-col-resizer:hover::after,.summary-col-resizer:focus-visible::after,.summary-col-resizer.is-resizing::after { background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.3); }
@@ -1190,6 +1193,7 @@ function checkAuth(){
           <div style="margin-top:3px;color:#64748b;font-size:11px">多套 UPS 的相同型号物料将自动合并数量，配置来源保留在备注中</div>
           <div class="summary-resize-hint">默认按 UPS、功率模块、电池、电池开关箱/柜、电池架、电池监控排序；拖动序号列“⠿”手柄可快速调整，上下箭头可微调</div>
           <div class="summary-resize-hint">左右拖动表头分隔线可调整列宽，双击恢复默认</div>
+          <div class="summary-resize-hint">新增行支持 Excel 批量粘贴：复制单元格区域，点击起始单元格后按 Ctrl+V；超出行数自动新增，小计列自动跳过</div>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
@@ -4381,6 +4385,7 @@ function initSummaryColumnResizers() {
 // 渲染项目汇总表格
 function renderProjectSummary() {
   const tbody = document.getElementById('summary-tbody');
+  tbody.onpaste = handleCustomSummaryPaste;
   const showPrice = window.summaryShowPrice || false;
   let html = '';
   let total = 0;
@@ -4629,16 +4634,16 @@ function renderProjectSummary() {
     addSummaryRowBlock(rowKey, subtotal, `
       <tr style="background:#fffde7">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.category || '')}" oninput="updateCustomSummaryRow('${row.id}', 'category', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'category', this.value)" placeholder="类别" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.code || '')}" oninput="updateCustomSummaryRow('${row.id}', 'code', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'code', this.value)" placeholder="编码" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.model || '')}" oninput="updateCustomSummaryRow('${row.id}', 'model', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'model', this.value)" placeholder="型号/名称" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
-        <td style="padding:8px;border:1px solid #ddd"><textarea rows="2" oninput="updateCustomSummaryRow('${row.id}', 'desc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'desc', this.value)" placeholder="描述" style="border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px">${escapeHtml(row.desc || '')}</textarea></td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="number" value="${escapeHtml(row.qty || '')}" oninput="updateCustomSummaryRow('${row.id}', 'qty', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'qty', this.value)" min="0" step="0.01" style="width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.unit || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unit', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unit', this.value)" placeholder="单位" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? `<input type="number" value="${escapeHtml(row.unitPrice || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value)" min="0" step="0.01" style="width:78px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:right">` : '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="0" type="text" value="${escapeHtml(row.category || '')}" oninput="updateCustomSummaryRow('${row.id}', 'category', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'category', this.value)" placeholder="类别" title="可从 Excel 批量粘贴" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
+        <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="1" type="text" value="${escapeHtml(row.code || '')}" oninput="updateCustomSummaryRow('${row.id}', 'code', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'code', this.value)" placeholder="编码" title="可从 Excel 批量粘贴" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
+        <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="2" type="text" value="${escapeHtml(row.model || '')}" oninput="updateCustomSummaryRow('${row.id}', 'model', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'model', this.value)" placeholder="型号/名称" title="可从 Excel 批量粘贴" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
+        <td style="padding:8px;border:1px solid #ddd"><textarea class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="3" rows="2" oninput="updateCustomSummaryRow('${row.id}', 'desc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'desc', this.value)" placeholder="描述" title="可从 Excel 批量粘贴" style="border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px">${escapeHtml(row.desc || '')}</textarea></td>
+        <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="4" type="number" value="${escapeHtml(row.qty || '')}" oninput="updateCustomSummaryRow('${row.id}', 'qty', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'qty', this.value)" min="0" step="0.01" title="可从 Excel 批量粘贴" style="width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
+        <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="5" type="text" value="${escapeHtml(row.unit || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unit', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unit', this.value)" placeholder="单位" title="可从 Excel 批量粘贴" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? `<input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="6" type="number" value="${escapeHtml(row.unitPrice || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value)" min="0" step="0.01" title="可从 Excel 批量粘贴" style="width:78px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:right">` : '-'}</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? subtotal.toFixed(2) : '-'}</td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.nonStandardDesc || '')}" oninput="updateCustomSummaryRow('${row.id}', 'nonStandardDesc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'nonStandardDesc', this.value)" placeholder="非标描述" style="width:100%;min-width:90px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.note || '')}" oninput="updateCustomSummaryRow('${row.id}', 'note', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'note', this.value)" placeholder="备注" style="width:100%;min-width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
+        <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="8" type="text" value="${escapeHtml(row.nonStandardDesc || '')}" oninput="updateCustomSummaryRow('${row.id}', 'nonStandardDesc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'nonStandardDesc', this.value)" placeholder="非标描述" title="可从 Excel 批量粘贴" style="width:100%;min-width:90px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
+        <td style="padding:8px;border:1px solid #ddd"><input class="summary-paste-cell" data-custom-row-key="${row.id}" data-summary-paste-column="9" type="text" value="${escapeHtml(row.note || '')}" oninput="updateCustomSummaryRow('${row.id}', 'note', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'note', this.value)" placeholder="备注" title="可从 Excel 批量粘贴" style="width:100%;min-width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${renderSummaryActionCell(rowKey)}</td>
       </tr>
     `);
@@ -4675,9 +4680,12 @@ function getCustomSummaryRows() {
   return window.projectSummary.customRows;
 }
 
-function addCustomSummaryRow() {
-  const rows = getCustomSummaryRows();
-  rows.push({
+const CUSTOM_SUMMARY_PASTE_FIELDS = [
+  'category', 'code', 'model', 'desc', 'qty', 'unit', 'unitPrice', null, 'nonStandardDesc', 'note'
+];
+
+function createCustomSummaryRow() {
+  return {
     id: 'custom-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
     category: '自定义',
     code: '',
@@ -4688,7 +4696,122 @@ function addCustomSummaryRow() {
     unitPrice: 0,
     note: '',
     nonStandardDesc: ''
+  };
+}
+
+function parseSummaryClipboardText(text) {
+  const source = String(text || '').replace(/\r\n?/g, '\n');
+  const rows = [[]];
+  let cell = '';
+  let inQuotes = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '"') {
+      if (inQuotes && source[index + 1] === '"') {
+        cell += '"';
+        index += 1;
+      } else if (inQuotes || cell === '') {
+        inQuotes = !inQuotes;
+      } else {
+        cell += char;
+      }
+    } else if (char === '\t' && !inQuotes) {
+      rows[rows.length - 1].push(cell);
+      cell = '';
+    } else if (char === '\n' && !inQuotes) {
+      rows[rows.length - 1].push(cell);
+      rows.push([]);
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+  rows[rows.length - 1].push(cell);
+  while (rows.length > 1 && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === '') rows.pop();
+  return rows;
+}
+
+function normalizeCustomSummaryPasteValue(field, value) {
+  const text = String(value ?? '').trim();
+  if (field !== 'qty' && field !== 'unitPrice') return text;
+  if (!text) return '';
+  const numericText = text.replace(/[\s,，￥¥]/g, '');
+  const numericValue = parseFloat(numericText);
+  return Number.isFinite(numericValue) ? Math.max(0, numericValue) : '';
+}
+
+function applyCustomSummaryPasteMatrix(rows, startRowIndex, startColumnIndex, matrix) {
+  let rowsAdded = 0;
+  let cellsUpdated = 0;
+  matrix.forEach(function(sourceRow, rowOffset) {
+    const targetIndex = startRowIndex + rowOffset;
+    while (rows.length <= targetIndex) {
+      rows.push(createCustomSummaryRow());
+      rowsAdded += 1;
+    }
+    sourceRow.forEach(function(value, columnOffset) {
+      const field = CUSTOM_SUMMARY_PASTE_FIELDS[startColumnIndex + columnOffset];
+      if (!field) return;
+      rows[targetIndex][field] = normalizeCustomSummaryPasteValue(field, value);
+      cellsUpdated += 1;
+    });
   });
+  return { rowsAdded, cellsUpdated };
+}
+
+function handleCustomSummaryPaste(event) {
+  const target = event.target.closest('[data-custom-row-key][data-summary-paste-column]');
+  if (!target) return;
+  const clipboardText = event.clipboardData?.getData('text/plain') || '';
+  const hasTableLayout = clipboardText.includes('\t') || /[\r\n]/.test(clipboardText);
+  if (!clipboardText || !hasTableLayout) return;
+  if (target.tagName === 'TEXTAREA' && !clipboardText.includes('\t')) return;
+
+  const matrix = parseSummaryClipboardText(clipboardText);
+  if (!matrix.length) return;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const rows = getCustomSummaryRows();
+  const activeOrderBefore = getOrderedSummaryRows(collectProjectSummaryRows()).map(row => row.key);
+  const displayedIds = activeOrderBefore
+    .filter(key => key.startsWith('custom-'))
+    .map(key => key.slice('custom-'.length));
+  const rowById = new Map(rows.map(row => [row.id, row]));
+  const orderedRows = displayedIds.map(id => rowById.get(id)).filter(Boolean);
+  rows.forEach(row => { if (!displayedIds.includes(row.id)) orderedRows.push(row); });
+  window.projectSummary.customRows = orderedRows;
+
+  const startRowIndex = orderedRows.findIndex(row => row.id === target.dataset.customRowKey);
+  const startColumnIndex = parseInt(target.dataset.summaryPasteColumn, 10);
+  if (startRowIndex < 0 || !Number.isFinite(startColumnIndex)) return;
+  const originalLength = orderedRows.length;
+  const result = applyCustomSummaryPasteMatrix(orderedRows, startRowIndex, startColumnIndex, matrix);
+  const affectedRows = orderedRows.slice(startRowIndex, startRowIndex + matrix.length);
+
+  if (result.rowsAdded > 0 && window.projectSummary.rowOrderCustomized === true) {
+    const newKeys = orderedRows.slice(originalLength).map(row => `custom-${row.id}`);
+    const nextOrder = activeOrderBefore.filter(key => !newKeys.includes(key));
+    const lastExistingIndex = Math.min(originalLength - 1, startRowIndex + matrix.length - 1);
+    const anchorKey = lastExistingIndex >= 0 ? `custom-${orderedRows[lastExistingIndex].id}` : '';
+    let insertAt = nextOrder.indexOf(anchorKey);
+    insertAt = insertAt >= 0 ? insertAt + 1 : nextOrder.length;
+    nextOrder.splice(insertAt, 0, ...newKeys);
+    window.projectSummary.rowOrder = nextOrder;
+  }
+
+  renderProjectSummary();
+  affectedRows.forEach(function(row) {
+    document.querySelector(`#summary-tbody tr[data-summary-row-key="custom-${row.id}"]`)?.classList.add('summary-paste-flash');
+  });
+  const restoredTarget = document.querySelector(`[data-custom-row-key="${target.dataset.customRowKey}"][data-summary-paste-column="${startColumnIndex}"]`);
+  restoredTarget?.focus({ preventScroll: true });
+  showImportToast(`已粘贴 ${matrix.length} 行、${result.cellsUpdated} 个单元格${result.rowsAdded ? `，自动新增 ${result.rowsAdded} 行` : ''}`);
+}
+
+function addCustomSummaryRow() {
+  const rows = getCustomSummaryRows();
+  rows.push(createCustomSummaryRow());
   renderProjectSummary();
 }
 
