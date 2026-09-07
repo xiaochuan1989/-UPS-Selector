@@ -381,6 +381,23 @@ assert.equal(
   "用户手动微调后的 rowOrder 必须保留"
 );
 
+const dragOrderContext = {};
+vm.createContext(dragOrderContext);
+vm.runInContext([
+  extractFunction("getSummaryRowOrderAfterDrop"),
+  "globalThis.moveByDrop = getSummaryRowOrderAfterDrop;",
+].join("\n"), dragOrderContext);
+assert.equal(
+  JSON.stringify(dragOrderContext.moveByDrop(["ups", "battery", "switch", "rack", "monitor"], "monitor", "battery", false)),
+  JSON.stringify(["ups", "monitor", "battery", "switch", "rack"]),
+  "拖到目标行上半部必须插入目标行之前"
+);
+assert.equal(
+  JSON.stringify(dragOrderContext.moveByDrop(["ups", "battery", "switch", "rack", "monitor"], "ups", "rack", true)),
+  JSON.stringify(["battery", "switch", "rack", "ups", "monitor"]),
+  "拖到目标行下半部必须插入目标行之后"
+);
+
 console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级、UPS汇总与排序）");
 
 // ===== JYC HR12V 高功率电池数据校验 =====

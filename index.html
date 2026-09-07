@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.26";
+const APP_VERSION = "v1.8.27";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -79,6 +79,13 @@ document.addEventListener("DOMContentLoaded", function() {
   .summary-col-resizer:focus-visible { outline:2px solid #bfdbfe;outline-offset:-2px; }
   body.summary-col-resizing { cursor:col-resize;user-select:none; }
   .summary-resize-hint { margin-top:3px;color:#64748b;font-size:11px; }
+  .summary-row-drag-handle { width:20px;height:32px;display:inline-grid;place-items:center;flex:0 0 auto;border:1px solid #b7c8d8;border-radius:4px;background:#f8fbff;color:#2563eb;font-size:17px;font-weight:700;line-height:1;cursor:grab;user-select:none; }
+  .summary-row-drag-handle:hover,.summary-row-drag-handle:focus-visible { border-color:#2563eb;background:#e8f1ff;outline:2px solid #bfdbfe;outline-offset:1px; }
+  .summary-row-drag-handle:active { cursor:grabbing; }
+  #summary-tbody tr.summary-row-dragging { opacity:.42; }
+  #summary-tbody tr.summary-row-drop-before td { box-shadow:inset 0 3px 0 #2563eb; }
+  #summary-tbody tr.summary-row-drop-after td { box-shadow:inset 0 -3px 0 #2563eb; }
+  body.summary-row-dragging { cursor:grabbing;user-select:none; }
 
   /* ── 计算结果三卡：白卡 + 彩色标题条 ── */
   .result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
@@ -1181,7 +1188,7 @@ function checkAuth(){
         <div>
           <div style="font-weight:600;color:#1a3a5c;font-size:16px">📋 项目配置汇总清单</div>
           <div style="margin-top:3px;color:#64748b;font-size:11px">多套 UPS 的相同型号物料将自动合并数量，配置来源保留在备注中</div>
-          <div class="summary-resize-hint">默认按 UPS、功率模块、电池、电池开关箱/柜、电池架、电池监控排序；上下箭头可手动微调</div>
+          <div class="summary-resize-hint">默认按 UPS、功率模块、电池、电池开关箱/柜、电池架、电池监控排序；拖动序号列“⠿”手柄可快速调整，上下箭头可微调</div>
           <div class="summary-resize-hint">左右拖动表头分隔线可调整列宽，双击恢复默认</div>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
@@ -4092,10 +4099,66 @@ function moveSummaryRow(key, direction) {
   renderProjectSummary();
 }
 
+function getSummaryRowOrderAfterDrop(order, draggedKey, targetKey, placeAfter) {
+  if (!Array.isArray(order) || !draggedKey || !targetKey || draggedKey === targetKey) return Array.isArray(order) ? order.slice() : [];
+  const nextOrder = order.filter(key => key !== draggedKey);
+  let targetIndex = nextOrder.indexOf(targetKey);
+  if (targetIndex < 0) return order.slice();
+  if (placeAfter) targetIndex += 1;
+  nextOrder.splice(targetIndex, 0, draggedKey);
+  return nextOrder;
+}
+
+function clearSummaryRowDragState() {
+  document.querySelectorAll('#summary-tbody tr').forEach(function(row) {
+    row.classList.remove('summary-row-dragging', 'summary-row-drop-before', 'summary-row-drop-after');
+  });
+  document.body.classList.remove('summary-row-dragging');
+  window.summaryDraggedRowKey = '';
+}
+
+function handleSummaryRowDragStart(event, key) {
+  window.summaryDraggedRowKey = key;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', key);
+  event.currentTarget.closest('tr')?.classList.add('summary-row-dragging');
+  document.body.classList.add('summary-row-dragging');
+}
+
+function handleSummaryRowDragOver(event) {
+  const draggedKey = window.summaryDraggedRowKey || event.dataTransfer.getData('text/plain');
+  const targetRow = event.target.closest('tr[data-summary-row-key]');
+  if (!draggedKey || !targetRow || targetRow.dataset.summaryRowKey === draggedKey) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('#summary-tbody tr').forEach(function(row) {
+    row.classList.remove('summary-row-drop-before', 'summary-row-drop-after');
+  });
+  const placeAfter = event.clientY >= targetRow.getBoundingClientRect().top + targetRow.getBoundingClientRect().height / 2;
+  targetRow.classList.add(placeAfter ? 'summary-row-drop-after' : 'summary-row-drop-before');
+}
+
+function handleSummaryRowDrop(event) {
+  const draggedKey = window.summaryDraggedRowKey || event.dataTransfer.getData('text/plain');
+  const targetRow = event.target.closest('tr[data-summary-row-key]');
+  if (!draggedKey || !targetRow || targetRow.dataset.summaryRowKey === draggedKey) {
+    clearSummaryRowDragState();
+    return;
+  }
+  event.preventDefault();
+  const placeAfter = targetRow.classList.contains('summary-row-drop-after');
+  const activeOrder = getOrderedSummaryRows(collectProjectSummaryRows()).map(row => row.key);
+  window.projectSummary.rowOrder = getSummaryRowOrderAfterDrop(activeOrder, draggedKey, targetRow.dataset.summaryRowKey, placeAfter);
+  window.projectSummary.rowOrderCustomized = true;
+  clearSummaryRowDragState();
+  renderProjectSummary();
+}
+
 function renderSummaryRowNumberCell(key, rowNum) {
   const encodedKey = encodeURIComponent(key);
   return `<div style="display:flex;align-items:center;justify-content:center;gap:5px;line-height:1">
     <span style="min-width:16px">${rowNum}</span>
+    <span class="summary-row-drag-handle" draggable="true" role="button" tabindex="0" aria-label="拖动第${rowNum}行调整顺序" title="按住拖动到目标位置" ondragstart="handleSummaryRowDragStart(event, decodeURIComponent('${encodedKey}'))" ondragend="clearSummaryRowDragState()">⠿</span>
     <span style="display:inline-flex;flex-direction:column;gap:2px">
       <button onclick="moveSummaryRow(decodeURIComponent('${encodedKey}'), -1)" title="上移" style="width:18px;height:16px;line-height:12px;padding:0;border:1px solid #b7c8d8;border-radius:3px;background:#f8fbff;color:#2563eb;font-size:10px;cursor:pointer">▲</button>
       <button onclick="moveSummaryRow(decodeURIComponent('${encodedKey}'), 1)" title="下移" style="width:18px;height:16px;line-height:12px;padding:0;border:1px solid #b7c8d8;border-radius:3px;background:#f8fbff;color:#2563eb;font-size:10px;cursor:pointer">▼</button>
@@ -4190,7 +4253,7 @@ function renderSummaryNonStandardCell(key, value) {
 
 const SUMMARY_COLUMN_WIDTH_STORAGE_KEY = 'ups_summary_column_widths_v1';
 const SUMMARY_DEFAULT_COLUMN_WIDTHS = {
-  '序号': 46,
+  '序号': 78,
   '产品名称': 95,
   '编码': 150,
   '型号': 320,
@@ -4585,7 +4648,9 @@ function renderProjectSummary() {
   html = getOrderedSummaryRows(collectProjectSummaryRows())
     .map(row => rowBlockMap.get(row.key))
     .filter(Boolean)
-    .map((row, index) => row.html.replace(rowNumberToken, renderSummaryRowNumberCell(row.key, index + 1)))
+    .map((row, index) => row.html
+      .replace('<tr ', `<tr data-summary-row-key="${escapeHtml(row.key)}" `)
+      .replace(rowNumberToken, renderSummaryRowNumberCell(row.key, index + 1)))
     .join('');
 
   if (!html) {
@@ -4593,6 +4658,8 @@ function renderProjectSummary() {
     document.getElementById('summary-tfoot').style.display = 'none';
   } else {
     tbody.innerHTML = html;
+    tbody.ondragover = handleSummaryRowDragOver;
+    tbody.ondrop = handleSummaryRowDrop;
     document.getElementById('summary-tfoot').style.display = '';
     // 未勾选"显示价格"时，合计行显示"-"而非金额
     document.getElementById('summary-total').textContent = showPrice ? '¥' + total.toFixed(2) : '-';
