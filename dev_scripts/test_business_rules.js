@@ -256,6 +256,60 @@ assert.equal(multiFrameCatalogDefaults.frameCode, "维修旁路机柜 01021116�
 assert.equal(multiFrameCatalogDefaults.moduleCode, "100kVA模块 01021115");
 assert.equal(multiFrameCatalogDefaults.modulePrice, 149500);
 
+const aggregationContext = {
+  window: {
+    editingUpsConfigurationId: null,
+    savedSummaryRowTargets: new Map(),
+    savedUpsConfigurations: [
+      {
+        id: "config-1",
+        name: "配置 1",
+        rows: [{
+          key: "ups-module",
+          category: "功率模块",
+          code: "100kVA模块 01021115",
+          model: "祁连UM-1000TFL-M",
+          desc: "每台6个模块（最多6个）",
+          unit: "个",
+          qty: 36,
+          unitPrice: 149500,
+          note: "6台 × 6个/台",
+        }],
+      },
+      {
+        id: "config-2",
+        name: "配置 2",
+        rows: [{
+          key: "ups-module",
+          category: "功率模块",
+          code: "100kVA模块 01021115",
+          model: "祁连UM-1000TFL-M",
+          desc: "每台8个模块（最多8个）",
+          unit: "个",
+          qty: 16,
+          unitPrice: 149500,
+          note: "2台 × 8个/台",
+        }],
+      },
+    ],
+  },
+};
+vm.createContext(aggregationContext);
+vm.runInContext([
+  extractFunction("normalizeSummaryRow"),
+  extractFunction("hashSummaryIdentity"),
+  "function getSavedUpsConfigurations() { return window.savedUpsConfigurations; }",
+  extractFunction("collectSavedConfigurationRows"),
+  "globalThis.aggregateRows = collectSavedConfigurationRows();",
+].join("\n"), aggregationContext);
+assert.equal(aggregationContext.aggregateRows.length, 1, "相同功率模块必须合并为一行");
+assert.equal(aggregationContext.aggregateRows[0].qty, 52, "功率模块数量必须求和");
+assert.equal(
+  aggregationContext.aggregateRows[0].desc,
+  "配置 1：每台6个模块（最多6个）\n配置 2：每台8个模块（最多8个）",
+  "不同配置说明必须换行完整保留"
+);
+
 console.log("✅ 核心业务规则测试通过（断路器、电池电气量、传感器、电压等级、UPS汇总）");
 
 // ===== JYC HR12V 高功率电池数据校验 =====

@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.24";
+const APP_VERSION = "v1.8.25";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -66,10 +66,19 @@ document.addEventListener("DOMContentLoaded", function() {
 
   .container { width:100%;max-width: 1600px; margin: 0 auto; padding: 24px 24px; flex:1 0 auto; }
 
-  /* ── 项目配置汇总清单：自适应宽度、紧凑、可换行，避免横向滚动 ── */
-  #project-summary-table { table-layout: fixed; width: 100%; }
-  #project-summary-table th, #project-summary-table td { padding: 5px 7px !important; word-break: break-word; overflow-wrap: anywhere; }
+  /* ── 项目配置汇总清单：完整换行 + 可拖动列宽 + 横向滚动 ── */
+  #project-summary-scroll { overflow-x:auto;max-width:100%;border-radius:4px; }
+  #project-summary-table { table-layout:fixed;min-width:100%; }
+  #project-summary-table th { position:relative;white-space:nowrap; }
+  #project-summary-table th, #project-summary-table td { padding:5px 7px !important;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;vertical-align:middle; }
   #project-summary-table input, #project-summary-table select { width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
+  #project-summary-table textarea { width:100%;min-width:0;min-height:48px;resize:vertical;box-sizing:border-box;white-space:pre-wrap;line-height:1.45; }
+  .summary-col-resizer { position:absolute;top:0;right:-7px;bottom:0;width:14px;z-index:4;cursor:col-resize;touch-action:none; }
+  .summary-col-resizer::after { content:"";position:absolute;top:4px;right:6px;bottom:4px;width:2px;border-radius:2px;background:rgba(255,255,255,.38);transition:background-color .15s,box-shadow .15s; }
+  .summary-col-resizer:hover::after,.summary-col-resizer:focus-visible::after,.summary-col-resizer.is-resizing::after { background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.3); }
+  .summary-col-resizer:focus-visible { outline:2px solid #bfdbfe;outline-offset:-2px; }
+  body.summary-col-resizing { cursor:col-resize;user-select:none; }
+  .summary-resize-hint { margin-top:3px;color:#64748b;font-size:11px; }
 
   /* ── 计算结果三卡：白卡 + 彩色标题条 ── */
   .result-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
@@ -1172,6 +1181,7 @@ function checkAuth(){
         <div>
           <div style="font-weight:600;color:#1a3a5c;font-size:16px">📋 项目配置汇总清单</div>
           <div style="margin-top:3px;color:#64748b;font-size:11px">多套 UPS 的相同型号物料将自动合并数量，配置来源保留在备注中</div>
+          <div class="summary-resize-hint">左右拖动表头分隔线可调整列宽，双击恢复默认</div>
         </div>
         <div style="display:flex;gap:12px;align-items:center">
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
@@ -1184,22 +1194,36 @@ function checkAuth(){
           <button onclick="clearProjectSummary()" style="background:#95a5a6;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">清空</button>
         </div>
       </div>
-      <div style="overflow-x:auto">
-        <table id="project-summary-table" style="width:100%;border-collapse:collapse;font-size:12px">
+      <div id="project-summary-scroll">
+        <table id="project-summary-table" style="border-collapse:collapse;font-size:12px">
+          <colgroup>
+            <col data-summary-column="序号">
+            <col data-summary-column="产品名称">
+            <col data-summary-column="编码">
+            <col data-summary-column="型号">
+            <col data-summary-column="描述">
+            <col data-summary-column="数量">
+            <col data-summary-column="单位">
+            <col data-summary-column="单价">
+            <col data-summary-column="小计">
+            <col data-summary-column="非标描述">
+            <col data-summary-column="备注">
+            <col data-summary-column="操作">
+          </colgroup>
           <thead>
             <tr style="background:#2563eb;color:white">
-              <th style="padding:8px;border:1px solid #ddd;width:40px">序号</th>
-              <th style="padding:8px;border:1px solid #ddd;width:80px">产品名称</th>
-              <th style="padding:8px;border:1px solid #ddd;width:90px">编码</th>
-              <th style="padding:8px;border:1px solid #ddd">型号</th>
-              <th style="padding:8px;border:1px solid #ddd">描述</th>
-              <th style="padding:8px;border:1px solid #ddd;width:50px">数量</th>
-              <th style="padding:8px;border:1px solid #ddd;width:40px">单位</th>
-              <th style="padding:8px;border:1px solid #ddd;width:70px">单价</th>
-              <th style="padding:8px;border:1px solid #ddd;width:70px">小计</th>
-              <th style="padding:8px;border:1px solid #ddd;width:120px">非标描述</th>
-              <th style="padding:8px;border:1px solid #ddd;width:100px">备注</th>
-              <th style="padding:8px;border:1px solid #ddd;width:54px">操作</th>
+              <th data-summary-column="序号" style="padding:8px;border:1px solid #ddd">序号</th>
+              <th data-summary-column="产品名称" style="padding:8px;border:1px solid #ddd">产品名称</th>
+              <th data-summary-column="编码" style="padding:8px;border:1px solid #ddd">编码</th>
+              <th data-summary-column="型号" style="padding:8px;border:1px solid #ddd">型号</th>
+              <th data-summary-column="描述" style="padding:8px;border:1px solid #ddd">描述</th>
+              <th data-summary-column="数量" style="padding:8px;border:1px solid #ddd">数量</th>
+              <th data-summary-column="单位" style="padding:8px;border:1px solid #ddd">单位</th>
+              <th data-summary-column="单价" style="padding:8px;border:1px solid #ddd">单价</th>
+              <th data-summary-column="小计" style="padding:8px;border:1px solid #ddd">小计</th>
+              <th data-summary-column="非标描述" style="padding:8px;border:1px solid #ddd">非标描述</th>
+              <th data-summary-column="备注" style="padding:8px;border:1px solid #ddd">备注</th>
+              <th data-summary-column="操作" style="padding:8px;border:1px solid #ddd">操作</th>
             </tr>
           </thead>
           <tbody id="summary-tbody">
@@ -1677,6 +1701,7 @@ document.addEventListener('DOMContentLoaded', function() {
   refreshUnifiedBatteryPowerOptions();
   refreshRuntimeBatteryOptions();
   renderSavedUpsConfigurations();
+  initSummaryColumnResizers();
 
   const cfg = JSON.parse(localStorage.getItem("ups_config") || "{}");
   if (cfg.provider && document.getElementById("provider")) document.getElementById("provider").value = cfg.provider;
@@ -3806,9 +3831,9 @@ function collectSavedConfigurationRows() {
     if (config.id === window.editingUpsConfigurationId) return;
     (config.rows || []).forEach(function(sourceRow) {
       const row = normalizeSummaryRow(sourceRow);
-      // 电池数量说明会随每套 UPS 的台数变化，但同一型号仍应作为同一物料合并。
-      const identityDesc = row.category === '电池' ? '' : row.desc;
-      const identity = [row.category, row.model || row.code, identityDesc, row.unit].join('|');
+      // 描述可能随配置数量变化（例如“每台6个/8个模块”），不能参与物料身份判断。
+      // 同一产品名称、编码、型号、单位视为同一物料，并汇总数量。
+      const identity = [row.category, row.code, row.model, row.unit].join('|');
       let entry = grouped.get(identity);
       if (!entry) {
         entry = {
@@ -3819,7 +3844,8 @@ function collectSavedConfigurationRows() {
           sourceNames: [],
           sourceRows: [],
           notes: [],
-          descriptions: []
+          descriptions: [],
+          descriptionValues: []
         };
         grouped.set(identity, entry);
       }
@@ -3831,13 +3857,13 @@ function collectSavedConfigurationRows() {
       if (row.note && !entry.notes.includes(row.note)) entry.notes.push(row.note);
       const sourceDescription = `${config.name}：${row.desc}`;
       if (row.desc && !entry.descriptions.includes(sourceDescription)) entry.descriptions.push(sourceDescription);
+      if (row.desc && !entry.descriptionValues.includes(row.desc)) entry.descriptionValues.push(row.desc);
     });
   });
   const rows = Array.from(grouped.values()).map(function(entry) {
-    if (entry.category === '电池' && entry.descriptions.length > 1) {
-      entry.desc = entry.descriptions.join('；');
-    }
-    entry.note = entry.notes.concat('配置来源：' + entry.sourceNames.join('、')).filter(Boolean).join('; ');
+    if (entry.descriptionValues.length === 1) entry.desc = entry.descriptionValues[0];
+    else if (entry.descriptionValues.length > 1) entry.desc = entry.descriptions.join('\n');
+    entry.note = entry.notes.concat('配置来源：' + entry.sourceNames.join('、')).filter(Boolean).join('\n');
     window.savedSummaryRowTargets.set(entry.key, entry.sourceRows);
     return entry;
   });
@@ -4112,6 +4138,133 @@ function renderSummaryNonStandardCell(key, value) {
   return `<input type="text" value="${escapeHtml(value || '')}" oninput="updateSummaryRowField(decodeURIComponent('${encodedKey}'), 'nonStandardDesc', this.value, false)" onchange="updateSummaryRowField(decodeURIComponent('${encodedKey}'), 'nonStandardDesc', this.value)" placeholder="非标描述" style="width:100%;min-width:90px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px">`;
 }
 
+const SUMMARY_COLUMN_WIDTH_STORAGE_KEY = 'ups_summary_column_widths_v1';
+const SUMMARY_DEFAULT_COLUMN_WIDTHS = {
+  '序号': 46,
+  '产品名称': 95,
+  '编码': 150,
+  '型号': 320,
+  '描述': 380,
+  '数量': 64,
+  '单位': 54,
+  '单价': 90,
+  '小计': 100,
+  '非标描述': 150,
+  '备注': 260,
+  '操作': 62
+};
+
+function clampSummaryColumnWidth(width) {
+  return Math.min(720, Math.max(44, Math.round(Number(width) || 120)));
+}
+
+function getSummaryColumnWidths() {
+  try { return JSON.parse(localStorage.getItem(SUMMARY_COLUMN_WIDTH_STORAGE_KEY) || '{}'); }
+  catch (error) { return {}; }
+}
+
+function saveSummaryColumnWidth(columnName, width) {
+  const widths = getSummaryColumnWidths();
+  widths[columnName] = clampSummaryColumnWidth(width);
+  localStorage.setItem(SUMMARY_COLUMN_WIDTH_STORAGE_KEY, JSON.stringify(widths));
+}
+
+function updateSummaryTableWidth(table) {
+  const totalWidth = Array.from(table.querySelectorAll('col[data-summary-column]')).reduce(function(total, col) {
+    return total + (parseFloat(col.style.width) || 0);
+  }, 0);
+  table.style.width = Math.ceil(totalWidth) + 'px';
+}
+
+function initSummaryColumnResizer(resizer, table, colElement, columnName) {
+  let pointerId = null;
+  let startX = 0;
+  let startWidth = 0;
+
+  function applySummaryWidth(width, persist) {
+    const nextWidth = clampSummaryColumnWidth(width);
+    colElement.style.width = nextWidth + 'px';
+    resizer.setAttribute('aria-valuenow', String(nextWidth));
+    updateSummaryTableWidth(table);
+    if (persist) saveSummaryColumnWidth(columnName, nextWidth);
+  }
+
+  resizer.addEventListener('pointerdown', function(event) {
+    if (event.button !== 0) return;
+    pointerId = event.pointerId;
+    startX = event.clientX;
+    startWidth = parseFloat(colElement.style.width) || SUMMARY_DEFAULT_COLUMN_WIDTHS[columnName] || 120;
+    resizer.setPointerCapture(pointerId);
+    resizer.focus({ preventScroll: true });
+    resizer.classList.add('is-resizing');
+    document.body.classList.add('summary-col-resizing');
+    event.preventDefault();
+    event.stopPropagation();
+  });
+
+  resizer.addEventListener('pointermove', function(event) {
+    if (pointerId !== event.pointerId) return;
+    applySummaryWidth(startWidth + event.clientX - startX, false);
+    event.preventDefault();
+    event.stopPropagation();
+  });
+
+  function finishSummaryResize(event) {
+    if (pointerId !== event.pointerId) return;
+    if (resizer.hasPointerCapture(pointerId)) resizer.releasePointerCapture(pointerId);
+    pointerId = null;
+    resizer.classList.remove('is-resizing');
+    document.body.classList.remove('summary-col-resizing');
+    saveSummaryColumnWidth(columnName, parseFloat(colElement.style.width));
+    event.stopPropagation();
+  }
+
+  resizer.addEventListener('pointerup', finishSummaryResize);
+  resizer.addEventListener('pointercancel', finishSummaryResize);
+  resizer.addEventListener('dblclick', function(event) {
+    applySummaryWidth(SUMMARY_DEFAULT_COLUMN_WIDTHS[columnName] || 120, true);
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  resizer.addEventListener('keydown', function(event) {
+    const currentWidth = parseFloat(colElement.style.width) || SUMMARY_DEFAULT_COLUMN_WIDTHS[columnName] || 120;
+    if (event.key === 'ArrowLeft') applySummaryWidth(currentWidth - 16, true);
+    else if (event.key === 'ArrowRight') applySummaryWidth(currentWidth + 16, true);
+    else if (event.key === 'Home') applySummaryWidth(SUMMARY_DEFAULT_COLUMN_WIDTHS[columnName] || 120, true);
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
+  });
+}
+
+function initSummaryColumnResizers() {
+  const table = document.getElementById('project-summary-table');
+  if (!table) return;
+  const widths = getSummaryColumnWidths();
+  const cols = Array.from(table.querySelectorAll('col[data-summary-column]'));
+  const headers = Array.from(table.querySelectorAll('thead th[data-summary-column]'));
+  cols.forEach(function(colElement, index) {
+    const columnName = colElement.dataset.summaryColumn;
+    const initialWidth = clampSummaryColumnWidth(widths[columnName] || SUMMARY_DEFAULT_COLUMN_WIDTHS[columnName]);
+    colElement.style.width = initialWidth + 'px';
+    const th = headers[index];
+    if (!th || th.querySelector('.summary-col-resizer')) return;
+    const resizer = document.createElement('span');
+    resizer.className = 'summary-col-resizer';
+    resizer.tabIndex = 0;
+    resizer.setAttribute('role', 'separator');
+    resizer.setAttribute('aria-orientation', 'vertical');
+    resizer.setAttribute('aria-label', '调整“' + columnName + '”列宽');
+    resizer.setAttribute('aria-valuemin', '44');
+    resizer.setAttribute('aria-valuemax', '720');
+    resizer.setAttribute('aria-valuenow', String(initialWidth));
+    resizer.title = '左右拖动调整“' + columnName + '”列宽，双击恢复默认';
+    initSummaryColumnResizer(resizer, table, colElement, columnName);
+    th.appendChild(resizer);
+  });
+  updateSummaryTableWidth(table);
+}
+
 // 渲染项目汇总表格
 function renderProjectSummary() {
   const tbody = document.getElementById('summary-tbody');
@@ -4188,7 +4341,7 @@ function renderProjectSummary() {
         ? `<input type="text" value="${ups.model || ''}" onchange="updateCustomUps('model', this.value)" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`
         : (ups.model || '-');
       const capacityCell = ups.isCustom
-        ? `<input type="text" value="${ups.customDesc || ups.capacity || ''}" onchange="updateCustomUps('customDesc', this.value)" placeholder="输入描述" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`
+        ? `<textarea rows="2" onchange="updateCustomUps('customDesc', this.value)" placeholder="输入描述" style="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">${escapeHtml(ups.customDesc || ups.capacity || '')}</textarea>`
         : (ups.capacity || '');
       const noteCell = ups.isCustom 
         ? '⚠️ 非标型号，请确认参数'
@@ -4223,7 +4376,7 @@ function renderProjectSummary() {
     // 电池描述：可编辑，默认为计算结果
     const defaultDesc = `${bat.upsNum || 1}台 × (${bat.groupsPerUps || bat.totalGroups || 1}组/台 × ${bat.cellsPerGroup}只/组) = ${bat.totalCells}只`;
     const batDesc = bat.customDesc || defaultDesc;
-    const descCell = `<input type="text" value="${batDesc}" onchange="updateCustomBattery('customDesc', this.value)" placeholder="输入描述" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">`;
+    const descCell = `<textarea rows="2" onchange="updateCustomBattery('customDesc', this.value)" placeholder="输入描述" style="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px">${escapeHtml(batDesc)}</textarea>`;
     addSummaryRowBlock('battery', subtotal, `
       <tr style="background:#e8f5e9">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
@@ -4366,7 +4519,7 @@ function renderProjectSummary() {
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.category || '')}" oninput="updateCustomSummaryRow('${row.id}', 'category', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'category', this.value)" placeholder="类别" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.code || '')}" oninput="updateCustomSummaryRow('${row.id}', 'code', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'code', this.value)" placeholder="编码" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.model || '')}" oninput="updateCustomSummaryRow('${row.id}', 'model', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'model', this.value)" placeholder="型号/名称" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
-        <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.desc || '')}" oninput="updateCustomSummaryRow('${row.id}', 'desc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'desc', this.value)" placeholder="描述" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px"></td>
+        <td style="padding:8px;border:1px solid #ddd"><textarea rows="2" oninput="updateCustomSummaryRow('${row.id}', 'desc', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'desc', this.value)" placeholder="描述" style="border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px">${escapeHtml(row.desc || '')}</textarea></td>
         <td style="padding:8px;border:1px solid #ddd"><input type="number" value="${escapeHtml(row.qty || '')}" oninput="updateCustomSummaryRow('${row.id}', 'qty', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'qty', this.value)" min="0" step="0.01" style="width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
         <td style="padding:8px;border:1px solid #ddd"><input type="text" value="${escapeHtml(row.unit || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unit', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unit', this.value)" placeholder="单位" style="width:100%;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:center"></td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right">${showPrice ? `<input type="number" value="${escapeHtml(row.unitPrice || '')}" oninput="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value, false)" onchange="updateCustomSummaryRow('${row.id}', 'unitPrice', this.value)" min="0" step="0.01" style="width:78px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:12px;text-align:right">` : '-'}</td>
@@ -5268,9 +5421,10 @@ function calcAllBatteryConfig() {
     // 非标模式：使用手动输入的描述
     upsDesc = customUpsDesc || upsCapacity;
   } else {
-    // 标准模式：系列 + 容量
+    // 标准模式：优先使用产品数据库完整描述，缺失时再回退为系列 + 容量。
     const upsSeries = upsProduct ? (upsProduct['系列'] || '') : '';
-    upsDesc = upsSeries ? `${upsSeries} ${upsCapacity}` : upsCapacity;
+    const productDescription = String(upsProduct?.['描述'] || '').trim();
+    upsDesc = productDescription || (upsSeries ? `${upsSeries} ${upsCapacity}` : upsCapacity);
   }
 
   // 检测是否是祁连UM模块化UPS（仅标准模式）
