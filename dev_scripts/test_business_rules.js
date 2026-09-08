@@ -274,6 +274,20 @@ const aggregationContext = {
           qty: 36,
           unitPrice: 149500,
           note: "6台 × 6个/台",
+        }, {
+          key: "switchBox",
+          category: "电池开关箱/柜",
+          model: "750VDC 电池开关箱/柜",
+          desc: "合资开关 | 总开关:1600A 分开关:630A × 4路; UPS无中性线",
+          unit: "套",
+          qty: 6,
+        }, {
+          key: "batteryRack",
+          category: "电池架",
+          model: "电池架",
+          desc: "安装40节/架，电池型号：SPG12750b",
+          unit: "架",
+          qty: 24,
         }],
       },
       {
@@ -289,6 +303,39 @@ const aggregationContext = {
           qty: 16,
           unitPrice: 149500,
           note: "2台 × 8个/台",
+        }, {
+          key: "switchBox",
+          category: "电池开关箱/柜",
+          model: "750VDC 电池开关箱/柜",
+          desc: "合资开关 | 总开关:2000A 分开关:630A × 4路; UPS无中性线",
+          unit: "套",
+          qty: 2,
+        }, {
+          key: "batteryRack",
+          category: "电池架",
+          model: "电池架",
+          desc: "安装44节/架，电池型号：SPG12890b",
+          unit: "架",
+          qty: 8,
+        }],
+      },
+      {
+        id: "config-3",
+        name: "配置 3",
+        rows: [{
+          key: "switchBox",
+          category: "电池开关箱/柜",
+          model: "750VDC 电池开关箱/柜",
+          desc: "合资开关 | 总开关:1600A 分开关:630A × 4路; UPS无中性线",
+          unit: "套",
+          qty: 1,
+        }, {
+          key: "batteryRack",
+          category: "电池架",
+          model: "电池架",
+          desc: "安装40节/架，电池型号：SPG12750b",
+          unit: "架",
+          qty: 4,
         }],
       },
     ],
@@ -298,17 +345,36 @@ vm.createContext(aggregationContext);
 vm.runInContext([
   extractFunction("normalizeSummaryRow"),
   extractFunction("hashSummaryIdentity"),
+  extractFunction("getSavedSummaryAggregationIdentity"),
   "function getSavedUpsConfigurations() { return window.savedUpsConfigurations; }",
   extractFunction("collectSavedConfigurationRows"),
   "globalThis.aggregateRows = collectSavedConfigurationRows();",
 ].join("\n"), aggregationContext);
-assert.equal(aggregationContext.aggregateRows.length, 1, "相同功率模块必须合并为一行");
-assert.equal(aggregationContext.aggregateRows[0].qty, 52, "功率模块数量必须求和");
+assert.equal(aggregationContext.aggregateRows.length, 5, "不同规格的配置型物料必须拆行");
+const aggregatedModule = aggregationContext.aggregateRows.find(row => row.category === "功率模块");
+const aggregatedSwitches = aggregationContext.aggregateRows.filter(row => row.category === "电池开关箱/柜");
+const aggregatedRacks = aggregationContext.aggregateRows.filter(row => row.category === "电池架");
+assert.equal(aggregatedModule.qty, 52, "相同功率模块数量必须求和");
 assert.equal(
-  aggregationContext.aggregateRows[0].desc,
+  aggregatedModule.desc,
   "配置 1：每台6个模块（最多6个）\n配置 2：每台8个模块（最多8个）",
   "不同配置说明必须换行完整保留"
 );
+assert.equal(aggregatedSwitches.length, 2, "不同开关规格的电池开关柜不得合并");
+assert.equal(
+  aggregatedSwitches.find(row => row.desc.includes("1600A")).qty,
+  7,
+  "完全相同规格的电池开关柜才允许数量求和"
+);
+assert.equal(
+  aggregatedSwitches.find(row => row.desc.includes("2000A")).qty,
+  2,
+  "不同总开关规格的电池开关柜必须保留独立数量"
+);
+assert.equal(aggregatedRacks.length, 2, "不同装载节数或电池型号的电池架不得合并");
+assert.equal(aggregatedRacks.find(row => row.desc.includes("40节/架")).qty, 28, "相同电池架规格才允许数量求和");
+assert.equal(aggregatedRacks.find(row => row.desc.includes("44节/架")).qty, 8, "不同电池架规格必须保留独立数量");
+assert.equal(source.includes('summary-config-source'), false, "产品名称列不得重复显示配置来源");
 
 const summarySortContext = {};
 vm.createContext(summarySortContext);

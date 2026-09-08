@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.29";
+const APP_VERSION = "v1.8.30";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -124,7 +124,6 @@ document.addEventListener("DOMContentLoaded", function() {
   .multi-ups-card-actions .danger { color:#dc2626;border-color:#fecaca; }
   .multi-ups-save-btn { background:#0f8a5f !important; }
   .multi-ups-save-btn:hover { background:#0a704d !important; }
-  .summary-config-source { display:block;margin-top:3px;color:#64748b;font-size:10px;font-weight:500;line-height:1.35; }
   .ups-model-search { position:relative;display:flex;flex:1;min-width:0; }
   .ups-model-search-input { width:100%;min-width:0;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 40px 8px 12px;background:#fff;color:#172033;font-family:inherit;font-size:13px;transition:border-color .18s,box-shadow .18s; }
   .ups-model-search-input:focus { outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12); }
@@ -1190,7 +1189,7 @@ function checkAuth(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div>
           <div style="font-weight:600;color:#1a3a5c;font-size:16px">📋 项目配置汇总清单</div>
-          <div style="margin-top:3px;color:#64748b;font-size:11px">多套 UPS 的相同型号物料将自动合并数量，配置来源保留在备注中</div>
+          <div style="margin-top:3px;color:#64748b;font-size:11px">多套 UPS 仅在型号及配置规格均一致时合并数量，配置来源保留在备注中</div>
           <div class="summary-resize-hint">默认按 UPS、功率模块、电池、电池开关箱/柜、电池架、电池监控排序；拖动序号列“⠿”手柄可快速调整，上下箭头可微调</div>
           <div class="summary-resize-hint">左右拖动表头分隔线可调整列宽，双击恢复默认</div>
           <div class="summary-resize-hint">新增行支持 Excel 批量粘贴：复制单元格区域，点击起始单元格后按 Ctrl+V；超出行数自动新增，小计列自动跳过，描述框随内容自动增高</div>
@@ -3839,6 +3838,17 @@ function hashSummaryIdentity(value) {
   return (hash >>> 0).toString(36);
 }
 
+function getSavedSummaryAggregationIdentity(row) {
+  const category = String(row.category || '').trim();
+  const identityParts = [category, row.code, row.model, row.unit];
+  // 标准成品允许忽略“数量说明”合并，例如同一功率模块在不同配置中每台数量不同。
+  // 开关柜、电池架、非标及自定义物料的真实规格包含在描述中，描述不同绝不能合并。
+  const fixedCatalogCategories = ['UPS', 'UPS机框', '功率模块', '电池', '电池监控'];
+  if (!fixedCatalogCategories.includes(category)) identityParts.push(String(row.desc || '').trim());
+  identityParts.push(String(row.nonStandardDesc || '').trim());
+  return identityParts.join('|');
+}
+
 function collectSavedConfigurationRows() {
   const grouped = new Map();
   window.savedSummaryRowTargets = new Map();
@@ -3846,9 +3856,7 @@ function collectSavedConfigurationRows() {
     if (config.id === window.editingUpsConfigurationId) return;
     (config.rows || []).forEach(function(sourceRow) {
       const row = normalizeSummaryRow(sourceRow);
-      // 描述可能随配置数量变化（例如“每台6个/8个模块”），不能参与物料身份判断。
-      // 同一产品名称、编码、型号、单位视为同一物料，并汇总数量。
-      const identity = [row.category, row.code, row.model, row.unit].join('|');
+      const identity = getSavedSummaryAggregationIdentity(row);
       let entry = grouped.get(identity);
       if (!entry) {
         entry = {
@@ -4615,14 +4623,10 @@ function renderProjectSummary() {
   // 已保存的其他 UPS 配置：相同物料自动合并数量
   collectSavedConfigurationRows().forEach(function(row) {
     const subtotal = row.subtotal || 0;
-    const sourceText = (row.sourceNames || []).join('、');
     addSummaryRowBlock(row.key, subtotal, `
       <tr style="background:#f1f7ff">
         <td style="padding:8px;border:1px solid #ddd;text-align:center">${rowNumberToken}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:center">
-          ${escapeHtml(row.category || '')}
-          <span class="summary-config-source">${escapeHtml(sourceText)}</span>
-        </td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center">${escapeHtml(row.category || '')}</td>
         <td style="padding:8px;border:1px solid #ddd">${renderSummaryCodeCell(row.key, row.code || '')}</td>
         <td style="padding:8px;border:1px solid #ddd;font-weight:500">${escapeHtml(row.model || '')}</td>
         <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#666;white-space:normal;word-break:break-word">${escapeHtml(row.desc || '')}</td>
