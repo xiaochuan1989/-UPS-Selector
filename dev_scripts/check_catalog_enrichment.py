@@ -112,10 +112,12 @@ def main():
             errors.append(f"内置数据库未唯一命中：{item['model']}")
         if pair not in excel_pairs:
             errors.append(f"V8.0 速查表型号/描述未命中：{item['model']}")
-        codes = re.findall(r"\b\d{8}(?:-\d{2})?\b", item["code"])
+        codes = re.findall(r"\b\d{8}\b", item["code"])
         prices = re.findall(r"¥([\d,]+)", item["price"])
         if not codes or not prices:
             errors.append(f"编码或目录价格式无效：{item['model']}")
+        if not re.fullmatch(r"\d{8}(?:；\d{8})*", item["code"]):
+            errors.append(f"产品编码必须仅由 8 位数字组成：{item['model']} -> {item['code']}")
         if pdf_compact is not None:
             for code in codes:
                 if code not in pdf_compact:
@@ -123,7 +125,7 @@ def main():
             for price in prices:
                 if price.replace(",", "") not in pdf_compact:
                     errors.append(f"目录 PDF 未找到价格 {price}：{item['model']}")
-        if "模块" in item["code"] and not item["note"]:
+        if "模块" in item["price"] and not item["note"]:
             errors.append(f"组合式 UPS 缺少单价或缺项说明：{item['model']}")
         if len(codes) > 1 and not item["note"]:
             errors.append(f"多编码 UPS 缺少版本说明：{item['model']}")
@@ -159,6 +161,7 @@ def main():
     print(f"✅ 目录价对照校验通过：{len(enrichments)} 条数据库行，均唯一命中内置数据库与 V8.0 速查表")
     print("✅ 目录覆盖：" + "，".join(f"{name} {count} 条" for name, count in counts.items()))
     print("✅ 同型号多目录版本全部保留；PF0.9、锂电版和 BL5.0 专用版本未错误混入")
+    print("✅ 产品编码字段格式通过：仅含 PDF 原始 8 位数字，多编码使用中文分号分隔")
     if pdf_compact is None:
         print(f"⚠️ 未找到本地目录 PDF，已跳过 PDF 编码/价格原文核验：{CATALOG_PATH.name}")
     else:

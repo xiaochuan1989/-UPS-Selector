@@ -238,22 +238,22 @@ assert.equal(multiFrameModular.module, "祁连UM-1000TFL-M");
 assert.equal(multiFrameModular.maxModules, 6);
 
 const catalogDefaults = rules.getUpsCatalogSummaryDefaults({
-  "产品编码": "高效型机柜 01020393；标准型机柜 01020403；50kVA模块 01021107",
+  "产品编码": "01020393；01020403；01021107",
   "目录价": "高效型机柜 ¥373,330；标准型机柜 ¥327,980；50kVA模块 ¥82,690/个",
   "目录价备注": "保留两组机柜目录编码"
 }, modularFromSpace);
-assert.equal(catalogDefaults.frameCode, "高效型机柜 01020393；标准型机柜 01020403");
+assert.equal(catalogDefaults.frameCode, "01020393；01020403");
 assert.equal(catalogDefaults.framePrice, 0, "多机柜版本不能擅自选择单一价格");
-assert.equal(catalogDefaults.moduleCode, "50kVA模块 01021107");
+assert.equal(catalogDefaults.moduleCode, "01021107");
 assert.equal(catalogDefaults.modulePrice, 82690);
 assert.equal(catalogDefaults.note, "保留两组机柜目录编码");
 
 const multiFrameCatalogDefaults = rules.getUpsCatalogSummaryDefaults({
-  "产品编码": "维修旁路机柜 01021116；四开关机柜 01021117；100kVA模块 01021115",
+  "产品编码": "01021116；01021117；01021115",
   "目录价": "维修旁路机柜 ¥327,000；四开关机柜 ¥353,330；100kVA模块 ¥149,500/个",
 }, multiFrameModular);
-assert.equal(multiFrameCatalogDefaults.frameCode, "维修旁路机柜 01021116；四开关机柜 01021117");
-assert.equal(multiFrameCatalogDefaults.moduleCode, "100kVA模块 01021115");
+assert.equal(multiFrameCatalogDefaults.frameCode, "01021116；01021117");
+assert.equal(multiFrameCatalogDefaults.moduleCode, "01021115");
 assert.equal(multiFrameCatalogDefaults.modulePrice, 149500);
 
 const aggregationContext = {
