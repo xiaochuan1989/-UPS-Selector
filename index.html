@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.35";
+const APP_VERSION = "v1.8.36";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -261,12 +261,14 @@ document.addEventListener("DOMContentLoaded", function() {
   @media (max-height:760px) {
     .db-split-layout { height:560px; }
   }
-  #db-detail-modal { display:none;position:fixed;inset:0;z-index:1150;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.58); }
-  #db-detail-modal.is-open { display:flex; }
-  .db-detail-dialog { width:min(1120px,calc(100vw - 32px));max-height:min(900px,calc(100vh - 48px));display:flex;flex-direction:column;overflow:hidden;background:#f8fafc;border:1px solid rgba(255,255,255,.7);border-radius:16px;box-shadow:0 24px 70px rgba(15,23,42,.32); }
-  .db-detail-header { flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:22px 24px;background:#173a5e;color:#fff; }
+  #db-detail-modal { display:none;position:fixed;inset:0;z-index:1150;pointer-events:none; }
+  #db-detail-modal.is-open { display:block; }
+  .db-detail-dialog { position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(1540px,calc(100vw - 24px));height:min(940px,calc(100vh - 24px));min-width:min(760px,calc(100vw - 16px));min-height:min(480px,calc(100vh - 16px));max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);display:flex;flex-direction:column;overflow:hidden;resize:both;pointer-events:auto;background:#f8fafc;border:1px solid #b9c9db;border-radius:16px;box-shadow:0 24px 70px rgba(15,23,42,.42); }
+  .db-detail-header { flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:18px 22px;background:#173a5e;color:#fff;cursor:move;user-select:none;touch-action:none; }
+  .db-detail-header:active { cursor:grabbing; }
   .db-detail-heading { min-width:0; }
   .db-detail-eyebrow { display:flex;align-items:center;gap:7px;margin-bottom:8px;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:.08em; }
+  .db-detail-drag-hint { margin-left:8px;padding-left:10px;border-left:1px solid rgba(191,219,254,.45);font-weight:500;letter-spacing:0;opacity:.9; }
   .db-detail-title-line { display:flex;align-items:center;gap:10px;min-width:0; }
   .db-detail-series { flex:0 0 auto;padding:4px 9px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);font-size:12px;font-weight:700; }
   .db-detail-header h2 { min-width:0;margin:0;color:#fff;border:0;padding:0;font-size:24px;line-height:1.25;overflow-wrap:anywhere; }
@@ -288,20 +290,23 @@ document.addEventListener("DOMContentLoaded", function() {
   .db-detail-section-head-blue { color:#173a5e;background:#eef4fb;border-left:4px solid #2563eb; }
   .db-detail-section-head-green { color:#17603c;background:#edfbf3;border-left:4px solid #27ae60; }
   .db-detail-count { color:#64748b;font-size:11px;font-weight:600; }
-  .db-detail-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#e8edf3;border-top:1px solid #e8edf3; }
-  .db-detail-field { min-width:0;min-height:72px;padding:12px 14px;background:#fff; }
+  .db-detail-grid { display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:#e8edf3;border-top:1px solid #e8edf3; }
+  .db-detail-field { min-width:0;min-height:66px;padding:10px 12px;background:#fff; }
   .db-detail-label { color:#64748b;font-size:11px;font-weight:600;line-height:1.35;white-space:pre-line; }
   .db-detail-value { margin-top:6px;color:#0f172a;font-size:13px;font-weight:600;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap;user-select:text; }
   .db-detail-empty { padding:20px;color:#94a3b8;font-size:13px;text-align:center;background:#fff; }
-  body.db-detail-open { overflow:hidden; }
+  body.db-detail-dragging { cursor:grabbing;user-select:none; }
+  @media (max-width:1350px) {
+    .db-detail-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  }
   @media (max-width:900px) {
     .db-detail-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .db-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   }
   @media (max-width:560px) {
-    #db-detail-modal { padding:0;align-items:stretch; }
-    .db-detail-dialog { width:100%;max-height:none;border-radius:0; }
+    .db-detail-dialog { inset:0;width:100%;height:100%;min-width:0;min-height:0;max-height:none;transform:none;resize:none;border-radius:0; }
     .db-detail-header { padding:18px 16px; }
+    .db-detail-drag-hint { display:none; }
     .db-detail-title-line { align-items:flex-start;flex-direction:column;gap:7px; }
     .db-detail-header h2 { font-size:20px; }
     .db-detail-body { padding:15px 14px 20px; }
@@ -513,11 +518,11 @@ function checkAuth(){
     </div>
   </div>
 
-  <div id="db-detail-modal" aria-hidden="true" onclick="if(event.target===this)closeDatabaseProductDetail()">
-    <article class="db-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="db-detail-title" aria-describedby="db-detail-description">
-      <header class="db-detail-header">
+  <div id="db-detail-modal" aria-hidden="true">
+    <article class="db-detail-dialog" role="dialog" aria-modal="false" aria-labelledby="db-detail-title" aria-describedby="db-detail-description">
+      <header id="db-detail-drag-handle" class="db-detail-header" title="按住标题栏可拖动窗口">
         <div class="db-detail-heading">
-          <div class="db-detail-eyebrow"><i class="ti ti-chart-dots-3" aria-hidden="true"></i> UPS 型号数据全景</div>
+          <div class="db-detail-eyebrow"><i class="ti ti-chart-dots-3" aria-hidden="true"></i> UPS 型号数据全景 <span class="db-detail-drag-hint">↔ 拖动标题栏移动 · 页面仍可对照操作</span></div>
           <div class="db-detail-title-line">
             <span id="db-detail-series" class="db-detail-series"></span>
             <h2 id="db-detail-title"></h2>
@@ -1088,6 +1093,7 @@ function checkAuth(){
             <option value="yes">是（带中性线）</option>
             <option value="no">无（无中性线）</option>
           </select>
+          <div id="neutral-module-note" style="font-size:11px;color:#e65100;margin-top:4px">提示：50kVA 模块带中性线，100kVA 模块不带中性线</div>
         </div>
         <div class="field">
           <label>电池架含铜排</label>
@@ -1096,9 +1102,8 @@ function checkAuth(){
             <option value="yes">含连接铜排/电缆</option>
           </select>
         </div>
-        <div class="field" style="display:flex;align-items:center;gap:4px">
-          <label>电池开关</label>
-          <span class="tip-icon" title="重要提示：合资开关为施耐德/ABB/西门子等品牌，国产开关为良信/正泰/天正/德力西等品牌" style="cursor:help;color:#e65100;font-size:14px">❗</span>
+        <div class="field">
+          <label class="cost-impact-label">电池开关 <span id="switch-type-cost-impact" class="cost-impact-badge" title="合资或国产开关的选择会影响项目成本">⚠ 影响成本</span><span class="tip-icon" title="合资开关为施耐德/ABB/西门子等品牌，国产开关为良信/正泰/天正/德力西等品牌" style="cursor:help;color:#e65100;font-size:14px">❗</span></label>
           <select id="unified-switch-type">
             <option value="imported">合资开关</option>
             <option value="domestic">国产开关</option>
@@ -30642,6 +30647,61 @@ function buildRow(p, cols, kw, seriesClass) {
 
 let dbDetailLastFocus = null;
 
+function clampDatabaseDetailDialogPosition(dialog, left, top) {
+  const margin = 8;
+  return {
+    left: Math.min(Math.max(margin, left), Math.max(margin, window.innerWidth - dialog.offsetWidth - margin)),
+    top: Math.min(Math.max(margin, top), Math.max(margin, window.innerHeight - dialog.offsetHeight - margin))
+  };
+}
+
+function initDatabaseDetailDrag() {
+  const modal = document.getElementById('db-detail-modal');
+  const dialog = modal?.querySelector('.db-detail-dialog');
+  const handle = document.getElementById('db-detail-drag-handle');
+  if (!modal || !dialog || !handle || handle.dataset.dragReady === 'true') return;
+  handle.dataset.dragReady = 'true';
+
+  handle.addEventListener('pointerdown', function(event) {
+    if (event.button !== 0 || event.target.closest('button') || window.innerWidth <= 560) return;
+    const rect = dialog.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+    dialog.style.left = rect.left + 'px';
+    dialog.style.top = rect.top + 'px';
+    dialog.style.transform = 'none';
+    document.body.classList.add('db-detail-dragging');
+    event.preventDefault();
+
+    function moveDialog(moveEvent) {
+      const position = clampDatabaseDetailDialogPosition(dialog, moveEvent.clientX - offsetX, moveEvent.clientY - offsetY);
+      dialog.style.left = position.left + 'px';
+      dialog.style.top = position.top + 'px';
+    }
+
+    function stopDragging() {
+      document.body.classList.remove('db-detail-dragging');
+      document.removeEventListener('pointermove', moveDialog);
+      document.removeEventListener('pointerup', stopDragging);
+      document.removeEventListener('pointercancel', stopDragging);
+    }
+
+    document.addEventListener('pointermove', moveDialog);
+    document.addEventListener('pointerup', stopDragging);
+    document.addEventListener('pointercancel', stopDragging);
+  });
+
+  window.addEventListener('resize', function() {
+    if (!modal.classList.contains('is-open') || dialog.style.transform !== 'none') return;
+    const rect = dialog.getBoundingClientRect();
+    const position = clampDatabaseDetailDialogPosition(dialog, rect.left, rect.top);
+    dialog.style.left = position.left + 'px';
+    dialog.style.top = position.top + 'px';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initDatabaseDetailDrag);
+
 function hasDatabaseDetailValue(value) {
   return value !== null && value !== undefined && String(value).trim() !== '';
 }
@@ -30708,7 +30768,6 @@ function openDatabaseProductDetail(product) {
   syncDatabaseSelectedRows(product['型号']);
   modal.classList.add('is-open');
   modal.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('db-detail-open');
   requestAnimationFrame(function() { document.getElementById('db-detail-close').focus({ preventScroll: true }); });
 }
 
@@ -30717,7 +30776,6 @@ function closeDatabaseProductDetail() {
   if (!modal || !modal.classList.contains('is-open')) return;
   modal.classList.remove('is-open');
   modal.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('db-detail-open');
   if (dbDetailLastFocus && document.contains(dbDetailLastFocus)) dbDetailLastFocus.focus({ preventScroll: true });
   dbDetailCurrentProduct = null;
 }
@@ -30728,18 +30786,6 @@ document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
     closeDatabaseProductDetail();
     return;
-  }
-  if (event.key === 'Tab') {
-    const focusable = [
-      document.getElementById('db-detail-favorite'),
-      document.getElementById('db-detail-close')
-    ].filter(Boolean);
-    const currentIndex = focusable.indexOf(document.activeElement);
-    const nextIndex = event.shiftKey
-      ? (currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1)
-      : (currentIndex >= focusable.length - 1 ? 0 : currentIndex + 1);
-    event.preventDefault();
-    focusable[nextIndex].focus({ preventScroll: true });
   }
 });
 
