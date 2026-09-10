@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.36";
+const APP_VERSION = "v1.8.37";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -276,8 +276,8 @@ document.addEventListener("DOMContentLoaded", function() {
   .db-detail-close { flex:0 0 auto;width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.25);border-radius:9px;background:rgba(255,255,255,.08);color:#fff;font-size:21px;cursor:pointer; }
   .db-detail-close:hover,.db-detail-close:focus-visible { background:rgba(255,255,255,.2);outline:2px solid #bfdbfe;outline-offset:2px; }
   .db-detail-actions { flex:0 0 auto;display:flex;align-items:center;gap:8px; }
-  .db-detail-favorite { min-height:38px;display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid rgba(255,255,255,.3);border-radius:9px;background:rgba(255,255,255,.08);color:#fff;font-size:12px;font-weight:700;cursor:pointer; }
-  .db-detail-favorite:hover,.db-detail-favorite:focus-visible { background:rgba(255,255,255,.2);outline:2px solid #bfdbfe;outline-offset:2px; }
+  .db-detail-favorite,.db-detail-popout { min-height:38px;display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid rgba(255,255,255,.3);border-radius:9px;background:rgba(255,255,255,.08);color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap; }
+  .db-detail-favorite:hover,.db-detail-favorite:focus-visible,.db-detail-popout:hover,.db-detail-popout:focus-visible { background:rgba(255,255,255,.2);outline:2px solid #bfdbfe;outline-offset:2px; }
   .db-detail-favorite.is-favorite { border-color:#f8d66d;background:#fff4cc;color:#7a4d00; }
   .db-detail-body { overflow:auto;padding:20px 24px 26px; }
   .db-detail-summary { display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px; }
@@ -522,7 +522,7 @@ function checkAuth(){
     <article class="db-detail-dialog" role="dialog" aria-modal="false" aria-labelledby="db-detail-title" aria-describedby="db-detail-description">
       <header id="db-detail-drag-handle" class="db-detail-header" title="按住标题栏可拖动窗口">
         <div class="db-detail-heading">
-          <div class="db-detail-eyebrow"><i class="ti ti-chart-dots-3" aria-hidden="true"></i> UPS 型号数据全景 <span class="db-detail-drag-hint">↔ 拖动标题栏移动 · 页面仍可对照操作</span></div>
+          <div class="db-detail-eyebrow"><i class="ti ti-chart-dots-3" aria-hidden="true"></i> UPS 型号数据全景 <span class="db-detail-drag-hint">↔ 拖动标题栏 · ↘ 右下角调整大小 · ↗ 独立窗口可跨屏</span></div>
           <div class="db-detail-title-line">
             <span id="db-detail-series" class="db-detail-series"></span>
             <h2 id="db-detail-title"></h2>
@@ -530,6 +530,7 @@ function checkAuth(){
           <p id="db-detail-description" class="db-detail-description"></p>
         </div>
         <div class="db-detail-actions">
+          <button id="db-detail-popout" class="db-detail-popout" type="button" title="打开浏览器独立窗口，可从上下左右边缘调整大小并拖到另一台显示器" onclick="openDatabaseProductPopout()"><i class="ti ti-external-link" aria-hidden="true"></i><span>独立窗口</span></button>
           <button id="db-detail-favorite" class="db-detail-favorite" type="button" aria-pressed="false" onclick="toggleCurrentDatabaseFavorite()"><span aria-hidden="true">☆</span><span>收藏型号</span></button>
           <button id="db-detail-close" class="db-detail-close" type="button" aria-label="关闭型号详情" title="关闭" onclick="closeDatabaseProductDetail()"><i class="ti ti-x" aria-hidden="true"></i></button>
         </div>
@@ -30646,6 +30647,7 @@ function buildRow(p, cols, kw, seriesClass) {
 }
 
 let dbDetailLastFocus = null;
+let dbDetailPopoutWindow = null;
 
 function clampDatabaseDetailDialogPosition(dialog, left, top) {
   const margin = 8;
@@ -30749,12 +30751,84 @@ function syncDatabaseSelectedRows(model) {
   });
 }
 
+function buildDatabaseProductPopoutFields(product, columns, excludedColumns) {
+  const fields = columns.filter(function(column) {
+    return !excludedColumns.has(column) && hasDatabaseDetailValue(product[column]);
+  });
+  if (!fields.length) return '<div class="empty">该型号暂无此类数据</div>';
+  return fields.map(function(column) {
+    const value = column === '产品编码' ? formatUpsCatalogCodeDisplay(product) : product[column];
+    return `<div class="field"><div class="label">${escapeHtml(normalizeDatabaseDetailLabel(column))}</div><div class="value">${escapeHtml(String(value))}</div></div>`;
+  }).join('');
+}
+
+function buildDatabaseProductPopoutHtml(product) {
+  const summaryColumns = ['功率因数','满载效率','安装','并机数量','电池','高度'];
+  const summaryHtml = summaryColumns.filter(function(column) {
+    return hasDatabaseDetailValue(product[column]);
+  }).map(function(column) {
+    return `<div class="summary-card"><div class="label">${escapeHtml(column)}</div><div class="summary-value">${escapeHtml(String(product[column]))}</div></div>`;
+  }).join('');
+  const productFields = buildDatabaseProductPopoutFields(product, dbTopCols, new Set(['系列','型号','描述']));
+  const techFields = buildDatabaseProductPopoutFields(product, dbBotCols, new Set(['系列','型号']));
+  const productCount = dbTopCols.filter(column => !new Set(['系列','型号','描述']).has(column) && hasDatabaseDetailValue(product[column])).length;
+  const techCount = dbBotCols.filter(column => !new Set(['系列','型号']).has(column) && hasDatabaseDetailValue(product[column])).length;
+  return `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${escapeHtml(product['型号'] || 'UPS产品')} - 产品数据</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef3f8;color:#0f172a;font-family:"Microsoft YaHei","Segoe UI",sans-serif;font-size:13px}.header{position:sticky;top:0;z-index:2;padding:18px 24px;background:#173a5e;color:#fff;box-shadow:0 4px 18px rgba(15,23,42,.22)}.topline{display:flex;align-items:center;justify-content:space-between;gap:20px}.eyebrow{color:#bfdbfe;font-size:12px;font-weight:700}.window-tip{padding:5px 10px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);font-size:11px;white-space:nowrap}.title-line{display:flex;align-items:center;gap:10px;margin-top:8px}.series{padding:4px 9px;border:1px solid rgba(255,255,255,.3);border-radius:999px;background:rgba(255,255,255,.12);font-size:12px;font-weight:700}.title{margin:0;font-size:24px;overflow-wrap:anywhere}.desc{margin:8px 0 0;color:#dbeafe;line-height:1.6}.content{padding:20px 24px 28px}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.summary-card{padding:13px 14px;background:#fff;border:1px solid #dbe5ef;border-radius:10px;box-shadow:0 2px 7px rgba(15,23,42,.04)}.label{color:#64748b;font-size:11px;font-weight:600;line-height:1.35}.summary-value{margin-top:6px;color:#173a5e;font-size:15px;font-weight:700}.section{margin-top:14px;overflow:hidden;background:#fff;border:1px solid #dbe5ef;border-radius:12px}.section-head{display:flex;justify-content:space-between;gap:16px;padding:11px 14px;font-weight:800}.blue{color:#173a5e;background:#eef4fb;border-left:4px solid #2563eb}.green{color:#17603c;background:#edfbf3;border-left:4px solid #27ae60}.count{color:#64748b;font-size:11px}.grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:#e8edf3;border-top:1px solid #e8edf3}.field{min-width:0;min-height:66px;padding:10px 12px;background:#fff}.value{margin-top:6px;font-weight:600;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap;user-select:text}.empty{padding:20px;color:#94a3b8;text-align:center;background:#fff}.footer{padding:14px 24px;color:#64748b;font-size:11px;text-align:center}
+@media(max-width:1200px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:760px){.summary{grid-template-columns:repeat(3,minmax(0,1fr))}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.window-tip{white-space:normal}.content{padding:14px}.header{padding:16px}.title{font-size:20px}}
+</style></head><body>
+<header class="header"><div class="topline"><div class="eyebrow">UPS 型号数据全景 · 独立窗口</div><div class="window-tip">可拖到另一台显示器 · 上下左右边缘均可调整大小</div></div><div class="title-line"><span class="series">${escapeHtml(product['系列'] || 'UPS')}</span><h1 class="title">${escapeHtml(product['型号'] || '未命名型号')}</h1></div><p class="desc">${escapeHtml(product['描述'] || '暂无产品描述')}</p></header>
+<main class="content"><div class="summary">${summaryHtml}</div><section class="section"><div class="section-head blue"><span>📋 产品信息</span><span class="count">${productCount} 项</span></div><div class="grid">${productFields}</div></section><section class="section"><div class="section-head green"><span>🔧 技术规格（泰尔参数）</span><span class="count">${techCount} 项</span></div><div class="grid">${techFields}</div></section></main><footer class="footer">UPS 智能选型助手 ${escapeHtml(APP_VERSION)} · 主页面点击其他型号时本窗口自动更新</footer>
+</body></html>`;
+}
+
+function renderDatabaseProductPopout(product) {
+  if (!dbDetailPopoutWindow || dbDetailPopoutWindow.closed) return false;
+  try {
+    dbDetailPopoutWindow.document.open();
+    dbDetailPopoutWindow.document.write(buildDatabaseProductPopoutHtml(product));
+    dbDetailPopoutWindow.document.close();
+    return true;
+  } catch (error) {
+    dbDetailPopoutWindow = null;
+    return false;
+  }
+}
+
+function openDatabaseProductPopout() {
+  if (!dbDetailCurrentProduct) return;
+  const product = dbDetailCurrentProduct;
+  const popupWidth = Math.min(1500, Math.max(900, screen.availWidth - 120));
+  const popupHeight = Math.min(920, Math.max(650, screen.availHeight - 120));
+  const popupLeft = Math.max(0, window.screenX + Math.round((window.outerWidth - popupWidth) / 2));
+  const popupTop = Math.max(0, window.screenY + Math.round((window.outerHeight - popupHeight) / 2));
+  if (!dbDetailPopoutWindow || dbDetailPopoutWindow.closed) {
+    dbDetailPopoutWindow = window.open('', 'ups-product-detail-window', `popup=yes,width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop},resizable=yes,scrollbars=yes`);
+  }
+  if (!dbDetailPopoutWindow) {
+    alert('独立窗口被浏览器拦截，请允许此网站打开弹出式窗口后重试。');
+    return;
+  }
+  renderDatabaseProductPopout(product);
+  const modal = document.getElementById('db-detail-modal');
+  modal?.classList.remove('is-open');
+  modal?.setAttribute('aria-hidden', 'true');
+  dbDetailCurrentProduct = product;
+  syncDatabaseSelectedRows(product['型号']);
+  dbDetailPopoutWindow.focus();
+}
+
 function openDatabaseProductDetail(product) {
   if (!product) return;
-  const modal = document.getElementById('db-detail-modal');
-  const summary = document.getElementById('db-detail-summary');
   dbDetailCurrentProduct = product;
   dbDetailLastFocus = document.activeElement;
+  syncDatabaseSelectedRows(product['型号']);
+  if (dbDetailPopoutWindow && !dbDetailPopoutWindow.closed && renderDatabaseProductPopout(product)) return;
+  const modal = document.getElementById('db-detail-modal');
+  const summary = document.getElementById('db-detail-summary');
   document.getElementById('db-detail-series').textContent = product['系列'] || 'UPS';
   document.getElementById('db-detail-title').textContent = product['型号'] || '未命名型号';
   document.getElementById('db-detail-description').textContent = product['描述'] || '暂无产品描述';
@@ -30765,7 +30839,6 @@ function openDatabaseProductDetail(product) {
   renderDatabaseDetailSection('db-detail-product-grid', 'db-detail-product-count', product, dbTopCols, new Set(['系列','型号','描述']));
   renderDatabaseDetailSection('db-detail-tech-grid', 'db-detail-tech-count', product, dbBotCols, new Set(['系列','型号']));
   updateDatabaseDetailFavoriteButton(product['型号']);
-  syncDatabaseSelectedRows(product['型号']);
   modal.classList.add('is-open');
   modal.setAttribute('aria-hidden', 'false');
   requestAnimationFrame(function() { document.getElementById('db-detail-close').focus({ preventScroll: true }); });
