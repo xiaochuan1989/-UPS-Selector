@@ -49,6 +49,8 @@ checks = [
     ('监控主机显示屏计算方式下拉框', 'id="unified-monitor-basis"'),
     ('监控主机显示屏按组数或UPS台数计算', 'function getMonitorHostCalculation'),
     ('监控计算方式随配置保存', "'unified-switch-basis', 'unified-monitor-basis'"),
+    ('开关计算成本影响提示', 'id="switch-cost-impact"'),
+    ('监控数量成本影响提示', 'id="monitor-cost-impact"'),
     ('已有结果切换型号自动重算', 'if (window.projectSummary?.generatedAt) calcAllBatteryConfig();'),
     ('配置参数修改提示重算', 'function markUnifiedConfigurationDirty'),
     ('UPS目录字段进入汇总', 'function getUpsCatalogSummaryDefaults'),

@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.34";
+const APP_VERSION = "v1.8.35";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -151,6 +151,8 @@ document.addEventListener("DOMContentLoaded", function() {
   .api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
   .api-grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; align-items: end; margin-top: 12px; }
   .field label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 500; }
+  .field label.cost-impact-label { display: flex; align-items: center; gap: 6px; }
+  .cost-impact-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border: 1px solid #ffb74d; border-radius: 999px; background: #fff3e0; color: #e65100; font-size: 10px; font-weight: 700; line-height: 1.5; cursor: help; }
   .field input, .field select { width: 100%; border: 1.5px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; font-size: 14px; transition: border-color 0.2s; }
   .field input:focus, .field select:focus { outline: none; border-color: #2563eb; }
   .field input[type="password"] { font-family: monospace; }
@@ -1103,7 +1105,7 @@ function checkAuth(){
           </select>
         </div>
         <div class="field">
-          <label>开关电流计算依据</label>
+          <label class="cost-impact-label">开关电流计算依据 <span id="switch-cost-impact" class="cost-impact-badge" title="该选项会影响开关箱、电流传感器及配套连接的规格和项目成本">⚠ 影响成本</span></label>
           <select id="unified-switch-basis">
             <option value="ups" selected>UPS容量 × 功率因数</option>
             <option value="load">负载功率</option>
@@ -1111,7 +1113,7 @@ function checkAuth(){
           <div style="font-size:11px;color:#888;margin-top:4px">影响开关箱、电流传感器及配套连接电流等级</div>
         </div>
         <div class="field">
-          <label>监控主机/显示屏数量</label>
+          <label class="cost-impact-label">监控主机/显示屏数量 <span id="monitor-cost-impact" class="cost-impact-badge" title="该选项会影响监控主机、显示屏的配置数量和项目成本">⚠ 影响成本</span></label>
           <select id="unified-monitor-basis">
             <option value="groups" selected>按总电池组数（每6组1套）</option>
             <option value="ups">按UPS台数（每台1套）</option>
