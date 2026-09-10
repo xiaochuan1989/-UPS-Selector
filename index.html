@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.31";
+const APP_VERSION = "v1.8.32";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -987,9 +987,9 @@ function checkAuth(){
         </div>
         <!-- 标准模式：从数据表选择 -->
         <div id="ups-standard-area" style="display:flex;align-items:center;gap:12px">
-          <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap">⚡ UPS型号：</label>
+          <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap">⚡ UPS型号（选填）：</label>
           <div id="ups-model-search" class="ups-model-search">
-            <input type="text" id="unified-ups-model" class="ups-model-search-input" placeholder="输入型号关键字，如 600、UR、昆仑" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ups-model-search-results" onfocus="openUpsModelSearchResults()" oninput="handleUpsModelSearchInput()" onkeydown="handleUpsModelSearchKeydown(event)">
+            <input type="text" id="unified-ups-model" class="ups-model-search-input" placeholder="选填；输入型号关键字，如 600、UR、昆仑" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ups-model-search-results" onfocus="openUpsModelSearchResults()" oninput="handleUpsModelSearchInput()" onkeydown="handleUpsModelSearchKeydown(event)">
             <button type="button" class="ups-model-search-toggle" onclick="toggleUpsModelSearchResults()" aria-label="展开全部 UPS 型号" title="展开全部 UPS 型号"><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
             <div id="ups-model-search-results" class="ups-model-search-results" role="listbox" hidden></div>
           </div>
@@ -999,8 +999,8 @@ function checkAuth(){
         <!-- 非标模式：手动输入 -->
         <div id="ups-custom-area" style="display:none">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-            <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap;width:80px">UPS型号：</label>
-            <input type="text" id="custom-ups-model" placeholder="请输入非标UPS型号" style="flex:1;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 12px;font-size:13px">
+            <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap;width:110px">UPS型号（选填）：</label>
+            <input type="text" id="custom-ups-model" placeholder="选填；请输入非标UPS型号" style="flex:1;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 12px;font-size:13px">
           </div>
           <div style="display:flex;align-items:center;gap:12px">
             <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap;width:80px">UPS描述：</label>
@@ -5428,6 +5428,13 @@ function fillUpsFromSelection() {
 }
 
 // ==================== UPS 与电池配置计算 ====================
+function getUpsCalculationModelError(upsType, upsModel, upsProduct) {
+  if (upsType === 'standard' && upsModel && !upsProduct) {
+    return '请从匹配结果中选择完整的 UPS 型号，再计算当前配置';
+  }
+  return '';
+}
+
 /**
  * UPS与电池配置统一计算函数
  *
@@ -5482,20 +5489,13 @@ function calcAllBatteryConfig() {
   const optVm = document.getElementById('unified-opt-vm').checked;
 
   // ===== 输入验证 =====
-  if (upsType === 'standard' && !upsModel) {
-    alert('请先选择 UPS 型号，再计算当前配置');
-    document.getElementById('unified-ups-model')?.focus();
-    return false;
-  }
-  if (upsType === 'standard' && !upsProduct) {
-    alert('请从匹配结果中选择完整的 UPS 型号，再计算当前配置');
+  // UPS 型号不是容量/电池计算的必要参数；留空时按手动输入的容量或负载计算。
+  // 若已输入标准型号，仍要求从产品库选择完整型号，避免把搜索关键字写入汇总。
+  const upsModelError = getUpsCalculationModelError(upsType, upsModel, upsProduct);
+  if (upsModelError) {
+    alert(upsModelError);
     renderUpsModelSearchResults(upsModel);
     document.getElementById('unified-ups-model')?.focus();
-    return false;
-  }
-  // 非标模式必须输入型号
-  if (upsType === 'custom' && !upsModel) {
-    alert('非标模式请输入UPS型号');
     return false;
   }
   if (upsCap <= 0 && loadKw <= 0) {

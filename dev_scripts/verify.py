@@ -44,7 +44,7 @@ checks = [
     ('UPS型号实时过滤', 'function getFilteredUpsModels'),
     ('UPS型号键盘选择', 'function handleUpsModelSearchKeydown'),
     ('UPS型号必须完整选择', '请从匹配结果中选择完整的 UPS 型号'),
-    ('UPS计算前必须选择型号', '请先选择 UPS 型号，再计算当前配置'),
+    ('空UPS型号允许计算', 'function getUpsCalculationModelError'),
     ('已有结果切换型号自动重算', 'if (window.projectSummary?.generatedAt) calcAllBatteryConfig();'),
     ('配置参数修改提示重算', 'function markUnifiedConfigurationDirty'),
     ('UPS目录字段进入汇总', 'function getUpsCatalogSummaryDefaults'),

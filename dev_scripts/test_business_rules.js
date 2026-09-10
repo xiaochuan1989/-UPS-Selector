@@ -115,6 +115,7 @@ const names = [
   "getUpsProductType",
   "parseModularUpsModel",
   "getUpsCatalogSummaryDefaults",
+  "getUpsCalculationModelError",
 ];
 const program = [
   extractConst("STANDARD_BREAKER_SIZES"),
@@ -127,6 +128,11 @@ const context = {};
 vm.createContext(context);
 vm.runInContext(program, context);
 const rules = context.rules;
+
+assert.equal(rules.getUpsCalculationModelError("standard", "", null), "");
+assert.equal(rules.getUpsCalculationModelError("custom", "", null), "");
+assert.equal(rules.getUpsCalculationModelError("standard", "600", null), "请从匹配结果中选择完整的 UPS 型号，再计算当前配置");
+assert.equal(rules.getUpsCalculationModelError("standard", "太行 UR-0600TPL", { 型号: "太行 UR-0600TPL" }), "");
 
 assert.equal(rules.getNextBreakerSize(62), 63);
 assert.equal(rules.getNextBreakerSize(63), 80);
