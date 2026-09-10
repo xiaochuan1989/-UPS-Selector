@@ -32,6 +32,7 @@ checks = [
     ('持久化数据目录价回填', 'const catalogMatchCount = enrichProductsWithCatalog(PRODUCTS)'),
     ('目录价版本字段', 'product["目录价版本"] = "iTeaQ-2026-04-V1.0"'),
     ('产品编码仅保留8位数字', '产品编码列只保存 PDF 中的 8 位数字'),
+    ('产品编码区分机柜与功率模块', 'function formatUpsCatalogCodeDisplay'),
     ('收藏筛选逻辑', "dbFavoritesOnly && !isDatabaseFavorite"),
     ('详情卡片收藏入口', 'id="db-detail-favorite"'),
     ('文字选择不触发行详情', 'selection && !selection.isCollapsed'),

@@ -116,6 +116,8 @@ const names = [
   "parseModularUpsModel",
   "getUpsCatalogSummaryDefaults",
   "getUpsCalculationModelError",
+  "getUpsCatalogCodeDisplayEntries",
+  "formatUpsCatalogCodeDisplay",
 ];
 const program = [
   extractConst("STANDARD_BREAKER_SIZES"),
@@ -133,6 +135,13 @@ assert.equal(rules.getUpsCalculationModelError("standard", "", null), "");
 assert.equal(rules.getUpsCalculationModelError("custom", "", null), "");
 assert.equal(rules.getUpsCalculationModelError("standard", "600", null), "请从匹配结果中选择完整的 UPS 型号，再计算当前配置");
 assert.equal(rules.getUpsCalculationModelError("standard", "太行 UR-0600TPL", { 型号: "太行 UR-0600TPL" }), "");
+
+const labeledCatalogCodes = rules.formatUpsCatalogCodeDisplay({
+  "产品编码": "01020391；01020401；01021107",
+  "目录价": "高效型机柜 ¥265,940；标准型机柜 ¥233,590；50kVA模块 ¥82,690/个",
+});
+assert.equal(labeledCatalogCodes, "高效型机柜：01020391\n标准型机柜：01020401\n50kVA功率模块：01021107");
+assert.equal(rules.formatUpsCatalogCodeDisplay({ "产品编码": "01020446" }), "01020446");
 
 assert.equal(rules.getNextBreakerSize(62), 63);
 assert.equal(rules.getNextBreakerSize(63), 80);

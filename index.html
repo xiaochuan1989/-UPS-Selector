@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.32";
+const APP_VERSION = "v1.8.33";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -218,6 +218,7 @@ document.addEventListener("DOMContentLoaded", function() {
   #db-table-bot th:hover { background:#27ae60; }
   #db-table-top,#db-table-bot { table-layout:fixed;min-width:100%; }
   #db-table-top td,#db-table-bot td { padding:7px 12px;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis; }
+  #db-table-top td.db-catalog-code-cell { white-space:pre-line;line-height:1.55;overflow:visible;text-overflow:clip;font-variant-numeric:tabular-nums; }
   .db-col-resizer { position:absolute;top:0;right:0;bottom:0;width:14px;z-index:4;cursor:col-resize;touch-action:none; }
   .db-col-resizer::after { content:"";position:absolute;top:5px;right:0;bottom:5px;width:2px;border-radius:2px;background:rgba(255,255,255,.32);transition:background-color .15s,box-shadow .15s; }
   .db-col-resizer:hover::after,.db-col-resizer:focus-visible::after,.db-col-resizer.is-resizing::after { background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.28); }
@@ -2030,6 +2031,26 @@ function getUpsCatalogSummaryDefaults(product, modularInfo) {
     modulePrice: modulePrices.length === 1 ? readPrice(modulePrices[0]) : 0,
     note
   };
+}
+
+function getUpsCatalogCodeDisplayEntries(product) {
+  const codes = String(product?.['产品编码'] || '').split(/[；;]/).map(item => item.trim()).filter(Boolean);
+  const priceParts = String(product?.['目录价'] || '').split(/[；;]/).map(item => item.trim());
+  return codes.map(function(code, index) {
+    const pricePart = priceParts[index] || '';
+    const labelMatch = pricePart.match(/^(.+?)(?=\s*¥)/);
+    let label = labelMatch ? labelMatch[1].trim() : '';
+    if (label && /模块/.test(label) && !/功率模块/.test(label)) {
+      label = label.replace(/模块/g, '功率模块');
+    }
+    return { code, label };
+  });
+}
+
+function formatUpsCatalogCodeDisplay(product) {
+  return getUpsCatalogCodeDisplayEntries(product).map(function(item) {
+    return item.label ? item.label + '：' + item.code : item.code;
+  }).join('\n');
 }
 
 let allRecsCache = [];
@@ -30547,7 +30568,9 @@ function buildRow(p, cols, kw, seriesClass) {
   cols.forEach(col => {
     const td = document.createElement("td");
     const val = String(p[col] || "");
-    td.title = val;
+    const displayVal = col === '产品编码' ? formatUpsCatalogCodeDisplay(p) : val;
+    td.title = displayVal;
+    if (col === '产品编码') td.classList.add('db-catalog-code-cell');
     if (col === '型号') {
       const favoriteButton = document.createElement('button');
       const favorite = isDatabaseFavorite(p['型号']);
@@ -30561,7 +30584,7 @@ function buildRow(p, cols, kw, seriesClass) {
       favoriteButton.addEventListener('keydown', function(event) { event.stopPropagation(); });
       td.appendChild(favoriteButton);
     }
-    appendHighlightedDatabaseValue(td, val, kw);
+    appendHighlightedDatabaseValue(td, displayVal, kw);
     tr.appendChild(td);
   });
   tr.addEventListener('click', function() {
@@ -30611,7 +30634,8 @@ function renderDatabaseDetailSection(containerId, countId, product, columns, exc
     return !excludedColumns.has(column) && hasDatabaseDetailValue(product[column]);
   });
   fields.forEach(function(column) {
-    appendDatabaseDetailField(container, column, product[column], false);
+    const value = column === '产品编码' ? formatUpsCatalogCodeDisplay(product) : product[column];
+    appendDatabaseDetailField(container, column, value, false);
   });
   document.getElementById(countId).textContent = fields.length + ' 项';
   if (!fields.length) {
