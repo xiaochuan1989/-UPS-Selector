@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.33";
+const APP_VERSION = "v1.8.34";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -1110,6 +1110,14 @@ function checkAuth(){
           </select>
           <div style="font-size:11px;color:#888;margin-top:4px">影响开关箱、电流传感器及配套连接电流等级</div>
         </div>
+        <div class="field">
+          <label>监控主机/显示屏数量</label>
+          <select id="unified-monitor-basis">
+            <option value="groups" selected>按总电池组数（每6组1套）</option>
+            <option value="ups">按UPS台数（每台1套）</option>
+          </select>
+          <div style="font-size:11px;color:#888;margin-top:4px">仅影响监控主机和已勾选的显示屏数量</div>
+        </div>
       </div>
       <div style="margin-top:10px">
         <button class="save-btn" onclick="calcAllBatteryConfig()" style="padding:12px 24px"><i class="ti ti-calculator" aria-hidden="true"></i> 计算当前配置</button>
@@ -1138,7 +1146,7 @@ function checkAuth(){
         </table>
         <div style="font-weight:600;color:#7b1fa2;margin-bottom:10px">📡 监控配置规则</div>
         <table style="width:100%;border-collapse:collapse">
-          <tr style="background:#f3e5f5"><td style="padding:6px 10px;border:1px solid #ce93d8;font-weight:500">监控主机</td><td style="padding:6px 10px;border:1px solid #ce93d8">每6组电池配1台主机（向上取整）</td></tr>
+          <tr style="background:#f3e5f5"><td style="padding:6px 10px;border:1px solid #ce93d8;font-weight:500">监控主机/显示屏</td><td style="padding:6px 10px;border:1px solid #ce93d8">可选择按总电池组数配置（每6组1套，向上取整），或按UPS台数配置（每台UPS独立1套）；显示屏仅在勾选时计入</td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #ce93d8;font-weight:500">电流传感器</td><td style="padding:6px 10px;border:1px solid #ce93d8">每组电池1个，量程根据<b>分开关电流</b>选择（保守设计）</td></tr>
           <tr><td style="padding:6px 10px;border:1px solid #ce93d8;font-weight:500">单体测量模块</td><td style="padding:6px 10px;border:1px solid #ce93d8">每只电池配1个</td></tr>
         </table>
@@ -3521,7 +3529,7 @@ function createEmptyProjectSummary(preserve) {
     battery: { code: '', model: '', capacity: '', cellsPerGroup: 0, groups: 0, groupsPerUps: 0, totalGroups: 0, upsNum: 0, totalCells: 0, price: 0, note: '', nonStandardDesc: '', customModel: '', customDesc: '' },
     switchBox: { code: '', model: '', voltLevel: '', mainSwitch: '', subSwitch: '', subSwitchQty: 0, qty: 0, price: 0, neutralLine: '', switchType: 'imported', currentBasis: 'ups', calculationPowerKw: 0, note: '', nonStandardDesc: '' },
     batteryRack: { code: '', model: '', cellsPerRack: 0, batteryModel: '', includeCable: false, cableAmp: '', qty: 0, price: 0, note: '', nonStandardDesc: '' },
-    monitor: { config: [] },
+    monitor: { config: [], basis: 'groups', hostQty: 0 },
     customRows: Array.isArray(carried.customRows) ? carried.customRows : [],
     rowOrder: Array.isArray(carried.rowOrder) ? carried.rowOrder : [],
     rowOrderCustomized: carried.rowOrderCustomized === true,
@@ -3540,7 +3548,7 @@ const UNIFIED_CONFIG_FIELD_IDS = [
   'unified-ups-cap', 'unified-ups-num', 'unified-pf', 'unified-cells', 'unified-groups',
   'unified-batt-type', 'unified-discharge-time', 'unified-end-v', 'unified-eff',
   'unified-terminal', 'unified-neutral', 'unified-rack-cable', 'unified-switch-type',
-  'unified-switch-basis'
+  'unified-switch-basis', 'unified-monitor-basis'
 ];
 
 function cloneProjectData(value) {
@@ -5123,6 +5131,29 @@ function getBatteryMonitorSlaveCode(battType) {
   return isTwoVoltBatteryType(battType) ? '88091146' : '88091145';
 }
 
+function getMonitorHostCalculation({ basis, totalGroups, upsNum }) {
+  if (!Number.isFinite(totalGroups) || totalGroups < 1 || !Number.isFinite(upsNum) || upsNum < 1) {
+    throw new RangeError('电池总组数和UPS台数必须是正数');
+  }
+  if (basis === 'ups') {
+    return {
+      basis,
+      qty: Math.ceil(upsNum),
+      label: '按UPS台数（每台1套）',
+      formula: `${Math.ceil(upsNum)}台UPS × 1套/台`
+    };
+  }
+  if (basis !== 'groups') {
+    throw new RangeError('未知的监控主机/显示屏计算方式');
+  }
+  return {
+    basis,
+    qty: Math.ceil(totalGroups / 6),
+    label: '按总电池组数（每6组1套）',
+    formula: `${Math.ceil(totalGroups)}组 ÷ 6组/套，向上取整`
+  };
+}
+
 function resolveSwitchCalculationPower({ basis, loadKw, upsCap, pf }) {
   if (basis === 'load') {
     if (!Number.isFinite(loadKw) || loadKw <= 0) {
@@ -5503,6 +5534,7 @@ function calcAllBatteryConfig() {
   const rackCable = document.getElementById('unified-rack-cable').value;  // 电池架含铜排: 'yes' 或 'no'
   const switchType = document.getElementById('unified-switch-type').value;  // 电池开关: 'imported' 或 'domestic'
   const switchBasis = document.getElementById('unified-switch-basis').value;  // 开关电流依据: 'ups' 或 'load'
+  const monitorBasis = document.getElementById('unified-monitor-basis')?.value || 'groups';  // 监控主机/显示屏依据: 'groups' 或 'ups'
   const dischargeTime = parseInt(document.getElementById('unified-discharge-time').value) || 15;
   const endV = parseFloat(document.getElementById('unified-end-v').value) || 1.75;
   const eff = parseFloat(document.getElementById('unified-eff').value) || 0.95;
@@ -5642,18 +5674,19 @@ function calcAllBatteryConfig() {
   document.getElementById('unified-switch-result').innerHTML = switchHtml;
 
   // ===== 3. 监控计算 =====
-  const hostQty = Math.ceil(totalGroups / 6);
+  const monitorHostCalculation = getMonitorHostCalculation({ basis: monitorBasis, totalGroups, upsNum });
+  const hostQty = monitorHostCalculation.qty;
   const monitorConfig = [];
   let monitorHtml = '';
 
   // 主机
   const host = MONITOR_PRODUCTS.find(p => p.code === '88091156');
-  monitorConfig.push({ ...host, qty: hostQty, total: hostQty * host.unitPrice, note: '必选' });
+  monitorConfig.push({ ...host, qty: hostQty, total: hostQty * host.unitPrice, note: `必选；${monitorHostCalculation.label}` });
 
   // HMI
   if (optHmi) {
     const hmi = MONITOR_PRODUCTS.find(p => p.code === '88091157');
-    monitorConfig.push({ ...hmi, qty: hostQty, total: hostQty * hmi.unitPrice, note: '选配' });
+    monitorConfig.push({ ...hmi, qty: hostQty, total: hostQty * hmi.unitPrice, note: `选配；${monitorHostCalculation.label}` });
   }
 
   // 电流监控
@@ -5687,7 +5720,9 @@ function calcAllBatteryConfig() {
     monitorConfig.push({ ...vm, qty: totalGroups, total: totalGroups * vm.unitPrice, note: '选配' });
   }
 
-  monitorHtml = `<div style="max-height:200px;overflow-y:auto">`;
+  monitorHtml = `<div style="margin-bottom:8px;padding:6px;background:#f3e5f5;border-radius:4px;font-size:11px;color:#6a1b9a">
+    主机/显示屏：<b>${monitorHostCalculation.label}</b><br>${monitorHostCalculation.formula}
+  </div><div style="max-height:200px;overflow-y:auto">`;
   monitorConfig.forEach(item => {
     monitorHtml += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #ddd">
       <span>${item.name}</span><span><b>${item.qty}</b>个</span>
@@ -5789,7 +5824,7 @@ function calcAllBatteryConfig() {
       note: '',
       nonStandardDesc: previousSummary.batteryRack?.nonStandardDesc || ''
     },
-    monitor: { config: monitorConfig },
+    monitor: { config: monitorConfig, basis: monitorBasis, hostQty },
     customRows,
     rowOrder,
     rowOrderCustomized: previousSummary.rowOrderCustomized === true,

@@ -108,6 +108,7 @@ const names = [
   "isTwoVoltBatteryType",
   "getBatteryCellMultiplier",
   "getBatteryMonitorSlaveCode",
+  "getMonitorHostCalculation",
   "resolveSwitchCalculationPower",
   "calculateBatteryElectricals",
   "selectCurrentSensor",
@@ -162,6 +163,19 @@ assert.equal(rules.getBatteryCellMultiplier("custom"), 6);
 assert.equal(rules.getBatteryMonitorSlaveCode("jyc2v"), "88091146");
 assert.equal(rules.getBatteryMonitorSlaveCode("jyc2vhr"), "88091146");
 assert.equal(rules.getBatteryMonitorSlaveCode("jyc"), "88091145");
+
+const monitorByGroups = rules.getMonitorHostCalculation({ basis: "groups", totalGroups: 4, upsNum: 2 });
+assert.equal(monitorByGroups.qty, 1);
+assert.equal(monitorByGroups.label, "按总电池组数（每6组1套）");
+assert.equal(rules.getMonitorHostCalculation({ basis: "groups", totalGroups: 7, upsNum: 2 }).qty, 2);
+const monitorByUps = rules.getMonitorHostCalculation({ basis: "ups", totalGroups: 4, upsNum: 2 });
+assert.equal(monitorByUps.qty, 2);
+assert.equal(monitorByUps.formula, "2台UPS × 1套/台");
+assert.equal(rules.getMonitorHostCalculation({ basis: "ups", totalGroups: 20, upsNum: 3 }).qty, 3);
+assert.throws(
+  () => rules.getMonitorHostCalculation({ basis: "unknown", totalGroups: 4, upsNum: 2 }),
+  /未知的监控主机\/显示屏计算方式/
+);
 
 const switchByUps = rules.resolveSwitchCalculationPower({
   basis: "ups", loadKw: 120, upsCap: 200, pf: 0.9,
