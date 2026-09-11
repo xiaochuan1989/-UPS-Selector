@@ -26,3 +26,4 @@ liantong_result_*
 __pycache__/
 *.pyc
 .playwright-cli/
+*.pdf
