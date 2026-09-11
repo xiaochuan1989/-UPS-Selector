@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.38";
+const APP_VERSION = "v1.8.39";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -76,6 +76,21 @@ document.addEventListener("DOMContentLoaded", function() {
   #project-summary-table .summary-paste-cell:focus { border-color:#16a34a !important;outline:2px solid rgba(22,163,74,.2);outline-offset:1px; }
   #summary-tbody tr.summary-paste-flash td { animation:summaryPasteFlash 1.2s ease-out; }
   @keyframes summaryPasteFlash { 0%,35% { background:#dcfce7; } 100% { background:transparent; } }
+  /* 非阻塞消息条：替代原生 alert，可叠加、可点掉，错误类停留更久 */
+  #toast-stack { position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:100000;
+    display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;
+    width:min(560px,calc(100vw - 32px)); }
+  .toast { pointer-events:auto;cursor:pointer;max-width:100%;padding:11px 20px;border-radius:10px;
+    font-size:14px;font-weight:600;line-height:1.5;color:#fff;white-space:pre-line;
+    box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:1;
+    animation:toastIn .22s ease; }
+  /* 只动 transform：页面隐藏时动画时间线冻结，opacity 参与动画会导致消息条永久不可见 */
+  @keyframes toastIn { from { transform:translateY(8px); } to { transform:translateY(0); } }
+  .toast.is-leaving { opacity:0;transform:translateY(8px);transition:opacity .22s ease,transform .22s ease; }
+  .toast-success { background:#27ae60; }
+  .toast-warn { background:#d97706; }
+  .toast-error { background:#dc2626; }
+  @media (prefers-reduced-motion:reduce) { .toast { animation:none; } .toast.is-leaving { transition:none; } }
   .summary-col-resizer { position:absolute;top:0;right:-7px;bottom:0;width:14px;z-index:4;cursor:col-resize;touch-action:none; }
   .summary-col-resizer::after { content:"";position:absolute;top:4px;right:6px;bottom:4px;width:2px;border-radius:2px;background:rgba(255,255,255,.38);transition:background-color .15s,box-shadow .15s; }
   .summary-col-resizer:hover::after,.summary-col-resizer:focus-visible::after,.summary-col-resizer.is-resizing::after { background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.3); }
@@ -255,6 +270,9 @@ document.addEventListener("DOMContentLoaded", function() {
   .db-splitter { flex:0 0 20px;display:flex;align-items:center;justify-content:center;margin:7px 0;cursor:row-resize;touch-action:none;color:#64748b;background:#eef3f8;border:1px solid #cbd6e2;border-radius:6px;transition:background-color .15s,border-color .15s,color .15s; }
   .db-splitter:hover,.db-splitter:focus-visible,.db-splitter.is-dragging { color:#1d4ed8;background:#e2ebff;border-color:#7aa2f7;outline:none; }
   .db-splitter-label { display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;line-height:1;pointer-events:none; }
+  /* 图标用内联 SVG：宽高取 1em，继续由 font-size 控制大小，兼容原有 .ic / .ti 规则 */
+  svg.ti { width:1em;height:1em;display:inline-block;vertical-align:-0.125em;flex:none;
+    fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
   .db-splitter .ti { font-size:16px; }
   body.db-resizing { cursor:row-resize;user-select:none; }
   body.db-col-resizing { cursor:col-resize;user-select:none; }
@@ -397,7 +415,6 @@ document.addEventListener("DOMContentLoaded", function() {
   .analyze-btn { justify-content:center; }
 }
 </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -431,6 +448,12 @@ LIB_SOURCES.forEach(function(lib) {
   document.head.appendChild(s);
 });
 
+// 库缺失提示出口：showToast 就绪时用非阻塞消息条，未就绪则退回原生 alert
+function notifyLibIssue(message, type) {
+  if (typeof showToast === 'function') showToast(message, type);
+  else alert(message);
+}
+
 // 依赖第三方库的入口统一先调用本函数，缺库时给出可操作的提示而不是抛未捕获异常
 function ensureLib(globalName) {
   if (typeof window[globalName] !== 'undefined') return true;
@@ -440,15 +463,17 @@ function ensureLib(globalName) {
   }
   var name = lib ? lib.label : globalName;
   if (libLoadState[globalName] === 'loading') {
-    alert(name + '正在从备用源加载，请等待几秒后重试。');
+    notifyLibIssue(name + '正在从备用源加载，请等待几秒后重试。', 'warn');
   } else {
-    alert(name + '加载失败，该功能暂时不可用。\n\n常见原因：当前网络（客户内网、防火墙）无法访问 CDN。\n请更换网络后刷新页面重试。');
+    notifyLibIssue(name + '加载失败，该功能暂时不可用。\n\n常见原因：当前网络（客户内网、防火墙）无法访问 CDN。\n请更换网络后刷新页面重试。', 'error');
   }
   return false;
 }
 </script>
 </head>
 <body>
+<!-- 内联图标 sprite：只含实际用到的 tabler 图标，避免外部 webfont 拖慢首屏 -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="ti-battery-3" viewBox="0 0 24 24"><path d="M6 7h11a2 2 0 0 1 2 2v.5a.5 .5 0 0 0 .5 .5a.5 .5 0 0 1 .5 .5v3a.5 .5 0 0 1 -.5 .5a.5 .5 0 0 0 -.5 .5v.5a2 2 0 0 1 -2 2h-11a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2" /> <path d="M7 10l0 4" /> <path d="M10 10l0 4" /> <path d="M13 10l0 4" /></symbol><symbol id="ti-building" viewBox="0 0 24 24"><path d="M3 21l18 0" /> <path d="M9 8l1 0" /> <path d="M9 12l1 0" /> <path d="M9 16l1 0" /> <path d="M14 8l1 0" /> <path d="M14 12l1 0" /> <path d="M14 16l1 0" /> <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16" /></symbol><symbol id="ti-calculator" viewBox="0 0 24 24"><path d="M4 3m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" /> <path d="M8 7m0 1a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1v1a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1z" /> <path d="M8 14l0 .01" /> <path d="M12 14l0 .01" /> <path d="M16 14l0 .01" /> <path d="M8 17l0 .01" /> <path d="M12 17l0 .01" /> <path d="M16 17l0 .01" /></symbol><symbol id="ti-chart-dots-3" viewBox="0 0 24 24"><path d="M5 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M16 15m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M18 6m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /> <path d="M6 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /> <path d="M9 17l5 -1.5" /> <path d="M6.5 8.5l7.81 5.37" /> <path d="M7 7l8 -1" /></symbol><symbol id="ti-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6l6 -6" /></symbol><symbol id="ti-clipboard-data" viewBox="0 0 24 24"><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /> <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /> <path d="M9 17v-4" /> <path d="M12 17v-1" /> <path d="M15 17v-2" /> <path d="M12 17v-1" /></symbol><symbol id="ti-clock-hour-4" viewBox="0 0 24 24"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M12 12l3 2" /> <path d="M12 7v5" /></symbol><symbol id="ti-database" viewBox="0 0 24 24"><path d="M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0" /> <path d="M4 6v6a8 3 0 0 0 16 0v-6" /> <path d="M4 12v6a8 3 0 0 0 16 0v-6" /></symbol><symbol id="ti-device-desktop-analytics" viewBox="0 0 24 24"><path d="M3 4m0 1a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1z" /> <path d="M7 20h10" /> <path d="M9 16v4" /> <path d="M15 16v4" /> <path d="M9 12v-4" /> <path d="M12 12v-1" /> <path d="M15 12v-2" /> <path d="M12 12v-1" /></symbol><symbol id="ti-device-floppy" viewBox="0 0 24 24"><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /> <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M14 4l0 4l-6 0l0 -4" /></symbol><symbol id="ti-edit" viewBox="0 0 24 24"><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /> <path d="M16 5l3 3" /></symbol><symbol id="ti-external-link" viewBox="0 0 24 24"><path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6" /> <path d="M11 13l9 -9" /> <path d="M15 4h5v5" /></symbol><symbol id="ti-grip-horizontal" viewBox="0 0 24 24"><path d="M5 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M5 15m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M12 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M12 15m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M19 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M19 15m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></symbol><symbol id="ti-history" viewBox="0 0 24 24"><path d="M12 8l0 4l2 2" /> <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" /></symbol><symbol id="ti-plug" viewBox="0 0 24 24"><path d="M9.785 6l8.215 8.215l-2.054 2.054a5.81 5.81 0 1 1 -8.215 -8.215l2.054 -2.054z" /> <path d="M4 20l3.5 -3.5" /> <path d="M15 4l-3.5 3.5" /> <path d="M20 9l-3.5 3.5" /></symbol><symbol id="ti-plus" viewBox="0 0 24 24"><path d="M12 5l0 14" /> <path d="M5 12l14 0" /></symbol><symbol id="ti-pointer" viewBox="0 0 24 24"><path d="M7.904 17.563a1.2 1.2 0 0 0 2.228 .308l2.09 -3.093l4.907 4.907a1.067 1.067 0 0 0 1.509 0l1.047 -1.047a1.067 1.067 0 0 0 0 -1.509l-4.907 -4.907l3.113 -2.09a1.2 1.2 0 0 0 -.309 -2.228l-13.582 -3.904l3.904 13.563z" /></symbol><symbol id="ti-refresh" viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /> <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></symbol><symbol id="ti-settings" viewBox="0 0 24 24"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></symbol><symbol id="ti-stack-2" viewBox="0 0 24 24"><path d="M12 4l-8 4l8 4l8 -4l-8 -4" /> <path d="M4 12l8 4l8 -4" /> <path d="M4 16l8 4l8 -4" /></symbol><symbol id="ti-target" viewBox="0 0 24 24"><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M12 12m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0" /> <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></symbol><symbol id="ti-tool" viewBox="0 0 24 24"><path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5" /></symbol><symbol id="ti-trash" viewBox="0 0 24 24"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></symbol><symbol id="ti-upload" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /> <path d="M7 9l5 -5l5 5" /> <path d="M12 4l0 12" /></symbol><symbol id="ti-x" viewBox="0 0 24 24"><path d="M18 6l-12 12" /> <path d="M6 6l12 12" /></symbol></svg>
 
 <!-- 密码保护遮罩 -->
 <div id="auth-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a3a5c,#2563eb);display:flex;align-items:center;justify-content:center;z-index:99999;">
@@ -499,23 +524,23 @@ function checkAuth(){
     </div>
     <div class="appbar-actions">
       <label class="appbar-btn" title="导入Excel后将替换内置数据">
-        <i class="ti ti-upload" aria-hidden="true"></i> 导入 Excel
+        <svg class="ti ti-upload" aria-hidden="true"><use href="#ti-upload"/></svg> 导入 Excel
         <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
       </label>
-      <button class="appbar-btn" onclick="openSettings()"><i class="ti ti-settings" aria-hidden="true"></i> 设置</button>
-      <button class="appbar-btn primary" onclick="openHistoryModal()"><i class="ti ti-history" aria-hidden="true"></i> 历史</button>
-      <button id="restore-btn" class="appbar-btn warn" onclick="restoreBuiltinData()" style="display:none"><i class="ti ti-refresh" aria-hidden="true"></i> 恢复内置数据</button>
+      <button class="appbar-btn" onclick="openSettings()"><svg class="ti ti-settings" aria-hidden="true"><use href="#ti-settings"/></svg> 设置</button>
+      <button class="appbar-btn primary" onclick="openHistoryModal()"><svg class="ti ti-history" aria-hidden="true"><use href="#ti-history"/></svg> 历史</button>
+      <button id="restore-btn" class="appbar-btn warn" onclick="restoreBuiltinData()" style="display:none"><svg class="ti ti-refresh" aria-hidden="true"><use href="#ti-refresh"/></svg> 恢复内置数据</button>
     </div>
   </div>
 </div>
 <nav class="nav">
   <div class="nav-inner">
-    <button class="nav-tab nav-tab-active" id="tab-home" onclick="showMainTab('home')"><i class="ti ti-target ic" aria-hidden="true"></i>智能选型</button>
-    <button class="nav-tab" id="tab-battery" onclick="showMainTab('battery')"><i class="ti ti-battery-3 ic" aria-hidden="true"></i>UPS 与电池配置</button>
-    <button class="nav-tab" id="tab-runtime" onclick="showMainTab('runtime')"><i class="ti ti-clock-hour-4 ic" aria-hidden="true"></i>后备时间反算</button>
-    <button class="nav-tab" id="tab-lead" onclick="showMainTab('lead')"><i class="ti ti-calculator ic" aria-hidden="true"></i>电池计算(方法一/锂电)</button>
-    <button class="nav-tab" id="tab-dc" onclick="showMainTab('dc')"><i class="ti ti-building ic" aria-hidden="true"></i>数据中心校核</button>
-    <button class="nav-tab" id="tab-db" onclick="showMainTab('db')"><i class="ti ti-database ic" aria-hidden="true"></i>产品数据库</button>
+    <button class="nav-tab nav-tab-active" id="tab-home" onclick="showMainTab('home')"><svg class="ti ti-target ic" aria-hidden="true"><use href="#ti-target"/></svg>智能选型</button>
+    <button class="nav-tab" id="tab-battery" onclick="showMainTab('battery')"><svg class="ti ti-battery-3 ic" aria-hidden="true"><use href="#ti-battery-3"/></svg>UPS 与电池配置</button>
+    <button class="nav-tab" id="tab-runtime" onclick="showMainTab('runtime')"><svg class="ti ti-clock-hour-4 ic" aria-hidden="true"><use href="#ti-clock-hour-4"/></svg>后备时间反算</button>
+    <button class="nav-tab" id="tab-lead" onclick="showMainTab('lead')"><svg class="ti ti-calculator ic" aria-hidden="true"><use href="#ti-calculator"/></svg>电池计算(方法一/锂电)</button>
+    <button class="nav-tab" id="tab-dc" onclick="showMainTab('dc')"><svg class="ti ti-building ic" aria-hidden="true"><use href="#ti-building"/></svg>数据中心校核</button>
+    <button class="nav-tab" id="tab-db" onclick="showMainTab('db')"><svg class="ti ti-database ic" aria-hidden="true"><use href="#ti-database"/></svg>产品数据库</button>
   </div>
 </nav>
 
@@ -539,7 +564,7 @@ function checkAuth(){
     <div id="db-split-layout" class="db-split-layout">
       <!-- 上栏：产品信息 -->
       <section id="db-pane-top" class="db-pane db-pane-top" aria-labelledby="db-pane-title-top">
-        <div id="db-pane-title-top" class="db-pane-title db-pane-title-top"><span>📋 产品信息</span><span class="db-pane-hint"><i class="ti ti-pointer" aria-hidden="true"></i>单击行看详情 · 拖动列宽 · Shift+拖动横移</span></div>
+        <div id="db-pane-title-top" class="db-pane-title db-pane-title-top"><span>📋 产品信息</span><span class="db-pane-hint"><svg class="ti ti-pointer" aria-hidden="true"><use href="#ti-pointer"/></svg>单击行看详情 · 拖动列宽 · Shift+拖动横移</span></div>
         <div id="db-scroll-top" class="db-table-scroll" aria-label="产品信息表，可选择文字；按住 Shift 拖动可横向查看">
           <table id="db-table-top" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
             <thead id="db-thead-top"></thead>
@@ -548,11 +573,11 @@ function checkAuth(){
         </div>
       </section>
       <div id="db-splitter" class="db-splitter" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="调整产品信息与技术规格表格高度" aria-controls="db-pane-top db-pane-bottom" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" title="上下拖动调整表格高度，双击恢复均分">
-        <span class="db-splitter-label"><i class="ti ti-grip-horizontal" aria-hidden="true"></i>上下拖动调整</span>
+        <span class="db-splitter-label"><svg class="ti ti-grip-horizontal" aria-hidden="true"><use href="#ti-grip-horizontal"/></svg>上下拖动调整</span>
       </div>
       <!-- 下栏：泰尔技术规格 -->
       <section id="db-pane-bottom" class="db-pane db-pane-bottom" aria-labelledby="db-pane-title-bottom">
-        <div id="db-pane-title-bottom" class="db-pane-title db-pane-title-bottom"><span>🔧 技术规格（泰尔参数）</span><span class="db-pane-hint"><i class="ti ti-pointer" aria-hidden="true"></i>单击行看详情 · 拖动列宽 · Shift+拖动横移</span></div>
+        <div id="db-pane-title-bottom" class="db-pane-title db-pane-title-bottom"><span>🔧 技术规格（泰尔参数）</span><span class="db-pane-hint"><svg class="ti ti-pointer" aria-hidden="true"><use href="#ti-pointer"/></svg>单击行看详情 · 拖动列宽 · Shift+拖动横移</span></div>
         <div id="db-scroll-bottom" class="db-table-scroll" aria-label="技术规格表，可选择文字；按住 Shift 拖动可横向查看">
           <table id="db-table-bot" style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
             <thead id="db-thead-bot"></thead>
@@ -567,7 +592,7 @@ function checkAuth(){
     <article class="db-detail-dialog" role="dialog" aria-modal="false" aria-labelledby="db-detail-title" aria-describedby="db-detail-description">
       <header id="db-detail-drag-handle" class="db-detail-header" title="按住标题栏可拖动窗口">
         <div class="db-detail-heading">
-          <div class="db-detail-eyebrow"><i class="ti ti-chart-dots-3" aria-hidden="true"></i> UPS 型号数据全景 <span class="db-detail-drag-hint">↔ 拖动标题栏 · ↘ 右下角调整大小 · ↗ 独立窗口可跨屏</span></div>
+          <div class="db-detail-eyebrow"><svg class="ti ti-chart-dots-3" aria-hidden="true"><use href="#ti-chart-dots-3"/></svg> UPS 型号数据全景 <span class="db-detail-drag-hint">↔ 拖动标题栏 · ↘ 右下角调整大小 · ↗ 独立窗口可跨屏</span></div>
           <div class="db-detail-title-line">
             <span id="db-detail-series" class="db-detail-series"></span>
             <h2 id="db-detail-title"></h2>
@@ -575,23 +600,23 @@ function checkAuth(){
           <p id="db-detail-description" class="db-detail-description"></p>
         </div>
         <div class="db-detail-actions">
-          <button id="db-detail-popout" class="db-detail-popout" type="button" title="打开浏览器独立窗口，可从上下左右边缘调整大小并拖到另一台显示器" onclick="openDatabaseProductPopout()"><i class="ti ti-external-link" aria-hidden="true"></i><span>独立窗口</span></button>
+          <button id="db-detail-popout" class="db-detail-popout" type="button" title="打开浏览器独立窗口，可从上下左右边缘调整大小并拖到另一台显示器" onclick="openDatabaseProductPopout()"><svg class="ti ti-external-link" aria-hidden="true"><use href="#ti-external-link"/></svg><span>独立窗口</span></button>
           <button id="db-detail-favorite" class="db-detail-favorite" type="button" aria-pressed="false" onclick="toggleCurrentDatabaseFavorite()"><span aria-hidden="true">☆</span><span>收藏型号</span></button>
-          <button id="db-detail-close" class="db-detail-close" type="button" aria-label="关闭型号详情" title="关闭" onclick="closeDatabaseProductDetail()"><i class="ti ti-x" aria-hidden="true"></i></button>
+          <button id="db-detail-close" class="db-detail-close" type="button" aria-label="关闭型号详情" title="关闭" onclick="closeDatabaseProductDetail()"><svg class="ti ti-x" aria-hidden="true"><use href="#ti-x"/></svg></button>
         </div>
       </header>
       <div class="db-detail-body">
         <div id="db-detail-summary" class="db-detail-summary" aria-label="关键指标"></div>
         <section class="db-detail-section" aria-labelledby="db-detail-product-heading">
           <div id="db-detail-product-heading" class="db-detail-section-head db-detail-section-head-blue">
-            <span><i class="ti ti-clipboard-data" aria-hidden="true"></i>产品信息</span>
+            <span><svg class="ti ti-clipboard-data" aria-hidden="true"><use href="#ti-clipboard-data"/></svg>产品信息</span>
             <span id="db-detail-product-count" class="db-detail-count"></span>
           </div>
           <div id="db-detail-product-grid" class="db-detail-grid"></div>
         </section>
         <section class="db-detail-section" aria-labelledby="db-detail-tech-heading">
           <div id="db-detail-tech-heading" class="db-detail-section-head db-detail-section-head-green">
-            <span><i class="ti ti-tool" aria-hidden="true"></i>技术规格（泰尔参数）</span>
+            <span><svg class="ti ti-tool" aria-hidden="true"><use href="#ti-tool"/></svg>技术规格（泰尔参数）</span>
             <span id="db-detail-tech-count" class="db-detail-count"></span>
           </div>
           <div id="db-detail-tech-grid" class="db-detail-grid"></div>
@@ -1012,12 +1037,12 @@ function checkAuth(){
     <section class="multi-ups-manager" aria-labelledby="multi-ups-manager-title">
       <div class="multi-ups-manager-head">
         <div>
-          <div id="multi-ups-manager-title" class="multi-ups-manager-title"><i class="ti ti-stack-2" aria-hidden="true"></i>多套 UPS 项目配置</div>
+          <div id="multi-ups-manager-title" class="multi-ups-manager-title"><svg class="ti ti-stack-2" aria-hidden="true"><use href="#ti-stack-2"/></svg>多套 UPS 项目配置</div>
           <div class="multi-ups-manager-sub">每套 UPS 独立计算；保存后自动汇总相同物料数量，也可随时载入修改。</div>
         </div>
         <div class="multi-ups-manager-actions">
           <span id="multi-ups-count" class="multi-ups-count">0 套已保存</span>
-          <button type="button" class="save-btn" onclick="startNewUpsConfiguration()" title="清空当前草稿并定位到下方表单" style="padding:8px 13px"><i class="ti ti-plus" aria-hidden="true"></i> 开始新配置</button>
+          <button type="button" class="save-btn" onclick="startNewUpsConfiguration()" title="清空当前草稿并定位到下方表单" style="padding:8px 13px"><svg class="ti ti-plus" aria-hidden="true"><use href="#ti-plus"/></svg> 开始新配置</button>
         </div>
       </div>
       <div id="multi-ups-list" class="multi-ups-list">
@@ -1044,7 +1069,7 @@ function checkAuth(){
           <label style="font-size:13px;font-weight:500;color:#e65100;white-space:nowrap">⚡ UPS型号（选填）：</label>
           <div id="ups-model-search" class="ups-model-search">
             <input type="text" id="unified-ups-model" class="ups-model-search-input" placeholder="选填；输入型号关键字，如 600、UR、昆仑" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ups-model-search-results" onfocus="openUpsModelSearchResults()" oninput="handleUpsModelSearchInput()" onkeydown="handleUpsModelSearchKeydown(event)">
-            <button type="button" class="ups-model-search-toggle" onclick="toggleUpsModelSearchResults()" aria-label="展开全部 UPS 型号" title="展开全部 UPS 型号"><i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+            <button type="button" class="ups-model-search-toggle" onclick="toggleUpsModelSearchResults()" aria-label="展开全部 UPS 型号" title="展开全部 UPS 型号"><svg class="ti ti-chevron-down" aria-hidden="true"><use href="#ti-chevron-down"/></svg></button>
             <div id="ups-model-search-results" class="ups-model-search-results" role="listbox" hidden></div>
           </div>
           <button onclick="fillUpsFromSelection()" style="background:#2563eb;color:white;border:none;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap">填入参数</button>
@@ -1173,8 +1198,8 @@ function checkAuth(){
         </div>
       </div>
       <div style="margin-top:10px">
-        <button class="save-btn" onclick="calcAllBatteryConfig()" style="padding:12px 24px"><i class="ti ti-calculator" aria-hidden="true"></i> 计算当前配置</button>
-        <button class="save-btn multi-ups-save-btn" onclick="saveCurrentUpsConfigurationAndStartNext()" style="padding:12px 24px;margin-left:8px"><i class="ti ti-device-floppy" aria-hidden="true"></i> 加入项目并新增下一套</button>
+        <button class="save-btn" onclick="calcAllBatteryConfig()" style="padding:12px 24px"><svg class="ti ti-calculator" aria-hidden="true"><use href="#ti-calculator"/></svg> 计算当前配置</button>
+        <button class="save-btn multi-ups-save-btn" onclick="saveCurrentUpsConfigurationAndStartNext()" style="padding:12px 24px;margin-left:8px"><svg class="ti ti-device-floppy" aria-hidden="true"><use href="#ti-device-floppy"/></svg> 加入项目并新增下一套</button>
         <span id="multi-ups-draft-hint" style="margin-left:10px;color:#64748b;font-size:12px">当前为新配置</span>
     </div>
 
@@ -1213,7 +1238,7 @@ function checkAuth(){
     <div class="result-grid">
       <!-- 电池推荐 -->
       <div class="result-card rc-green">
-        <div class="result-card-hd"><i class="ti ti-battery-3" aria-hidden="true"></i>电池推荐</div>
+        <div class="result-card-hd"><svg class="ti ti-battery-3" aria-hidden="true"><use href="#ti-battery-3"/></svg>电池推荐</div>
         <div class="result-card-bd" id="unified-battery-result">
           <span style="color:#888">点击"计算当前配置"查看结果</span>
         </div>
@@ -1221,7 +1246,7 @@ function checkAuth(){
 
       <!-- 电池开关箱/柜 -->
       <div class="result-card rc-amber">
-        <div class="result-card-hd"><i class="ti ti-plug" aria-hidden="true"></i>电池开关箱/柜配置</div>
+        <div class="result-card-hd"><svg class="ti ti-plug" aria-hidden="true"><use href="#ti-plug"/></svg>电池开关箱/柜配置</div>
         <div class="result-card-bd" id="unified-switch-result">
           <span style="color:#888">点击"计算当前配置"查看结果</span>
         </div>
@@ -1229,7 +1254,7 @@ function checkAuth(){
 
       <!-- 监控 -->
       <div class="result-card rc-purple">
-        <div class="result-card-hd"><i class="ti ti-device-desktop-analytics" aria-hidden="true"></i>电池监控</div>
+        <div class="result-card-hd"><svg class="ti ti-device-desktop-analytics" aria-hidden="true"><use href="#ti-device-desktop-analytics"/></svg>电池监控</div>
         <div class="result-card-bd">
           <div style="margin-bottom:10px">
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
@@ -1480,193 +1505,211 @@ const PRODUCTS = [{"系列":"太行UR","型号":"太行 UR-0010SPS","描述":"�
 // 先以“速查表型号 + 速查表描述”锁定数据库行，再逐项对照目录型号、产品描述和版本差异。
 // 来源：解决方案产品目录价汇总 iTeaQ-2026-04-V1.0（PDF 第 54、58、61、63-65 页）。
 // 同型号多目录版本全部保留；组合式 UPS 可只回填目录中实际出现的机柜/模块，绝不虚构缺失编码。
+// 目录价按 XOR + base64 存储，避免明文出现在公开页面源码里。
+// 说明：解码逻辑就在前端，这挡的是直接 view-source 和 grep，不是加密。
+const CATALOG_PRICE_KEY = [0x5a, 0x3c, 0x71, 0x2e, 0x68, 0x19, 0x44, 0x7b];
+
+function decodeCatalogPrice(encoded) {
+  if (!encoded) return '';
+  try {
+    const bytes = Uint8Array.from(atob(encoded), ch => ch.charCodeAt(0));
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] ^= CATALOG_PRICE_KEY[i % CATALOG_PRICE_KEY.length];
+    }
+    return new TextDecoder().decode(bytes);
+  } catch (error) {
+    debugLog('目录价解码失败', error);
+    return '';
+  }
+}
+
 const UPS_CATALOG_ENRICHMENTS = [
-  { model: "太行 UR-0200TPL", description: "太行Power系列20kVA三三/三单/单单长机", code: "01020446", price: "¥38,900" },
-  { model: "太行 UR-0300TPL", description: "太行Power系列30kVA三进三出长机", code: "01020447", price: "¥50,000" },
-  { model: "太行 UR-0400TPL", description: "太行Power系列40kVA三进三出长机", code: "01020448", price: "¥60,000" },
-  { model: "昆仑UE-2000TAL-1", description: "UE 200KVA，只含维修旁路开关", code: "01021046", price: "¥286,360" },
-  { model: "昆仑UE-3000TAL-1", description: "UE 300KVA，只含维修旁路开关", code: "01021047", price: "¥447,730" },
+  { model: "太行 UR-0200TPL", description: "太行Power系列20kVA三三/三单/单单长机", code: "01020446", priceEnc: "mJlCFkQgdEs=" },
+  { model: "太行 UR-0300TPL", description: "太行Power系列30kVA三进三出长机", code: "01020447", priceEnc: "mJlEHkQpdEs=" },
+  { model: "太行 UR-0400TPL", description: "太行Power系列40kVA三进三出长机", code: "01020448", priceEnc: "mJlHHkQpdEs=" },
+  { model: "昆仑UE-2000TAL-1", description: "UE 200KVA，只含维修旁路开关", code: "01021046", priceEnc: "mJlDFl41d01q" },
+  { model: "昆仑UE-3000TAL-1", description: "UE 300KVA，只含维修旁路开关", code: "01021047", priceEnc: "mJlFGl81c0hq" },
   {
     model: "昆仑UE-4000TAL-F-1",
     description: "UE 400KVA，含 4 个开关-隔离负荷开关",
     code: "01021048；01020404",
-    price: "PF1高效型 ¥609,090；PF1标准型 ¥593,800",
+    priceEnc: "CnpAx8OBou7S2e+lSNvhTWoFXR5RKavHwWw3H465w57dupSw4zmG3m8FQgJQKXQ=",
     note: "速查表确认输出PF=1，但未注明高效型或标准型，故保留两组目录编码和单价"
   },
   {
     model: "昆仑UE-5000TAL-F-1",
     description: "UE 500KVA，含 4 个开关-隔离负荷开关",
     code: "01021049；01020405",
-    price: "PF1高效型 ¥736,360；PF1标准型 ¥719,920",
+    priceEnc: "CnpAx8OBou7S2e+lSNvhTGkKXR1eKavHwWw3H465w57dupSw4zmG3m0NSAJRK3Q=",
     note: "速查表确认输出PF=1，但未注明高效型或标准型，故保留两组目录编码和单价"
   },
   {
     model: "昆仑UE-6000TAL-F-1",
     description: "UE 600KVA，含 4 个开关-隔离负荷开关",
     code: "01021050；01020406",
-    price: "PF1高效型 ¥940,140；PF1标准型 ¥901,430",
+    priceEnc: "CnpAx8OBou7S2e+lSNvhQm4MXR9cKavHwWw3H465w57dupSw4zmG3mMMQAJcKnQ=",
     note: "速查表确认输出PF=1，但未注明高效型或标准型，故保留两组目录编码和单价"
   },
-  { model: "昆仑UE-8000TAL-F-1", description: "UE 800KVA，含 4 个开关-隔离负荷开关", code: "01021064", price: "¥1,257,240" },
+  { model: "昆仑UE-8000TAL-F-1", description: "UE 800KVA，含 4 个开关-隔离负荷开关", code: "01021064", priceEnc: "mJlAAlosc1doCEE=" },
   {
     model: "祁连UM-0900TFL-FS/15\r祁连UM-0150TFL-M",
     description: "祁连UM满配90kVA机柜，只含手动维修旁路开关",
     code: "01021119；01021118",
-    price: "机柜 ¥61,750；15kVA模块 ¥30,000/个",
+    priceEnc: "vKDLyPeFZLn/CkACXyx0lOanQBsDTwWd8p2Us/85ht5pDF0eWClrn+KW",
     note: "机柜与功率模块均为目录单价，未按装机模块数量汇总"
   },
   {
     model: "祁连UM-1250TFL-FF\r祁连UM-0250TFL-M",
     description: "125kVA 机柜，配置主路输入、旁路输入、输出及维修旁路四个开关",
     code: "01021054；01020386",
-    price: "机柜 ¥93,750；25kVA模块 ¥65,000/个",
+    priceEnc: "vKDLyPeFZLn/BUICXyx0lOanQxsDTwWd8p2Us/85ht5sCV0eWClrn+KW",
     note: "机柜与功率模块均为目录单价，未按装机模块数量汇总"
   },
   {
     model: "祁连UM-1800TFL-FS/3\r祁连UM-0300TFL-M",
     description: "祁连UM满配180kVA 机柜，只含手动维修旁路开关",
     code: "01021039；01020387",
-    price: "机柜 ¥123,600；30kVA模块 ¥66,730/个",
+    priceEnc: "vKDLyPeFZLn/DUMdRC90S7WA6h1YchI6vJTQy/WOZLn/CkcCXyp0VL6E2w==",
     note: "机柜与功率模块均为目录单价，未按装机模块数量汇总"
   },
   {
     model: "祁连UM-1800TFL-FF/3\r祁连UM-0300TFL-M",
     description: "祁连UM满配180kVA 机柜，含输入开关、维修旁路开关和输出开关",
     code: "01020387",
-    price: "30kVA模块 ¥66,730/个",
+    priceEnc: "aQwaeCn/7Nq/oeYOqrxyTXYLQh5H/fzR",
     note: "本版目录未列出该180kVA四开关机柜；仅回填目录中存在的30kVA功率模块"
   },
   {
     model: "祁连UM-3000TFL-FS/3\r祁连UM-0300TFL-M",
     description: "祁连UM满配300kVA 机柜，只含手动维修旁路开关",
     code: "01020387",
-    price: "30kVA模块 ¥66,730/个",
+    priceEnc: "aQwaeCn/7Nq/oeYOqrxyTXYLQh5H/fzR",
     note: "本版目录未列出该300kVA维修旁路机柜；仅回填目录中存在的30kVA功率模块"
   },
   {
     model: "祁连UM-3000TFL-FF/3\r祁连UM-0300TFL-M",
     description: "祁连UM满配300kVA 机柜，含输入开关、维修旁路开关和输出开关",
     code: "01021157；01020387",
-    price: "机柜 ¥185,400；30kVA模块 ¥66,730/个",
+    priceEnc: "vKDLyPeFZLn/DUkbRC10S7WA6h1YchI6vJTQy/WOZLn/CkcCXyp0VL6E2w==",
     note: "机柜与功率模块均为目录单价，未按装机模块数量汇总"
   },
   {
     model: "祁连UM-2000TAL-FS/5-1\r祁连UM-0500TFL-M",
     description: "祁连UM200kVA机柜，只含维修旁路开关",
     code: "01020389；01021107",
-    price: "机柜 ¥140,000；50kVA模块 ¥82,690/个",
+    priceEnc: "vKDLyPeFZLn/DUUeRCl0S7WA6htYchI6vJTQy/WOZLn/BEMCXiB0VL6E2w==",
     note: "机柜与功率模块均为目录单价，未按装机模块数量汇总"
   },
   {
     model: "祁连UM-3000TAL-FS/5-1\r祁连UM-0500TFL-M",
     description: "祁连UM300kVA机柜，只含维修旁路开关",
     code: "01020390；01021107",
-    price: "机柜 ¥169,170；50kVA模块 ¥82,690/个",
+    priceEnc: "vKDLyPeFZLn/DUcXRChzS7WA6htYchI6vJTQy/WOZLn/BEMCXiB0VL6E2w==",
     note: "机柜与功率模块均为目录单价，未按装机模块数量汇总"
   },
   {
     model: "祁连UM-4000TAL-FF/5-1\r祁连UM-0500TFL-M",
     description: "祁连UM满配400kVA机柜，含4开关-隔离负荷开关",
     code: "01020391；01020401；01021107",
-    price: "高效型机柜 ¥265,940；标准型机柜 ¥233,590；50kVA模块 ¥82,690/个",
+    priceEnc: "s5fpyP2RoeXR2u2UjobYW5iZQxhdNX1PatPNtY65w57dupSw4//Ywbyj7Q6qvHZIaRBEF1j2+OBvDBp4Kf/s2r+h5g6qvHxJdgpIHkf9/NE=",
     note: "速查表未注明高效型或标准型，故保留两组机柜目录编码；模块与机柜均为单价"
   },
   {
     model: "祁连UM-5000TAL-FF/5-1\r祁连UM-0500TFL-M",
     description: "祁连UM满配500kVA机柜，含4开关-隔离负荷开关",
     code: "01020392；01020402；01021107",
-    price: "高效型机柜 ¥297,220；标准型机柜 ¥265,150；50kVA模块 ¥82,690/个",
+    priceEnc: "s5fpyP2RoeXR2u2UjobYW5iZQxdfNXZJatPNtY65w57dupSw4//Ywbyj7Q6qvHZNbxBAG1j2+OBvDBp4Kf/s2r+h5g6qvHxJdgpIHkf9/NE=",
     note: "速查表未注明高效型或标准型，故保留两组机柜目录编码；模块与机柜均为单价"
   },
   {
     model: "祁连UM-6000TAL-FF/5-1\r祁连UM-0500TFL-M",
     description: "祁连UM满配600kVA机柜，含4开关-隔离负荷开关",
     code: "01020393；01020403；01021107",
-    price: "高效型机柜 ¥373,330；标准型机柜 ¥327,980；50kVA模块 ¥82,690/个",
+    priceEnc: "s5fpyP2RoeXR2u2UjobYW5iZQhlbNXdIatPNtY65w57dupSw4//Ywbyj7Q6qvHdJbRBIFlj2+OBvDBp4Kf/s2r+h5g6qvHxJdgpIHkf9/NE=",
     note: "速查表未注明高效型或标准型，故保留两组机柜目录编码；模块与机柜均为单价"
   },
   {
     model: "祁连UM-8000TAL-FF/5-1\r祁连UM-0500TFL-M",
     description: "祁连UM满配800kVA机柜，含4开关-隔离负荷开关",
     code: "01021063；01021107",
-    price: "机柜 ¥621,020；50kVA模块 ¥82,690/个",
+    priceEnc: "vKDLyPeFZLn/CkMfRCl2S7WA6htYchI6vJTQy/WOZLn/BEMCXiB0VL6E2w==",
     note: "机柜与功率模块均为目录单价，未按装机模块数量汇总"
   },
   {
     model: "祁连UM-3000TFL-FS/100\r祁连UM-3000TFL-FF/100\r祁连UM-3000TFL-F/100\r祁连UM-1000TFL-M",
     description: "祁连UM系列300kVA机框，含单开关/四开关/无开关",
     code: "01021115",
-    price: "100kVA模块 ¥149,500/个",
+    priceEnc: "awxBRT5YotP72ey5SNvhSm4FXRtYKWuf4pY=",
     note: "本版目录未列出该300kVA机柜；仅回填目录中存在的100kVA功率模块"
   },
   {
     model: "祁连UM-4000TFL-FS/100\r祁连UM-4000TFL-FF/100\r祁连UM-4000TFL-F/100\r祁连UM-1000TFL-M",
     description: "祁连UM系列400kVA机框，含单开关/四开关/无开关",
     code: "01021115",
-    price: "100kVA模块 ¥149,500/个",
+    priceEnc: "awxBRT5YotP72ey5SNvhSm4FXRtYKWuf4pY=",
     note: "本版目录未列出该400kVA机柜；仅回填目录中存在的100kVA功率模块"
   },
   {
     model: "祁连UM-5000TFL-FS/100\r祁连UM-5000TFL-FF/100\r祁连UM-5000TFL-F/100\r祁连UM-1000TFL-M",
     description: "祁连UM系列500kVA机框，含单开关/四开关/无开关",
     code: "01021115",
-    price: "100kVA模块 ¥149,500/个",
+    priceEnc: "awxBRT5YotP72ey5SNvhSm4FXRtYKWuf4pY=",
     note: "本版目录未列出该500kVA机柜；仅回填目录中存在的100kVA功率模块"
   },
   {
     model: "祁连UM-6000TFL-FS/100\r祁连UM-6000TFL-FF/100\r祁连UM-6000TFL-F/100\r祁连UM-1000TFL-M",
     description: "祁连UM系列600kVA机框，含单开关/四开关/无开关",
     code: "01021116；01021117；01021115",
-    price: "维修旁路机柜 ¥327,000；四开关机柜 ¥353,330；100kVA模块 ¥149,500/个",
+    priceEnc: "vYfFyte3ouzb1MaBjoX+ncWgUezNKnZMdgxBHoel357Bp5SS6PzByLygy8j3hWS5/w9EHUQqd0u1gOofWCkvLRva2Y+NhNNbmJlAGlE1cUtqE5WWwg==",
     note: "目录未列出无开关机柜UM-6000TFL-F/100；其余机柜与模块均为目录单价"
   },
   {
     model: "祁连UM-8000TFL-FS/100\r祁连UM-8000TFL-FF/100\r祁连UM-8000TFL-F/100\r祁连UM-1000TFL-M",
     description: "祁连UM系列800kVA机框，含单开关/四开关/无开关",
     code: "01021115",
-    price: "100kVA模块 ¥149,500/个",
+    priceEnc: "awxBRT5YotP72ey5SNvhSm4FXRtYKWuf4pY=",
     note: "本版目录未列出该800kVA机柜；仅回填目录中存在的100kVA功率模块"
   },
   {
     model: "祁连UM-10000TFL-FS/100\r祁连UM-10000TFL-FF/100\r祁连UM-1000TFL-M",
     description: "祁连UM系列1000kVA机框，含单开关/四开关",
     code: "01021115",
-    price: "100kVA模块 ¥149,500/个",
+    priceEnc: "awxBRT5YotP72ey5SNvhSm4FXRtYKWuf4pY=",
     note: "本版目录未列出该1000kVA机柜；仅回填目录中存在的100kVA功率模块"
   },
   {
     model: "祁连UM-12000TFL-FS/100\r祁连UM-12000TFL-FF/100\r祁连UM-1000TFL-M",
     description: "祁连UM系列1200kVA机框，含单开关/四开关",
     code: "01021115",
-    price: "100kVA模块 ¥149,500/个",
+    priceEnc: "awxBRT5YotP72ey5SNvhSm4FXRtYKWuf4pY=",
     note: "本版目录未列出该1200kVA机柜；仅回填目录中存在的100kVA功率模块"
   },
   {
     model: "祁连UM-0900TFL-D\r祁连UM-0150TFL-M",
     description: "祁连UM一体化UPS-90KVA双路输入（ATS）-含UPS 输入输出-4 路空调-3 路照明-40 路 IT 配电",
     code: "01021118",
-    price: "15kVA模块 ¥30,000/个",
+    priceEnc: "awkaeCn/7Nq/oeYOqrx3S3YMQR5H/fzR",
     note: "本版目录未列出该90kVA一体化机柜；仅回填目录中存在的15kVA功率模块"
   },
   {
     model: "祁连UM-0900TFL-S\r祁连UM-0150TFL-M",
     description: "祁连UM一体化UPS-90KVA单路输入（MCCB）-含UPS 输入输出-4 路空调-3 路照明-40 路 IT 配电",
     code: "01021118",
-    price: "15kVA模块 ¥30,000/个",
+    priceEnc: "awkaeCn/7Nq/oeYOqrx3S3YMQR5H/fzR",
     note: "本版目录未列出该90kVA一体化机柜；仅回填目录中存在的15kVA功率模块"
   },
   {
     model: "祁连UM-1250TFL-D\r祁连UM-0250TFL-M\r祁连UM-0300TFL-M",
     description: "祁连UM一体化UPS-125KVA双路输入（ATS）-含UPS 输入输出-8 路空调-3 路照明-48 路 IT 配电",
     code: "01021044；01021127；01020386；01020387",
-    price: "1100mm机柜 ¥329,320；1200mm机柜 ¥334,910；25kVA模块 ¥65,000/个；30kVA模块 ¥66,730/个",
+    priceEnc: "aw1BHgV0oufg2u6ySNvhSGgFXR1aKavHwQ1DHlh0KZ3Ghpex9DmG3mkPRQJRKHSU5qdDGwNPBZ3ynZSz/zmG3mwJXR5YKWuf4paekvMqdBAMfZeGyfzZ7Hr+1BheNXNIahOVlsI=",
     note: "速查表未注明柜深，故保留1100mm与1200mm两组目录编码；机柜与模块均为目录单价"
   },
   {
     model: "祁连UM-1250TFL-S\r祁连UM-0250TFL-M\r祁连UM-0300TFL-M",
     description: "祁连UM一体化UPS-125KVA单路输入（MCCB）-含UPS 输入输出-8 路空调-3 路照明-48 路 IT 配电",
     code: "01021045；01021128；01020386；01020387",
-    price: "1100mm机柜 ¥277,720；1200mm机柜 ¥283,320；25kVA模块 ¥65,000/个；30kVA模块 ¥66,730/个",
+    priceEnc: "aw1BHgV0oufg2u6ySNvhSW0LXRlaKavHwQ1DHlh0KZ3Ghpex9DmG3mgEQgJbK3SU5qdDGwNPBZ3ynZSz/zmG3mwJXR5YKWuf4paekvMqdBAMfZeGyfzZ7Hr+1BheNXNIahOVlsI=",
     note: "速查表未注明柜深，故保留1100mm与1200mm两组目录编码；机柜与模块均为目录单价"
   }
 ];
@@ -1686,7 +1729,7 @@ function enrichProductsWithCatalog(products) {
     const catalog = exactMatches.get(key);
     if (!catalog) return;
     product["产品编码"] = catalog.code;
-    product["目录价"] = catalog.price;
+    product["目录价"] = decodeCatalogPrice(catalog.priceEnc);
     product["目录价版本"] = "iTeaQ-2026-04-V1.0";
     if (catalog.note) product["目录价备注"] = catalog.note;
     matched++;
@@ -1811,7 +1854,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }).catch(e => {
     console.error('加载持久化数据失败:', e);
-    alert('加载持久化数据失败: ' + e.message);
+    showToast('加载持久化数据失败: ' + e.message);
   });
 });
 
@@ -1917,7 +1960,7 @@ function buildProductSummary() {
 
 async function analyze() {
   const req = document.getElementById("requirement").value.trim();
-  if (!req) { alert("请先输入客户需求"); return; }
+  if (!req) { showToast("请先输入客户需求"); return; }
 
   let fullReq = req;
 
@@ -1955,7 +1998,7 @@ async function analyze() {
     document.getElementById("followup-card").style.display = "block";
     document.getElementById("chat-history").innerHTML = "";
   } catch(e) {
-    alert("选型失败：" + e.message);
+    showToast("选型失败：" + e.message);
   } finally {
     btn.disabled = false; btn.classList.remove("loading");
     document.getElementById("spinner").style.display = "none";
@@ -2393,7 +2436,7 @@ function validateModels(result, validModels) {
 
 function showDetail(model, reason) {
   const p = findProduct(model);
-  if (!p) { alert("未找到产品数据：" + model); return; }
+  if (!p) { showToast("未找到产品数据：" + model); return; }
 
   document.getElementById("modal-model").textContent = p["型号"] || model;
   document.getElementById("modal-series").textContent = "系列：" + (p["系列"] || "");
@@ -2469,11 +2512,11 @@ function toggleSelectAll(type) {
 function showCompare() {
   const checkboxes = document.querySelectorAll('.product-checkbox:checked');
   if (checkboxes.length < 2) {
-    alert('请至少选择 2 个产品进行对比');
+    showToast('请至少选择 2 个产品进行对比');
     return;
   }
   if (checkboxes.length > 4) {
-    alert('最多只能同时对比 4 个产品');
+    showToast('最多只能同时对比 4 个产品');
     return;
   }
 
@@ -2481,7 +2524,7 @@ function showCompare() {
   const products = models.map(m => findProduct(m)).filter(p => p);
 
   if (products.length < 2) {
-    alert('找不到选中的产品数据');
+    showToast('找不到选中的产品数据');
     return;
   }
 
@@ -2651,7 +2694,7 @@ function exportTechnicalBrief() {
   var hasSummary = getOrderedSummaryRows(collectProjectSummaryRows()).length > 0;
 
   if (!hasDc && !hasRuntime && !hasUnified && !hasSummary && !lastResult) {
-    alert('暂无可导出的技术说明，请先完成方案校核、后备时间反算或UPS与电池配置计算');
+    showToast('暂无可导出的技术说明，请先完成方案校核、后备时间反算或UPS与电池配置计算');
     return;
   }
 
@@ -2812,13 +2855,13 @@ async function extractTextFromImages() {
       document.getElementById('requirement').value = finalText;
       pastedImages = [];
       updateImagePreviews();
-      alert('图片识别完成！文字已填入需求框，请检查确认。');
+      showToast('图片识别完成！文字已填入需求框，请检查确认。');
     } else {
-      alert('未能从图片中识别到有效文字，请手动输入。');
+      showToast('未能从图片中识别到有效文字，请手动输入。');
     }
   } catch (e) {
     console.error('图片识别错误:', e);
-    alert('图片识别失败：' + e.message);
+    showToast('图片识别失败：' + e.message);
   } finally {
     isOcrProcessing = false;
     if (btn) { btn.disabled = false; btn.textContent = '📷 识别图片文字'; }
@@ -3040,7 +3083,7 @@ async function importExcel(input) {
     }
 
     if (!newProducts.length) {
-      alert('未能解析到产品数据，请确认 Excel 包含"型号"列');
+      showToast('未能解析到产品数据，请确认 Excel 包含"型号"列');
       label.textContent = '导入失败';
       return;
     }
@@ -3074,27 +3117,73 @@ async function importExcel(input) {
     if (panel && panel.style.display !== 'none') buildDataTable();
 
   } catch(e) {
-    alert('解析失败：' + e.message);
+    showToast('解析失败：' + e.message);
     label.textContent = '导入失败：' + e.message;
   }
   input.value = '';
 }
 
-function showImportToast(msg) {
-  let t = document.getElementById('import-toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'import-toast';
-    t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);' +
-      'background:#27ae60;color:white;padding:11px 28px;border-radius:10px;' +
-      'font-size:14px;font-weight:600;z-index:9999;' +
-      'box-shadow:0 4px 16px rgba(0,0,0,.25);transition:opacity 0.5s;pointer-events:none;';
-    document.body.appendChild(t);
+// 非阻塞消息条。单参数调用即可：类型按最终文案自动判定，所以像
+// showToast("选型失败：" + e.message) 这种拼接也能正确归类为错误。
+// 需要覆盖时传第二个参数 success / warn / error。
+const TOAST_DURATIONS = { success: 3500, warn: 4500, error: 6500 };
+const TOAST_RULES = [
+  { type: 'error',   re: /(失败|错误|异常|无法|找不到|未找到|未能|不存在)/ },
+  { type: 'success', re: /(^已|完成|成功)/ },
+  { type: 'warn',    re: /(请|不能|应在|至少|最多|暂无|尚未|没有|仅支持)/ },
+];
+
+function classifyToast(msg) {
+  for (const rule of TOAST_RULES) {
+    if (rule.re.test(msg)) return rule.type;
   }
-  t.textContent = msg;
-  t.style.opacity = '1';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 3500);
+  return 'success';
+}
+
+function showToast(msg, type) {
+  const text = String(msg == null ? "" : msg);
+  if (!text) return;
+  const kind = type || classifyToast(text);
+  let stack = document.getElementById('toast-stack');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.id = 'toast-stack';
+    stack.setAttribute('role', 'status');
+    stack.setAttribute('aria-live', 'polite');
+    document.body.appendChild(stack);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + kind;
+  toast.textContent = text;
+  toast.title = '点击关闭';
+  const duration = TOAST_DURATIONS[kind] || TOAST_DURATIONS.success;
+
+  const onVisibilityChange = () => { if (!document.hidden) scheduleDismiss(); };
+  const dismiss = () => {
+    if (toast._done) return;
+    toast._done = true;
+    clearTimeout(toast._timer);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+    toast.classList.add('is-leaving');
+    setTimeout(() => toast.remove(), 240);
+  };
+  // 用户切到其他标签页时消息条不可见，此时不能让倒计时把消息吃掉，
+  // 否则像“选型失败”这种关键提示回到前台就已经消失了。
+  const scheduleDismiss = () => {
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { if (!document.hidden) dismiss(); }, duration);
+  };
+
+  toast.addEventListener('click', dismiss);
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  stack.appendChild(toast);
+  scheduleDismiss();
+  return toast;
+}
+
+// 历史入口，保留给既有导入流程调用
+function showImportToast(msg) {
+  return showToast(msg, 'success');
 }
 
 // ===== IndexedDB 数据持久化 =====
@@ -3187,7 +3276,7 @@ async function restoreBuiltinData() {
     await clearProductsDB();
     location.reload();
   } catch (e) {
-    alert('清除数据失败：' + e.message);
+    showToast('清除数据失败：' + e.message);
   }
 }
 
@@ -3327,13 +3416,13 @@ function importDcFromUnifiedConfig() {
 
 function importDcFromCurrentSelection() {
   if (importDcFromUnifiedConfig()) {
-    alert("已从UPS与电池配置计算面板导入现有UPS参数");
+    showToast("已从UPS与电池配置计算面板导入现有UPS参数");
     return;
   }
 
   const recs = lastResult?.recommended?.length ? lastResult.recommended : (lastResult?.also_consider || []);
   if (!recs.length) {
-    alert("暂无可导入的UPS参数，请先完成AI选型、填写UPS与电池配置计算参数，或手动填写本面板");
+    showToast("暂无可导入的UPS参数，请先完成AI选型、填写UPS与电池配置计算参数，或手动填写本面板");
     return;
   }
   const rec = recs[0];
@@ -3350,7 +3439,7 @@ function importDcFromCurrentSelection() {
     if (moduleKva) document.getElementById("dc-module-kw").value = moduleKva;
     if (modular.maxModules) document.getElementById("dc-module-qty").value = modular.maxModules;
   }
-  alert("已导入当前AI首选UPS型号，可继续补充IT负载和架构参数");
+  showToast("已导入当前AI首选UPS型号，可继续补充IT负载和架构参数");
 }
 
 function resetDataCenterCheck() {
@@ -3417,13 +3506,13 @@ function calcDataCenterCheck() {
   const moduleKw = parseFloat(document.getElementById("dc-module-kw").value || "0");
   const moduleQty = parseInt(document.getElementById("dc-module-qty").value || "0", 10);
 
-  if (!itLoad || itLoad <= 0) { alert("请填写IT负载功率"); return; }
-  if (!upsKva || upsKva <= 0) { alert("请填写单台UPS容量"); return; }
-  if (!upsPf || upsPf <= 0 || upsPf > 1) { alert("UPS功率因数应在0~1之间"); return; }
+  if (!itLoad || itLoad <= 0) { showToast("请填写IT负载功率"); return; }
+  if (!upsKva || upsKva <= 0) { showToast("请填写单台UPS容量"); return; }
+  if (!upsPf || upsPf <= 0 || upsPf > 1) { showToast("UPS功率因数应在0~1之间"); return; }
   if (architecture === "2N") {
-    if (!aPathQty || aPathQty < 1 || !bPathQty || bPathQty < 1) { alert("2N架构下A/B路UPS台数均不能小于1"); return; }
+    if (!aPathQty || aPathQty < 1 || !bPathQty || bPathQty < 1) { showToast("2N架构下A/B路UPS台数均不能小于1"); return; }
   } else if (!parallelQty || parallelQty < 1) {
-    alert("UPS台数不能小于1"); return;
+    showToast("UPS台数不能小于1"); return;
   }
 
   const designLoad = itLoad * (1 + Math.max(growth, 0) / 100);
@@ -3695,8 +3784,8 @@ function renderSavedUpsConfigurations() {
       <div class="multi-ups-card-model">${escapeHtml(model)}</div>
       <div class="multi-ups-card-meta">电池：${escapeHtml(batteryModel)} · ${(config.rows || []).length} 项物料</div>
       <div class="multi-ups-card-actions">
-        <button type="button" onclick="loadSavedUpsConfiguration('${config.id}')"><i class="ti ti-edit" aria-hidden="true"></i> 载入修改</button>
-        <button type="button" class="danger" onclick="deleteSavedUpsConfiguration('${config.id}')"><i class="ti ti-trash" aria-hidden="true"></i> 删除</button>
+        <button type="button" onclick="loadSavedUpsConfiguration('${config.id}')"><svg class="ti ti-edit" aria-hidden="true"><use href="#ti-edit"/></svg> 载入修改</button>
+        <button type="button" class="danger" onclick="deleteSavedUpsConfiguration('${config.id}')"><svg class="ti ti-trash" aria-hidden="true"><use href="#ti-trash"/></svg> 删除</button>
       </div>
     </article>`;
   }).join('');
@@ -3802,13 +3891,13 @@ function saveCurrentUpsConfigurationAndStartNext() {
     ? document.getElementById('custom-ups-model')
     : document.getElementById('unified-ups-model');
   if (!modelInput?.value?.trim()) {
-    alert(upsType === 'custom' ? '请先填写非标 UPS 型号，再加入项目' : '请先选择 UPS 型号，再加入项目');
+    showToast(upsType === 'custom' ? '请先填写非标 UPS 型号，再加入项目' : '请先选择 UPS 型号，再加入项目');
     document.getElementById('unified-config-input-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(function() { modelInput?.focus(); }, 300);
     return;
   }
   if (upsType === 'standard' && !findProduct(modelInput.value.trim())) {
-    alert('请从匹配结果中选择完整的 UPS 型号，再加入项目');
+    showToast('请从匹配结果中选择完整的 UPS 型号，再加入项目');
     renderUpsModelSearchResults(modelInput.value);
     modelInput.focus();
     return;
@@ -3816,7 +3905,7 @@ function saveCurrentUpsConfigurationAndStartNext() {
   if (!calcAllBatteryConfig()) return;
   const rows = collectProjectSummaryRows({ includeSaved: false }).filter(row => !String(row.key).startsWith('custom-'));
   if (!rows.length) {
-    alert('当前配置没有可加入项目的物料');
+    showToast('当前配置没有可加入项目的物料');
     return;
   }
   const existing = getSavedUpsConfigurations().find(item => item.id === window.editingUpsConfigurationId);
@@ -3848,7 +3937,7 @@ function toggleSummaryPrice() {
     const password = prompt('请输入密码查看价格:');
     if (password !== PRICE_VIEW_CODE) {
       checkbox.checked = false;
-      alert('密码错误！');
+      showToast('密码错误！');
       return;
     }
     window.summaryShowPrice = true;
@@ -4983,7 +5072,7 @@ function importRuntimeFromUnifiedConfig() {
     runtimeTarget.value = dcBackup.value;
   }
 
-  alert('已导入UPS与电池配置参数（含后备时间），可选择电池型号后反算后备时间');
+  showToast('已导入UPS与电池配置参数（含后备时间），可选择电池型号后反算后备时间');
 }
 
 function resetRuntimeCalc() {
@@ -5009,12 +5098,12 @@ function calcBatteryRuntime() {
   var isCustom = battType === 'custom';
   var cellMultiplier = getBatteryCellMultiplier(battType);
 
-  if (upsNum < 1) { alert('UPS台数不能小于1'); return; }
-  if (cellsPerGroup < 1) { alert('每组电池节数不能小于1'); return; }
-  if (groupsPerUps < 1) { alert('每台UPS电池组数不能小于1'); return; }
-  if (pf <= 0 || pf > 1) { alert('功率因数应在0~1之间'); return; }
-  if (eff <= 0 || eff > 1) { alert('逆变效率应在0~1之间'); return; }
-  if (loadKw <= 0 && upsKva <= 0) { alert('请填写总负载功率或单台UPS容量'); return; }
+  if (upsNum < 1) { showToast('UPS台数不能小于1'); return; }
+  if (cellsPerGroup < 1) { showToast('每组电池节数不能小于1'); return; }
+  if (groupsPerUps < 1) { showToast('每台UPS电池组数不能小于1'); return; }
+  if (pf <= 0 || pf > 1) { showToast('功率因数应在0~1之间'); return; }
+  if (eff <= 0 || eff > 1) { showToast('逆变效率应在0~1之间'); return; }
+  if (loadKw <= 0 && upsKva <= 0) { showToast('请填写总负载功率或单台UPS容量'); return; }
 
   var perUpsLoadW = loadKw > 0 ? (loadKw * 1000 / upsNum) : (upsKva * pf * 1000);
   var totalLoadW = loadKw > 0 ? loadKw * 1000 : perUpsLoadW * upsNum;
@@ -5028,7 +5117,7 @@ function calcBatteryRuntime() {
   var curve = battery ? getBatteryPowerCurve(battery, endV) : [];
 
   if (!isCustom) {
-    if (!battery) { alert('请选择电池型号'); return; }
+    if (!battery) { showToast('请选择电池型号'); return; }
     estimate = estimateRuntimeFromCurve(curve, requiredCellPower);
   }
 
@@ -5117,7 +5206,7 @@ function clearProjectSummary() {
   restoreUnifiedConfigurationResults(null);
   renderSavedUpsConfigurations();
   renderProjectSummary();
-  alert('已清空汇总数据');
+  showToast('已清空汇总数据');
 }
 
 // 标准断路器规格数组（安培）- 按升序排列
@@ -5580,41 +5669,41 @@ function calcAllBatteryConfig() {
   // 若已输入标准型号，仍要求从产品库选择完整型号，避免把搜索关键字写入汇总。
   const upsModelError = getUpsCalculationModelError(upsType, upsModel, upsProduct);
   if (upsModelError) {
-    alert(upsModelError);
+    showToast(upsModelError);
     renderUpsModelSearchResults(upsModel);
     document.getElementById('unified-ups-model')?.focus();
     return false;
   }
   if (upsCap <= 0 && loadKw <= 0) {
-    alert('请输入UPS容量或负载功率');
+    showToast('请输入UPS容量或负载功率');
     return false;
   }
   if (upsNum < 1) {
-    alert('UPS台数不能小于1');
+    showToast('UPS台数不能小于1');
     return false;
   }
   if (groups < 1) {
-    alert('电池组数不能小于1');
+    showToast('电池组数不能小于1');
     return false;
   }
   if (cellsPerGroup < 1) {
-    alert('电池节数不能小于1');
+    showToast('电池节数不能小于1');
     return false;
   }
   if (pf <= 0 || pf > 1) {
-    alert('功率因数应在0~1之间');
+    showToast('功率因数应在0~1之间');
     return false;
   }
   if (eff <= 0 || eff > 1) {
-    alert('逆变效率应在0~1之间');
+    showToast('逆变效率应在0~1之间');
     return false;
   }
   if (switchBasis === 'load' && loadKw <= 0) {
-    alert('开关电流选择按负载功率计算时，请填写负载功率');
+    showToast('开关电流选择按负载功率计算时，请填写负载功率');
     return false;
   }
   if (switchBasis === 'ups' && upsCap <= 0) {
-    alert('开关电流选择按UPS容量计算时，请填写UPS容量');
+    showToast('开关电流选择按UPS容量计算时，请填写UPS容量');
     return false;
   }
 
@@ -5914,7 +6003,7 @@ function exportProjectSummary() {
   if (!ensureLib('XLSX')) return;
   const orderedRows = getOrderedSummaryRows(collectProjectSummaryRows());
   if (!orderedRows.length) {
-    alert('请先导入配置数据');
+    showToast('请先导入配置数据');
     return;
   }
 
@@ -6082,7 +6171,7 @@ function exportQuickQuote() {
   if (!ensureLib('XLSX')) return;
   const orderedRows = getOrderedSummaryRows(collectProjectSummaryRows());
   if (!orderedRows.length) {
-    alert('暂无可导出的报价数据，请先完成UPS与电池配置计算或增加自定义行');
+    showToast('暂无可导出的报价数据，请先完成UPS与电池配置计算或增加自定义行');
     return;
   }
 
@@ -6232,7 +6321,7 @@ function calcLeadBattery() {
   const battPower = parseFloat(document.getElementById('lead-batt-power').value) || 546;
 
   if (!upsCap || !battNum || !battPower) {
-    alert('请填写完整的UPS参数');
+    showToast('请填写完整的UPS参数');
     return;
   }
 
@@ -29955,7 +30044,7 @@ function calcLithiumBattery() {
   const powerW = (loadKw === 0 || isNaN(loadKw)) ? (upsKva * pf * 1000) : (loadKw * 1000);
 
   if (!groupNum || !time) {
-    alert('请填写完整的锂电池参数');
+    showToast('请填写完整的锂电池参数');
     return;
   }
 
@@ -30748,7 +30837,7 @@ function openDatabaseProductPopout() {
     dbDetailPopoutWindow = window.open('', 'ups-product-detail-window', `popup=yes,width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop},resizable=yes,scrollbars=yes`);
   }
   if (!dbDetailPopoutWindow) {
-    alert('独立窗口被浏览器拦截，请允许此网站打开弹出式窗口后重试。');
+    showToast('独立窗口被浏览器拦截，请允许此网站打开弹出式窗口后重试。');
     return;
   }
   renderDatabaseProductPopout(product);
@@ -31087,7 +31176,7 @@ function restoreHistory(record, event) {
   renderProjectSummary();
 
   closeHistoryModal();
-  alert('已恢复选型结果');
+  showToast('已恢复选型结果');
 }
 
 function filterHistory() {
@@ -31147,7 +31236,7 @@ function exportHistory() {
   }
 
   if (!records.length) {
-    alert('没有可导出的历史记录');
+    showToast('没有可导出的历史记录');
     return;
   }
 
@@ -31248,7 +31337,7 @@ async function handleDocUpload(input) {
       textarea.focus();
       showOk();
     } catch(err) {
-      alert('DOCX 解析失败：' + err.message);
+      showToast('DOCX 解析失败：' + err.message);
     }
   } else if (ext === 'pdf') {
     if (!ensureLib('pdfjsLib')) { input.value = ''; return; }
@@ -31266,10 +31355,10 @@ async function handleDocUpload(input) {
       textarea.focus();
       showOk();
     } catch(err) {
-      alert('PDF 解析失败：' + err.message);
+      showToast('PDF 解析失败：' + err.message);
     }
   } else {
-    alert('暂不支持该格式。\n支持：TXT / MD / DOCX / PDF');
+    showToast('暂不支持该格式。\n支持：TXT / MD / DOCX / PDF');
   }
   input.value = '';
 }

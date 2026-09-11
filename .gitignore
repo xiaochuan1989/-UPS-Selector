@@ -23,3 +23,6 @@ test_data/
 *.docx
 ~$*
 liantong_result_*
+__pycache__/
+*.pyc
+.playwright-cli/

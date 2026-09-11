@@ -1,6 +1,6 @@
 # UPS 智能选型助手——产品与技术设计
 
-> 版本：v1.8.38
+> 版本：v1.8.39
 > 最后更新：2026-09-10
 > 文档职责：说明产品能力、系统结构、关键数据流、业务公式和技术边界。
 
@@ -319,7 +319,7 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 | `xlsx-js-style` | Excel 读写和样式 | jsdelivr | unpkg（cdnjs 未收录该包） |
 | `mammoth.js` | DOCX 文本提取 | jsdelivr | cdnjs |
 | `pdf.js` | PDF 文本提取 | cdnjs | jsdelivr（worker 同步切到同源） |
-| `@tabler/icons-webfont` | 顶栏与标签页图标 | jsdelivr | 无（缺失仅图标不显示，不影响功能与布局） |
+
 
 容灾机制（`index.html` 头部 `LIB_SOURCES` / `libLoadState` / `ensureLib`）：
 
@@ -328,6 +328,13 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 - 所有依赖第三方库的入口先调用 `ensureLib(全局名)`：库就绪返回 `true`；仍在加载提示稍后重试；确认失败提示网络原因并中止。覆盖 `importExcel`、`exportProjectSummary`、`exportQuickQuote`、`exportHistory`（`XLSX`）以及 `handleDocUpload` 的 DOCX/PDF 分支。
 
 基础产品查看和内置计算不依赖这些库。`XLSX` 曾有 28 处调用零守卫，CDN 不可用时点击导出会抛未捕获的 `TypeError` 且界面无任何反馈，现已由 `ensureLib` 统一兜底。
+
+图标不再依赖外部字体（v1.8.39）：原先从 jsdelivr 加载 `@tabler/icons-webfont`（5800+ 图标，首次 `loadEvent` 约 3.9s 且期间图标回退），现改为 `<body>` 后的内联 SVG sprite，只含实际用到的 25 个图标，约 6KB。
+
+- 标记形式：`<svg class="ti ti-名称" aria-hidden="true"><use href="#ti-名称"/></svg>`。
+- `svg.ti` 宽高取 `1em`，尺寸继续由 `font-size` 控制，`.nav-tab .ic`、`.db-splitter .ti` 等原有规则不变。
+- 新增图标要同时补 sprite 里的 `<symbol>`；`<use>` 只在本文档内解析，跨窗口 HTML（如产品数据独立窗口）不要使用该写法。
+- 实测外部资源从 4 个减至 3 个，`loadEvent` 由 3945ms 降到 417ms。
 
 本地开发依赖：
 
@@ -340,6 +347,8 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 
 - 客户端访问码可从源码读取，只能阻挡误操作。
 - 价格查看码同样不是加密或权限系统。
+- 目录价按 XOR + base64 编码存储在 `UPS_CATALOG_ENRICHMENTS` 的 `priceEnc` 字段，运行时由 `decodeCatalogPrice` 还原（v1.8.39）。目的是让目录价不以明文出现在公开页面源码里，挡住直接 view-source 和 grep；解码逻辑就在前端，**这不是加密**。目录价是随产品目录对外流通的价格、不含折扣和实际成本，因此按体面性处理而非安全边界对待。
+- `CATALOG_PRICE_KEY` 在 `index.html` 和 `dev_scripts/check_catalog_enrichment.py` 两处各有一份，改动必须同步，否则目录价门禁会失效。
 - 线上部署制品只包含 `index.html`，不得发布 Excel 模板、MCP 配置和开发记录。
 - `.mcp.json` 是本机 MCP 配置，保留在本地但不纳入 Git。
 - 不在代码仓库中写入真实 API Key。
@@ -357,6 +366,7 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 - 105 款产品 JSON 可解析。
 - 产品编码是有类型约束的标识字段：目录回填值只能是 PDF 原始 8 位数字；多个候选编码以中文分号分隔，部件名称、版本差异和价格说明不得混入编码字段。
 - 版本号在页面和三份文档中一致。
+- 目录价门禁可解码全部 32 条 `priceEnc` 并命中内置数据库与 V8.0 速查表。
 - 断路器、电池电气量、传感器和电压等级业务测试通过。
 - Playwright 至少覆盖登录、五个主功能面板、数据库和设置/历史弹窗。
 
@@ -418,5 +428,6 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 | v1.8.36 | 2026-09-10 | 补充 50kVA/100kVA 功率模块的中性线说明，并为电池开关品牌选项增加成本提示；产品数据全景改为更大、可调整尺寸且可拖动的非模态浮窗，压缩字段布局并允许继续操作背景产品表，便于并排对照 |
 | v1.8.37 | 2026-09-10 | 产品数据全景新增浏览器级“独立窗口”：支持从上下左右边缘调整大小、通过系统标题栏拖到另一台显示器；独立窗口打开后主页面仍可操作，点击其他型号时窗口内容自动同步更新；原页面内浮窗继续保留 |
 | v1.8.38 | 2026-09-11 | 第三方库容灾：xlsx-js-style 与 mammoth 主源由 unpkg 改为 jsdelivr，新增实测可用的备用源自动切换（xlsx→unpkg、mammoth→cdnjs、pdf.js→jsdelivr 并同步切换 worker）；统一 ensureLib 守卫，Excel 导入、项目汇总导出、快速报价单、历史导出在库未加载时给出明确提示而不再抛未捕获异常；修复 pdf.js worker 配置在库加载失败时抛错；删除 4 个零引用死函数（handleImagePaste、switchLeadMethodTab、showBatteryCategory、renderBatteryRecommendations，共 107 行）；结构审计新增“零引用函数”检查 |
+| v1.8.39 | 2026-09-11 | 交互与首屏收尾：56 处阻塞 `alert()` 改为可叠加、可点掉的非阻塞消息条 `showToast`，类型按文案自动判定（错误停留更久），页面隐藏时不消耗消息避免关键提示被错过；顶栏与标签页图标由外部 tabler webfont 改为内联 SVG sprite（仅 25 个在用图标，约 6KB），外部资源 4→3、`loadEvent` 3945ms→417ms；目录价改为 XOR + base64 编码存储、运行时解码，明文 `¥` 金额从 61 处降至 5 处（仅剩代码正则），目录价门禁同步解码后仍校验通过 |
 
 更细的历史变更以 Git 提交记录为准。

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """校验 UPS 目录价对照表与 V8.0 速查表、内置数据库及目录 PDF 的一致性。"""
 
+import base64
 import json
 import re
 import sys
@@ -22,6 +23,8 @@ HTML_PATH = PROJECT_ROOT / "index.html"
 WORKBOOK_PATH = PROJECT_ROOT / "常用UPS速查表-V8.0.xlsx"
 CATALOG_PATH = PROJECT_ROOT / "解决方案产品目录价汇总（CM-CR-BM-BL-UPS）-iTeaQ-2026-04-V1.0 .pdf.pdf"
 EXPECTED_MATCH_COUNT = 32
+# 必须与 index.html 的 CATALOG_PRICE_KEY 一致
+CATALOG_PRICE_KEY = [0x5a, 0x3c, 0x71, 0x2e, 0x68, 0x19, 0x44, 0x7b]
 
 
 def normalize(value):
@@ -46,6 +49,15 @@ def decode_js_string(value):
     return json.loads('"' + value + '"')
 
 
+def decode_catalog_price(encoded):
+    """与 index.html 的 decodeCatalogPrice 对应：目录价按 XOR + base64 存储，
+    避免明文出现在公开页面源码里。两侧密钥必须保持一致。"""
+    raw = bytearray(base64.b64decode(encoded))
+    for index in range(len(raw)):
+        raw[index] ^= CATALOG_PRICE_KEY[index % len(CATALOG_PRICE_KEY)]
+    return raw.decode("utf-8")
+
+
 def parse_enrichments(html):
     start = html.index("const UPS_CATALOG_ENRICHMENTS = [")
     end = html.index("function normalizeCatalogMatchText", start)
@@ -54,7 +66,7 @@ def parse_enrichments(html):
         r'\{\s*model:\s*"((?:\\.|[^"])*)",\s*'
         r'description:\s*"((?:\\.|[^"])*)",\s*'
         r'code:\s*"((?:\\.|[^"])*)",\s*'
-        r'price:\s*"((?:\\.|[^"])*)"'
+        r'priceEnc:\s*"((?:\\.|[^"])*)"'
         r'(?:,\s*note:\s*"((?:\\.|[^"])*)")?\s*\}',
         re.S,
     )
@@ -63,7 +75,7 @@ def parse_enrichments(html):
             "model": decode_js_string(model),
             "description": decode_js_string(description),
             "code": decode_js_string(code),
-            "price": decode_js_string(price),
+            "price": decode_catalog_price(decode_js_string(price)),
             "note": decode_js_string(note) if note is not None else "",
         }
         for model, description, code, price, note in pattern.findall(block)

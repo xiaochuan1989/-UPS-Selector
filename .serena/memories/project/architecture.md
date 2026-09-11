@@ -1,6 +1,6 @@
 # UPS选型助手技术架构
 
-（已更新：2026-09-11，版本 v1.8.38）
+（已更新：2026-09-11，版本 v1.8.39）
 
 ## 正式入口
 
@@ -21,6 +21,16 @@
 - `setPdfWorkerSrc` 包裹 `pdfjsLib.GlobalWorkerOptions.workerSrc` 赋值，并在走备用源时切到同源 worker。
 - `ensureLib(全局名)` 是所有依赖三方库入口的统一守卫：`importExcel`、`exportProjectSummary`、`exportQuickQuote`、`exportHistory`、`handleDocUpload` 的 DOCX/PDF 分支。
 - 新增依赖三方库的入口时必须先调 `ensureLib`，否则库缺失会抛未捕获异常且界面无反馈。
+
+## 界面基础设施（v1.8.39）
+
+- `showToast(msg, type)`：非阻塞消息条，全站替代 `alert`。单参数即可，类型由 `classifyToast` 按文案判定（error / success / warn，规则顺序不能调换：成功类文案里也常含「请」）。
+  - 入场动画只动 `transform`：页面隐藏时动画时间线冻结，若 `opacity` 参与动画消息条会永久不可见。
+  - `document.hidden` 时定时器不关闭消息，等 `visibilitychange` 回到前台重新计时。
+  - `showImportToast` 保留为 `showToast(msg, "success")` 的薄包装。
+  - `notifyLibIssue` 给头部 script 里的 `ensureLib` 用，`showToast` 未就绪时退回 `alert`。
+- 图标：`<body>` 后的内联 SVG sprite，`<svg class="ti ti-名称"><use href="#ti-名称"/></svg>`，`svg.ti` 宽高 `1em`。新增图标须同时补 `<symbol>`；`<use>` 不跨文档，产品数据独立窗口里不能用。
+- 目录价：`UPS_CATALOG_ENRICHMENTS[].priceEnc` 为 XOR + base64，`decodeCatalogPrice` 在回填 `product["目录价"]` 时还原。下游全部读 `product["目录价"]`，与明文时期逐字节一致。
 
 ## 功能模块
 
