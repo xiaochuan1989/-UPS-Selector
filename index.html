@@ -6,7 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a9f'/%3E%3Cpath d='M36 4 14 36h16l-2 24 22-34H34z' fill='%23fff'/%3E%3C/svg%3E">
 <title>UPS 智能选型助手</title>
 <script>
-const APP_VERSION = "v1.8.37";
+const APP_VERSION = "v1.8.38";
 const DEBUG_MODE = false;
 const CLIENT_SIDE_ACCESS_CODE = '173205';
 const PRICE_VIEW_CODE = '314159';
@@ -398,10 +398,55 @@ document.addEventListener("DOMContentLoaded", function() {
 }
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
-<script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script>
+/* 第三方库容灾：主源（jsdelivr / cdnjs）被客户内网拦截或超时时自动切换备用源，
+   避免 Excel 导入导出、Word/PDF 解析静默失效。备用源已逐个实测可用：
+   xlsx-js-style 仅 jsdelivr 与 unpkg 收录，cdnjs 无该包。 */
+var LIB_SOURCES = [
+  { global: 'XLSX',      label: 'Excel 组件（xlsx-js-style）', url: 'https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js' },
+  { global: 'mammoth',   label: 'Word 解析组件（mammoth）',    url: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js' },
+  { global: 'pdfjsLib',  label: 'PDF 解析组件（pdf.js）',      url: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+    worker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js' }
+];
+var libLoadState = {};
+
+function setPdfWorkerSrc(url) {
+  if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = url;
+}
+setPdfWorkerSrc('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
+
+LIB_SOURCES.forEach(function(lib) {
+  if (typeof window[lib.global] !== 'undefined') { libLoadState[lib.global] = 'ready'; return; }
+  libLoadState[lib.global] = 'loading';
+  var s = document.createElement('script');
+  s.src = lib.url;
+  s.onload = function() {
+    libLoadState[lib.global] = typeof window[lib.global] !== 'undefined' ? 'ready' : 'failed';
+    if (lib.worker && libLoadState[lib.global] === 'ready') setPdfWorkerSrc(lib.worker);
+  };
+  s.onerror = function() { libLoadState[lib.global] = 'failed'; };
+  document.head.appendChild(s);
+});
+
+// 依赖第三方库的入口统一先调用本函数，缺库时给出可操作的提示而不是抛未捕获异常
+function ensureLib(globalName) {
+  if (typeof window[globalName] !== 'undefined') return true;
+  var lib = null;
+  for (var i = 0; i < LIB_SOURCES.length; i++) {
+    if (LIB_SOURCES[i].global === globalName) { lib = LIB_SOURCES[i]; break; }
+  }
+  var name = lib ? lib.label : globalName;
+  if (libLoadState[globalName] === 'loading') {
+    alert(name + '正在从备用源加载，请等待几秒后重试。');
+  } else {
+    alert(name + '加载失败，该功能暂时不可用。\n\n常见原因：当前网络（客户内网、防火墙）无法访问 CDN。\n请更换网络后刷新页面重试。');
+  }
+  return false;
+}
+</script>
 </head>
 <body>
 
@@ -2780,26 +2825,6 @@ async function extractTextFromImages() {
   }
 }
 
-function handleImagePaste(event) {
-  const items = event.clipboardData?.items;
-  if (!items) return;
-
-  for (let item of items) {
-    if (item.type.startsWith('image/')) {
-      event.preventDefault();
-      const file = item.getAsFile();
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          pastedImages.push(e.target.result);
-          updateImagePreviews();
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  }
-}
-
 function handleImageDrop(event) {
   event.preventDefault();
   event.target.classList.remove('dragover');
@@ -2894,6 +2919,7 @@ const DB_TOP_SET = new Set(["系列","型号","描述","产品编码","目录价
 async function importExcel(input) {
   const file = input.files[0];
   if (!file) return;
+  if (!ensureLib('XLSX')) { input.value = ''; return; }
   const label = document.getElementById('data-source-label');
   label.textContent = '正在解析 ' + file.name + '...';
   try {
@@ -5885,6 +5911,7 @@ function getVoltLevel(cells, battType) {
 
 // 导出项目汇总清单（Excel格式，含样式）
 function exportProjectSummary() {
+  if (!ensureLib('XLSX')) return;
   const orderedRows = getOrderedSummaryRows(collectProjectSummaryRows());
   if (!orderedRows.length) {
     alert('请先导入配置数据');
@@ -6052,6 +6079,7 @@ function exportProjectSummary() {
 
 // 快速报价单导出（复用项目汇总清单数据）
 function exportQuickQuote() {
+  if (!ensureLib('XLSX')) return;
   const orderedRows = getOrderedSummaryRows(collectProjectSummaryRows());
   if (!orderedRows.length) {
     alert('暂无可导出的报价数据，请先完成UPS与电池配置计算或增加自定义行');
@@ -29811,37 +29839,6 @@ function estimateRuntimeFromCurve(curve, requiredPower) {
   };
 }
 
-function switchLeadMethodTab(method) {
-  ['method1', 'method2'].forEach(function(m) {
-    var btn = document.getElementById('lead-tab-' + m);
-    var panel = document.getElementById('lead-' + m + '-panel');
-    if (btn && panel) {
-      if (m === method) {
-        btn.classList.add('lead-sub-tab-active');
-        panel.style.display = 'block';
-      } else {
-        btn.classList.remove('lead-sub-tab-active');
-        panel.style.display = 'none';
-      }
-    }
-  });
-}
-
-function showBatteryCategory(category) {
-  ['normal', 'highpower', '2v'].forEach(function(cat) {
-    var btn = document.getElementById('cat-' + cat + '-btn');
-    var panel = document.getElementById('lead2-' + cat + '-recommend');
-    if (btn && panel) {
-      if (cat === category) {
-        btn.classList.add('cat-tab-active');
-        panel.style.display = 'block';
-      } else {
-        btn.classList.remove('cat-tab-active');
-        panel.style.display = 'none';
-      }
-    }
-  });
-}
 function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
   var result = {
     normal: { suitable: [], all: [] },
@@ -29890,64 +29887,6 @@ function getBatteryRecommendationsByPower(cellPower, endV, dischargeTime) {
   });
 
   return result;
-}
-function renderBatteryRecommendations(category, data, cellPower) {
-  var container = document.getElementById('lead2-' + category + '-recommend');
-  if (!container) return;
-
-  var html = '';
-  if (data.suitable.length > 0) {
-    var total = data.suitable.length;
-    var displayCount = Math.min(total, 6);
-    var remaining = total - displayCount;
-
-    html += '<div style="margin-bottom:12px;padding:8px 12px;background:#e8f5e9;border-radius:6px;font-size:12px;color:#2e7d32">';
-    html += '<strong>找到 ' + total + ' 个适合的型号</strong>（功率 >= ' + cellPower.toFixed(2) + 'W）</div>';
-    html += '<div class="battery-recommend-card">';
-    data.suitable.slice(0, displayCount).forEach(function(b) {
-      html += '<div class="battery-item">';
-      html += '<div class="model">' + b.model + '</div>';
-      html += '<div class="spec">' + b.capacity + '</div>';
-      html += '<div class="power suitable">恒功率: ' + b.power + 'W (余量 +' + b.marginPercent + '%)</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-
-    if (remaining > 0) {
-      html += '<details style="margin-top:12px">';
-      html += '<summary style="cursor:pointer;font-size:13px;color:#2563eb;font-weight:500;padding:8px 12px;background:#f5f7fa;border-radius:6px;text-align:center">';
-      html += '▼ 点击展开查看剩余 ' + remaining + ' 个型号 ▲</summary>';
-      html += '<div class="battery-recommend-card" style="margin-top:8px">';
-      data.suitable.slice(displayCount).forEach(function(b) {
-        html += '<div class="battery-item">';
-        html += '<div class="model">' + b.model + '</div>';
-        html += '<div class="spec">' + b.capacity + '</div>';
-        html += '<div class="power suitable">恒功率: ' + b.power + 'W (余量 +' + b.marginPercent + '%)</div>';
-        html += '</div>';
-      });
-      html += '</div></details>';
-    }
-  } else {
-    html += '<div style="margin-bottom:12px;padding:8px 12px;background:#fff3cd;border-radius:6px;font-size:12px;color:#856404">';
-    html += '<strong>未找到适合的型号</strong>，请调整参数</div>';
-  }
-
-  if (data.all.length > 0 && data.suitable.length < data.all.length) {
-    var unsuitCount = data.all.length - data.suitable.length;
-    html += '<details style="margin-top:12px">';
-    html += '<summary style="cursor:pointer;font-size:12px;color:#888">查看 ' + unsuitCount + ' 个功率不足的型号</summary>';
-    html += '<div class="battery-recommend-card" style="margin-top:8px">';
-    data.all.filter(function(b) { return !b.isSuitable; }).forEach(function(b) {
-      html += '<div class="battery-item unsuitable">';
-      html += '<div class="model">' + b.model + '</div>';
-      html += '<div class="spec">' + b.capacity + '</div>';
-      html += '<div class="power insufficient">恒功率: ' + b.power + 'W</div>';
-      html += '</div>';
-    });
-    html += '</div></details>';
-  }
-
-  container.innerHTML = html;
 }
 function openBatteryDataTable(){document.getElementById('battery-data-modal').style.display='block';refreshBatteryDataVoltageOptions();renderBatteryDataTable();}
 function closeBatteryDataTable(){document.getElementById('battery-data-modal').style.display='none';}
@@ -31194,6 +31133,7 @@ function expandHistoryItem(el) {
 }
 
 function exportHistory() {
+  if (!ensureLib('XLSX')) return;
   const keyword = document.getElementById('history-search').value.trim();
   const history = loadSelectionHistoryRaw();
   let records = history.records;
@@ -31300,10 +31240,7 @@ async function handleDocUpload(input) {
     textarea.focus();
     showOk();
   } else if (ext === 'docx' || ext === 'doc') {
-    if (typeof mammoth === 'undefined') {
-      alert('DOCX 解析库尚未加载，请检查网络连接后刷新页面重试');
-      input.value = ''; return;
-    }
+    if (!ensureLib('mammoth')) { input.value = ''; return; }
     try {
       const buf = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer: buf });
@@ -31314,10 +31251,7 @@ async function handleDocUpload(input) {
       alert('DOCX 解析失败：' + err.message);
     }
   } else if (ext === 'pdf') {
-    if (typeof pdfjsLib === 'undefined') {
-      alert('PDF 解析库尚未加载，请检查网络连接后刷新页面重试');
-      input.value = ''; return;
-    }
+    if (!ensureLib('pdfjsLib')) { input.value = ''; return; }
     try {
       const buf = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;

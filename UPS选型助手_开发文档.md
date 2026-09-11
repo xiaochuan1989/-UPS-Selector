@@ -1,6 +1,6 @@
 # UPS 智能选型助手——产品与技术设计
 
-> 版本：v1.8.37
+> 版本：v1.8.38
 > 最后更新：2026-09-10
 > 文档职责：说明产品能力、系统结构、关键数据流、业务公式和技术边界。
 
@@ -312,14 +312,22 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 
 ## 9. 外部运行依赖
 
-正式页面通过 CDN 加载：
+正式页面通过 CDN 加载，每个库都有主源和已实测可用的备用源：
 
-- `xlsx-js-style`：Excel 读写和样式。
-- `mammoth.js`：DOCX 文本提取。
-- `pdf.js`：PDF 文本提取。
-- `@tabler/icons-webfont`：顶栏与标签页图标（缺失仅图标不显示，不影响功能与布局）。
+| 库 | 用途 | 主源 | 备用源 |
+|---|---|---|---|
+| `xlsx-js-style` | Excel 读写和样式 | jsdelivr | unpkg（cdnjs 未收录该包） |
+| `mammoth.js` | DOCX 文本提取 | jsdelivr | cdnjs |
+| `pdf.js` | PDF 文本提取 | cdnjs | jsdelivr（worker 同步切到同源） |
+| `@tabler/icons-webfont` | 顶栏与标签页图标 | jsdelivr | 无（缺失仅图标不显示，不影响功能与布局） |
 
-基础产品查看和内置计算不依赖这些库；Excel、DOCX、PDF 功能在 CDN 不可用时应显示明确错误。
+容灾机制（`index.html` 头部 `LIB_SOURCES` / `libLoadState` / `ensureLib`）：
+
+- 主源脚本标签解析完成后，若对应全局对象仍未定义，自动注入备用源；`pdf.js` 走备用源时 `workerSrc` 同步切换到同源 worker，避免主库与 worker 版本错配。
+- `pdf.js` 的 `workerSrc` 赋值经 `setPdfWorkerSrc` 包裹，库未加载时不再在页面加载阶段抛错。
+- 所有依赖第三方库的入口先调用 `ensureLib(全局名)`：库就绪返回 `true`；仍在加载提示稍后重试；确认失败提示网络原因并中止。覆盖 `importExcel`、`exportProjectSummary`、`exportQuickQuote`、`exportHistory`（`XLSX`）以及 `handleDocUpload` 的 DOCX/PDF 分支。
+
+基础产品查看和内置计算不依赖这些库。`XLSX` 曾有 28 处调用零守卫，CDN 不可用时点击导出会抛未捕获的 `TypeError` 且界面无任何反馈，现已由 `ensureLib` 统一兜底。
 
 本地开发依赖：
 
@@ -344,6 +352,7 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 - 所有内联 JavaScript 可被 Node.js 编译。
 - HTML 核心面板层级正确，客户需求卡片不在隐藏容器内。
 - DOM ID 和函数定义无重复。
+- 不存在零引用函数（全文仅出现定义处一次即判定死代码；确需保留的预留入口写入 `audit_html.py` 的 `UNREFERENCED_ALLOWLIST` 并说明原因）。
 - 活动代码不引用不存在的静态 DOM ID。
 - 105 款产品 JSON 可解析。
 - 产品编码是有类型约束的标识字段：目录回填值只能是 PDF 原始 8 位数字；多个候选编码以中文分号分隔，部件名称、版本差异和价格说明不得混入编码字段。
@@ -408,5 +417,6 @@ API Key 保存在浏览器本地存储中，适合受控内部环境，不适合
 | v1.8.35 | 2026-09-10 | 在“开关电流计算依据”和“监控主机/显示屏数量”旁增加醒目的“⚠ 影响成本”提示徽标及悬停说明，提醒用户这两项选择会改变配置规格、数量和项目成本 |
 | v1.8.36 | 2026-09-10 | 补充 50kVA/100kVA 功率模块的中性线说明，并为电池开关品牌选项增加成本提示；产品数据全景改为更大、可调整尺寸且可拖动的非模态浮窗，压缩字段布局并允许继续操作背景产品表，便于并排对照 |
 | v1.8.37 | 2026-09-10 | 产品数据全景新增浏览器级“独立窗口”：支持从上下左右边缘调整大小、通过系统标题栏拖到另一台显示器；独立窗口打开后主页面仍可操作，点击其他型号时窗口内容自动同步更新；原页面内浮窗继续保留 |
+| v1.8.38 | 2026-09-11 | 第三方库容灾：xlsx-js-style 与 mammoth 主源由 unpkg 改为 jsdelivr，新增实测可用的备用源自动切换（xlsx→unpkg、mammoth→cdnjs、pdf.js→jsdelivr 并同步切换 worker）；统一 ensureLib 守卫，Excel 导入、项目汇总导出、快速报价单、历史导出在库未加载时给出明确提示而不再抛未捕获异常；修复 pdf.js worker 配置在库加载失败时抛错；删除 4 个零引用死函数（handleImagePaste、switchLeadMethodTab、showBatteryCategory、renderBatteryRecommendations，共 107 行）；结构审计新增“零引用函数”检查 |
 
 更细的历史变更以 Git 提交记录为准。

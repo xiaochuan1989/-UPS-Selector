@@ -1,6 +1,6 @@
 # 待办与未来优化
 
-（已更新：2026-09-05 v1.8.15）
+（已更新：2026-09-11 v1.8.38）
 
 ## P0 - 高优先级（已完成）
 - [x] 导入数据持久化（IndexedDB）
@@ -29,15 +29,20 @@
 - [x] **UPS信息从AI结果提取**：支持从lastResult自动填入型号 (v1.6.3)
 
 ## P1-B - 中价值
+- [x] **第三方库容灾与依赖守卫**（v1.8.38）：xlsx/mammoth 主源换 jsdelivr 并加实测备用源；`ensureLib` 统一守卫 4 个 XLSX 入口和 DOCX/PDF 分支；修复 pdf.js worker 在库加载失败时抛错
+- [x] **清理零引用死代码并加机制拦截**（v1.8.38）：删除 handleImagePaste / switchLeadMethodTab / showBatteryCategory / renderBatteryRecommendations 共 107 行，`audit_html.py` 新增「零引用函数」检查
 - [ ] 竞品对标（华为/艾默生/施耐德等竞品型号映射）
 - [x] 汇总表产品编码和价格填充
 - [ ] 批量需求处理
-- [ ] 产品收藏
+- [x] 产品收藏：产品数据库双表和详情卡片支持星标收藏，“只看收藏”可与关键词组合筛选，并使用 localStorage 持久化（v1.8.20）
 - [x] 清理无UI入口的历史函数：旧监控配置、旧开关箱计算及对应导入函数
 - [x] 清理或归档未被正式入口引用的历史生成物和重复数据文件
 - [x] 梳理 `.42eval/`、历史 `*.txt`、`*_backup.html`、旧 Excel 模板是否继续跟踪或迁入归档目录
 
 ## P2 - 低优先级
+- [ ] **公开 Pages 暴露目录价**（待业务决策）：线上 `HTTP 200` 匿名可访问，文件含 18 处目录价、产品编码和明文访问码常量，view-source 即可取走。候选方案：仓库转私有 + Netlify 密码保护 / 价格数据改运行时导入不入库 / 访问码移到服务端
+- [ ] 交互反馈统一：56 处原生阻塞 `alert()`，而 `showImportToast` 仅用于 4 处导入场景
+- [ ] 自托管 tabler-icons webfont 或改内联 SVG：外部 webfont 使首次 `loadEvent` 约 3.9s 且期间图标回退
 - [ ] 多语言（英文）
 - [ ] 移动端适配
 - [ ] 离线AI（Ollama）

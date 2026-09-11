@@ -16,6 +16,9 @@ if hasattr(sys.stdout, "reconfigure"):
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 HTML_PATH = PROJECT_ROOT / "index.html"
 
+# 允许零引用的函数（仅用于确认保留的预留入口，加入前必须说明原因）
+UNREFERENCED_ALLOWLIST: set[str] = set()
+
 
 class HtmlNode:
     def __init__(self, tag, attrs, parent):
@@ -152,6 +155,22 @@ console.log(`✅ JavaScript 语法: ${scripts.length} 个内联 script 均通过
         failures.append("重复函数定义: " + ", ".join(duplicate_functions))
     else:
         print(f"✅ 函数唯一性: {len(function_names)} 个函数无重复")
+
+    # 零引用函数：全文（含内联 onclick 等属性）只出现定义处一次，说明已无调用入口。
+    # 单文件架构下这类函数会长期残留并误导后续修改，历史上已多次发生。
+    unreferenced = sorted(
+        name
+        for name in set(function_names)
+        if name not in UNREFERENCED_ALLOWLIST
+        and len(re.findall(r"\b" + re.escape(name) + r"\b", html)) <= 1
+    )
+    if unreferenced:
+        failures.append(
+            "零引用函数（疑似死代码，确认后删除或加入 UNREFERENCED_ALLOWLIST）: "
+            + ", ".join(unreferenced)
+        )
+    else:
+        print(f"✅ 函数可达性: {len(set(function_names))} 个函数均有引用")
 
     declared_ids = set(ids)
     declared_ids.update(re.findall(r"\.id\s*=\s*[\"']([^\"']+)[\"']", javascript))
